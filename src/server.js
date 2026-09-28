@@ -11,6 +11,7 @@ import { metaRoutes } from './routes/meta.js';
 import { apiRoutes } from './routes/api.js';
 import { adminRoutes } from './routes/admin.js';
 import { pageMeta, breadcrumbLd } from './lib/seo.js';
+import { privacyReport, sensitiveOnDisk } from './lib/privacy.js';
 import { cookies, clientIp, visitorId, geoGuess, gzipMiddleware, countPageview } from './lib/http.js';
 import { ensureCsrf } from './lib/sessions.js';
 import { resolveLocale, makeTranslator, availableLocales, localeMeta, normaliseLocale, clientStrings } from './lib/i18n.js';
@@ -195,6 +196,12 @@ export function startServer({ port = process.env.PORT || 4173, host = process.en
     console.log('  [1m[36m╚══════════════════════════════════════════════════╝[0m');
     console.log('  [32m▸[0m site    [4m' + base + '/[0m');
     console.log('  [32m▸[0m admin   [4m' + base + ctx.site.adminPath + '[0m');
+    const warnings = privacyReport();
+    for (const w of warnings) console.log('  ' + w);
+    const secretFiles = sensitiveOnDisk();
+    if (secretFiles.length) {
+      console.log('  [90m▸[0m ' + secretFiles.length + ' 个运行时数据文件在 data/ 里，已加入 .gitignore（不会被提交）');
+    }
     console.log('  [32m▸[0m posts   ' + ctx.index.publishedPosts().length + ' published, ' + ctx.index.allPosts().filter((p) => p.draft).length + ' drafts');
     console.log('');
   });
