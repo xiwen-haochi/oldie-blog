@@ -29,7 +29,7 @@ const zh = {
   'site.tagline_fallback': '建议用 800x600 分辨率观看',
   'bar.find': '搜索',
   'bar.rss': 'RSS',
-  'bar.theme': '1998 模式',
+
   'bar.language': '语言',
   'bar.home': '首页',
   'bar.status.connecting': '📶 正在以 56,000 bps 连接…',
@@ -54,15 +54,15 @@ const zh = {
   'side.next': '下一站',
   'side.random_site': '随便看看',
   'side.members': '成员',
-  'side.awards': '网页奖项',
+
   'side.guestbook': '留言板',
   'side.sign_it': '我要留言',
   'side.read_all': '全部留言',
-  'side.zine': '电子报',
-  'side.zine_body': '每两周一封，纯文本，零追踪像素。',
-  'side.join': '订阅',
-  'side.subscribers': '位订阅者',
-  'side.or_rss': '或者直接订 RSS',
+
+
+
+
+
   'side.best_viewed': '推荐用 NETSCAPE 4.0 在 800×600 下浏览',
   'side.back_to_top': '回到顶部',
 
@@ -174,9 +174,9 @@ const zh = {
   'meta.search': '搜索 {site} 的全部文章，支持 tag: 过滤、短语精确匹配和 -排除。',
   'meta.guestbook': '给 {author} 的留言簿签名。',
   'meta.tagged': '打了 #{tag} 标签的 {n} 篇文章。',
-  'time_machine.banner': '⚠ 你正在以 1998 模式浏览本页，一些现代功能被特意关掉了。',
-  'time_machine.back': '回到现在 ➜',
-  'subscribe.ok': '订阅成功！',
+
+
+
 
   // ---- 404 ----------------------------------------------------------------
   '404.title': '404：页面不存在',
@@ -194,7 +194,7 @@ const zh = {
   'footer.extras': '⚙ 彩蛋',
   'footer.dos_terminal': '⌨️ DOS 终端',
   'footer.chiptune': '🎵 芯片音乐',
-  'footer.time_machine': '⏳ 时间机器 1998',
+
   'footer.download_latest': '💾 下载最新一篇 .TXT',
   'footer.you_are_visiting': '你是这个环里的第 {n}/{total} 号站点。',
   'footer.copyright': '© 1998–{year} {author}。版权所有，但欢迎拿去改造。',
@@ -203,8 +203,8 @@ const zh = {
   'footer.ms': '毫秒',
 
   // ---- client toasts ------------------------------------------------------
-  'toast.theme_on': '⏳ 时间机器：1998 模式',
-  'toast.theme_off': '↩ 回到现在',
+
+
   'toast.music_on': '♫ 芯片音乐：开（下载量 0 字节）',
   'toast.music_off': '♪ 音乐已关闭',
   'toast.no_audio': '⚠ 这个浏览器不支持 Web Audio',
@@ -395,7 +395,7 @@ const en = {
   'site.tagline_fallback': 'Best viewed at 800x600',
   'bar.find': 'FIND',
   'bar.rss': 'RSS',
-  'bar.theme': '1998 MODE',
+
   'bar.language': 'Language',
   'bar.home': 'Home',
   'bar.status.connecting': '📶 Connecting at 56,000 bps…',
@@ -419,15 +419,15 @@ const en = {
   'side.next': 'NEXT',
   'side.random_site': 'RANDOM',
   'side.members': 'members',
-  'side.awards': 'Web awards',
+
   'side.guestbook': 'Guestbook',
   'side.sign_it': 'SIGN IT',
   'side.read_all': 'READ ALL',
-  'side.zine': 'The Zine',
-  'side.zine_body': 'One e-mail every other week. Plain text, zero tracking pixels.',
-  'side.join': 'JOIN',
-  'side.subscribers': 'subscribers',
-  'side.or_rss': 'or just RSS',
+
+
+
+
+
   'side.best_viewed': 'BEST VIEWED IN NETSCAPE 4.0 AT 800×600',
   'side.back_to_top': 'RETURN TO TOP',
 
@@ -532,9 +532,7 @@ const en = {
   'meta.search': 'Search all posts on {site}. Supports tag:, quotes and -exclusions.',
   'meta.guestbook': 'Sign the guestbook of {author}.',
   'meta.tagged': '{n} post(s) tagged #{tag}.',
-  'time_machine.banner': '⚠ You are viewing this page in 1998 MODE. Some modern niceties have been switched off on purpose.',
-  'time_machine.back': 'Return to the present ➜',
-  'subscribe.ok': 'Subscribed!',
+
 
   '404.title': '404: PAGE NOT FOUND',
   '404.detail': 'The file you requested is not on this server. It may have been moved, renamed, or it never existed — like most links from 1999.',
@@ -550,7 +548,7 @@ const en = {
   'footer.extras': '⚙ Extras',
   'footer.dos_terminal': '⌨️ DOS terminal',
   'footer.chiptune': '🎵 chiptune BGM',
-  'footer.time_machine': '⏳ Time Machine 1998',
+
   'footer.download_latest': '💾 download latest as .TXT',
   'footer.you_are_visiting': 'You are visiting site #{n} of {total} in the ring.',
   'footer.copyright': '© 1998–{year} {author}. All rights reserved, except the parts everyone is welcome to remix.',
@@ -558,8 +556,8 @@ const en = {
   'footer.generated_in': 'page generated in',
   'footer.ms': 'ms',
 
-  'toast.theme_on': '⏳ TIME MACHINE: 1998 MODE',
-  'toast.theme_off': '↩ back to the present',
+
+
   'toast.music_on': '♫ chiptune theme: ON (0 bytes downloaded)',
   'toast.music_off': '♪ music off',
   'toast.no_audio': '⚠ This browser has no Web Audio API',
@@ -803,21 +801,18 @@ export function makeTranslator(code) {
   return t;
 }
 
-/** Strings the browser needs (toasts, radio label, …). */
+/** Strings the browser needs (toasts, radio label, editor hints). */
 export function clientStrings(code) {
   const t = makeTranslator(code);
   return {
     locale: code,
-    themeOn: t('toast.theme_on'),
-    themeOff: t('toast.theme_off'),
     musicOn: t('toast.music_on'),
     musicOff: t('toast.music_off'),
     noAudio: t('toast.no_audio'),
     noSpeech: t('toast.no_speech'),
     onAir: t('toast.on_air'),
-    langLabel: t('bar.language'),
     listen: t('post.listen'),
-    stop: code === 'en' ? '⏹ STOP' : '⏹ 停止朗读',
+    stop: code === 'en' ? 'STOP' : '⏹ 停止朗读',
     done: t('bar.status.done'),
     connecting: t('bar.status.connecting'),
     previewEmpty: t('admin.preview_empty'),

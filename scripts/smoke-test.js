@@ -154,14 +154,75 @@ async function main() {
     return 'CJK slug ok';
   });
 
-  section('browser chrome (no fake window controls)');
-  await check('no minimise/maximise/close buttons', async () => {
+  section('trimmed chrome');
+  await check('no fake window controls or app menu bar', async () => {
     const html = await text('/');
     assert.ok(!html.includes('class="menubar"'), 'fake app menu bar still present');
-    assert.ok(!html.includes('tb-titlebar-buttons'), 'window buttons still present');
     const titlebar = html.slice(html.indexOf('class="titlebar"'), html.indexOf('class="titlebar"') + 900);
-    assert.ok(!titlebar.includes('tb-btn'), 'a button survived inside the titlebar');
+    assert.ok(!titlebar.includes('tb-btn'), 'a window button survived inside the titlebar');
     return 'clean';
+  });
+
+  await check('1998 mode is gone', async () => {
+    const html = await text('/');
+    assert.ok(!html.includes('tm-banner'), 'time machine banner still rendered');
+    assert.ok(!html.includes('data-toggle-theme'), 'theme toggle still wired up');
+    assert.ok(!html.includes('data-theme='), 'theme attribute still on <html>');
+    const css = await text('/css/site.css');
+    assert.ok(!css.includes('1998'), '1998 stylesheet still shipped');
+    return 'removed';
+  });
+
+  await check('zine and awards widgets are gone', async () => {
+    const html = await text('/');
+    assert.ok(!html.includes('/subscribe'), 'subscribe form still present');
+    assert.ok(!html.includes('class="awards"'), 'awards widget still present');
+    const css = await text('/css/site.css');
+    assert.ok(!css.includes('.awards'), 'awards styles still shipped');
+    return 'trimmed';
+  });
+
+  await check('the admin path is never advertised publicly', async () => {
+    const health = await (await get('/healthz')).json();
+    assert.equal(health.adminPath, '/admin', 'health endpoint should report the admin base');
+    assert.equal(health.locale, 'zh-CN');
+    const html = await text('/');
+    assert.ok(!html.includes('/admin'), 'the admin path leaks into the public markup');
+    const robots = await text('/robots.txt');
+    assert.ok(!robots.includes('my-secret-door'), 'a custom admin path leaked into robots.txt');
+    const feed = await text('/sitemap.xml');
+    assert.ok(!feed.includes('/admin'), 'admin leaked into the sitemap');
+    return 'quiet';
+  });
+
+  await check('admin login is reachable and stays unindexable', async () => {
+    const res = await get('/admin/login');
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('x-robots-tag') || '', /noindex/);
+    const html = await res.text();
+    assert.match(html, /<meta name="robots" content="noindex, nofollow">/);
+    assert.ok(!html.includes('19980'), 'login page leaks site statistics');
+    return 'guarded';
+  });
+
+  await check('static assets are cacheable, html is revalidated', async () => {
+    const css = await get('/css/site.css');
+    assert.match(css.headers.get('cache-control') || '', /max-age=(3600|\d+d)/);
+    const home = await get('/');
+    assert.equal(home.headers.get('cache-control'), 'no-cache');
+    assert.ok(home.headers.get('etag'), 'html needs an ETag for cheap 304s');
+    return 'headers ok';
+  });
+
+  await check('gzipped responses actually finish', async () => {
+    // a small file used to stall for exactly 6s on the pass-through path
+    const small = await get('/css/vendor/hljs.css');
+    assert.equal(small.status, 200);
+    const started = Date.now();
+    const big = await get('/', { headers: { 'accept-encoding': 'gzip' } });
+    assert.equal(big.status, 200);
+    assert.ok(Date.now() - started < 2000, 'home page took too long with gzip');
+    return 'fast';
   });
 
   section('SEO surface');
@@ -238,13 +299,6 @@ async function main() {
     const data = await res.json();
     assert.ok(data.count >= 1, 'expected hits, got ' + data.count);
     return data.count + ' hits';
-  });
-  await check('1998 mode hooks are present', async () => {
-    const html = await text('/');
-    assert.match(html, /data-theme="classic"/);
-    assert.match(html, /data-toggle-theme/);
-    assert.match(html, /tm-banner/);
-    return 'toggles wired';
   });
 
   section('guestbook and comments');

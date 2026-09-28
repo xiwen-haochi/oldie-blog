@@ -74,7 +74,7 @@ test('dictionaries are the same size', () => {
 test('client strings cover the toasts the browser shows', () => {
   const zh = clientStrings('zh-CN');
   const en = clientStrings('en');
-  for (const key of ['themeOn', 'musicOn', 'noAudio', 'noSpeech', 'onAir', 'listen', 'previewEmpty']) {
+  for (const key of ['musicOn', 'musicOff', 'noAudio', 'noSpeech', 'onAir', 'listen', 'stop', 'done', 'previewEmpty', 'autosave']) {
     assert.ok(zh[key], 'zh missing ' + key);
     assert.ok(en[key], 'en missing ' + key);
     assert.notEqual(zh[key], en[key], key + ' was not translated');

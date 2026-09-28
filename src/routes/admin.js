@@ -21,12 +21,21 @@ const MAX_UPLOAD = 4 * 1024 * 1024;
 
 export function adminRoutes(ctx) {
   const router = express.Router();
+  const A = ctx.site.adminPath || '/admin';
+  const U = (suffix = '') => A + suffix;
+
+  // belt and braces: even with JS disabled, nothing behind this path is indexable
+  router.use((req, res, next) => {
+    res.set('X-Robots-Tag', 'noindex, nofollow');
+    res.set('X-Frame-Options', 'DENY');
+    next();
+  });
 
   /* ------------------------------------------------------------ guards */
   const requireAuth = (req, res, next) => {
     if (req.session && req.session.user) return next();
-    const next_ = encodeURIComponent(req.originalUrl || '/admin');
-    return res.redirect('/admin/login?next=' + next_);
+    const next_ = encodeURIComponent(req.originalUrl || U());
+    return res.redirect(U('/login?next=' + next_));
   };
 
   const requireCsrf = (req, res, next) => {
@@ -35,7 +44,7 @@ export function adminRoutes(ctx) {
     return res.render('aw/error', {
       req,
       title: 'Access denied',
-      nav: adminNav(),
+      nav: adminNav(null, A),
       csrf: (req.session && req.session.csrf) || '',
       flash: null,
       message: 'Your session token expired or was missing. Reload the admin page and try again.',
@@ -47,6 +56,9 @@ export function adminRoutes(ctx) {
   const chrome = (req) => {
     const locale = (req && req.locale) || ctx.site.locale || 'zh-CN';
     return {
+      adminPath: A,
+      A,
+      U,
       t: makeTranslator(locale),
       locale,
       localeMeta: localeMeta(locale),
@@ -54,7 +66,7 @@ export function adminRoutes(ctx) {
       clientStrings: clientStrings(locale),
       dateLocale: localeMeta(locale).dateLocale,
       langSwitchUrl: (code) => {
-        const path = (req && req.path) || '/admin';
+        const path = (req && req.path) || U();
         return path + '?lang=' + encodeURIComponent(code);
       },
     };
@@ -66,9 +78,9 @@ export function adminRoutes(ctx) {
       return res.render('admin/login', {
         site: ctx.site,
         ctx,
-        nav: adminNav(i18n.t),
+        nav: adminNav(i18n.t, A),
         csrf: (locals.req && locals.req.session && locals.req.session.csrf) || '',
-        next: '/admin',
+        next: U(),
         error: null,
         form: {},
         mustChange: !!(loadCredentials().mustChange),
@@ -79,7 +91,7 @@ export function adminRoutes(ctx) {
     return res.render('aw/' + view, {
       site: ctx.site,
       ctx,
-      nav: adminNav(i18n.t),
+      nav: adminNav(i18n.t, A),
       flash: res.locals.flash || null,
       csrf: (locals.req && locals.req.session && locals.req.session.csrf) || '',
       ...i18n,
@@ -98,36 +110,41 @@ export function adminRoutes(ctx) {
   };
 
   /* ------------------------------------------------------------- login */
-  router.get('/admin/login', (req, res) => {
-    if (req.session && req.session.user) return res.redirect('/admin');
+  router.get(A + '/login', (req, res) => {
+    if (req.session && req.session.user) return res.redirect(U());
+    const i18n = chrome(req);
     res.render('admin/login', {
       site: ctx.site,
       ctx,
-      nav: adminNav(),
+      nav: adminNav(i18n.t, A),
       csrf: (req.session && req.session.csrf) || '',
-      next: String(req.query.next || '/admin'),
+      next: String(req.query.next || U()),
       error: null,
       form: {},
       mustChange: !!(loadCredentials().mustChange),
+      ...i18n,
     });
   });
 
-  router.post('/admin/login', async (req, res) => {
+  router.post(A + '/login', async (req, res) => {
+    const i18n = chrome(req);
     if (!checkCsrf(req, (req.body && req.body._csrf) || req.get('x-csrf-token'))) {
       return res.status(403).render('admin/login', {
-        site: ctx.site, ctx, nav: adminNav(),
+        site: ctx.site, ctx, nav: adminNav(null, A),
         csrf: (req.session && req.session.csrf) || '',
-        next: '/admin', form: {}, mustChange: false,
+        next: U(), form: {}, mustChange: false,
         error: 'Your session token expired. Reload this page and try again.',
+        ...i18n,
       });
     }
     const ip = req.clientIp || 'unknown';
     if (!loginLimiter(ip)) {
       return res.status(429).render('admin/login', {
-        site: ctx.site, ctx, nav: adminNav(),
+        site: ctx.site, ctx, nav: adminNav(null, A),
         csrf: (req.session && req.session.csrf) || '',
-        next: '/admin', form: {}, mustChange: false,
+        next: U(), form: {}, mustChange: false,
         error: 'Too many attempts. Wait a few minutes, then try again.',
+        ...i18n,
       });
     }
     const credentials = loadCredentials();
@@ -139,29 +156,30 @@ export function adminRoutes(ctx) {
 
     if (!okUser || !okPass) {
       return res.status(401).render('admin/login', {
-        site: ctx.site, ctx, nav: adminNav(),
+        site: ctx.site, ctx, nav: adminNav(null, A),
         csrf: (req.session && req.session.csrf) || '',
-        next: String(req.body.next || '/admin'), form: { username: user }, mustChange: false,
+        next: String(req.body.next || U()), form: { username: user }, mustChange: false,
         error: 'Wrong username or password. This attempt was written down in the visitor log.',
+        ...i18n,
       });
     }
 
     ctx.sessions.issue(res, { user, csrf: crypto.randomBytes(16).toString('base64url'), iat: Date.now() });
     res.cookie('oldie_admin', '1', { httpOnly: true, sameSite: 'lax', maxAge: 1000 * 60 * 60 * 12, path: '/' });
-    const nextUrl = String(req.body.next || '/admin');
-    res.redirect(nextUrl.startsWith('/admin') ? nextUrl : '/admin');
+    const nextUrl = String(req.body.next || U());
+    res.redirect(nextUrl.startsWith(A) ? nextUrl : U());
   });
 
-  router.post('/admin/logout', requireAuth, requireCsrf, (req, res) => {
+  router.post(A + '/logout', requireAuth, requireCsrf, (req, res) => {
     ctx.sessions.revoke(res);
     res.clearCookie('oldie_admin', { path: '/' });
-    res.redirect('/admin/login');
+    res.redirect(U('/login'));
   });
 
   /* -------------------------------------------------------- dashboard */
-  router.get('/admin', requireAuth, (req, res) => res.redirect('/admin/dashboard'));
+  router.get(A, requireAuth, (req, res) => res.redirect(U('/dashboard')));
 
-  router.get('/admin/dashboard', requireAuth, (req, res) => {
+  router.get(A + '/dashboard', requireAuth, (req, res) => {
     const stats = ctx.stats.summary();
     const community = ctx.community.stats();
     const posts = ctx.index.allPosts();
@@ -184,7 +202,7 @@ export function adminRoutes(ctx) {
   });
 
   /* ------------------------------------------------------------ posts */
-  router.get('/admin/posts', requireAuth, (req, res) => {
+  router.get(A + '/posts', requireAuth, (req, res) => {
     const filter = String(req.query.filter || 'all');
     let posts = ctx.index.allPosts();
     if (filter === 'draft') posts = posts.filter((p) => p.draft);
@@ -208,7 +226,7 @@ export function adminRoutes(ctx) {
     });
   });
 
-  router.get('/admin/posts/new', requireAuth, (req, res) => {
+  router.get(A + '/posts/new', requireAuth, (req, res) => {
     render(res, 'editor', {
       req,
       title: tr(req)('admin.new_post'),
@@ -232,7 +250,7 @@ export function adminRoutes(ctx) {
     });
   });
 
-  router.get('/admin/posts/:slug/edit', requireAuth, (req, res, next) => {
+  router.get(A + '/posts/:slug/edit', requireAuth, (req, res, next) => {
     const raw = rawOf({ kind: 'post', slug: req.params.slug });
     if (!raw) return next();
     raw.data.slug = raw.data.slug || raw.file.replace(/\.md$/, '').replace(/^\d{4}-\d{2}-\d{2}-/, '');
@@ -247,7 +265,7 @@ export function adminRoutes(ctx) {
     });
   });
 
-  router.post('/admin/posts', requireAuth, requireCsrf, async (req, res, next) => {
+  router.post(A + '/posts', requireAuth, requireCsrf, async (req, res, next) => {
     try {
       const slug = String(req.body.originalSlug || '');
       const fields = normaliseFields(req.body, {});
@@ -255,20 +273,20 @@ export function adminRoutes(ctx) {
       ctx.refresh();
       const tSave = makeTranslator((req && req.locale) || ctx.site.locale);
     setFlash(res, 'ok', tSave(slug ? 'admin.post_updated' : 'admin.post_created', { file: saved.file }));
-      res.redirect('/admin/posts/' + fields.slug + '/edit?saved=1');
+      res.redirect(U('/posts/' + fields.slug + '/edit?saved=1'));
     } catch (err) { next(err); }
   });
 
-  router.post('/admin/posts/:slug/delete', requireAuth, requireCsrf, async (req, res) => {
+  router.post(A + '/posts/:slug/delete', requireAuth, requireCsrf, async (req, res) => {
     const ok = await deleteDoc({ kind: 'post', slug: req.params.slug });
     ctx.refresh();
     setFlash(res, ok ? 'ok' : 'warn', ok ? 'Deleted ' + req.params.slug + '.md — check git status if you want it back.' : 'Nothing to delete.');
-    res.redirect('/admin/posts');
+    res.redirect(U('/posts'));
   });
 
-  router.post('/admin/posts/:slug/duplicate', requireAuth, requireCsrf, async (req, res) => {
+  router.post(A + '/posts/:slug/duplicate', requireAuth, requireCsrf, async (req, res) => {
     const raw = rawOf({ kind: 'post', slug: req.params.slug });
-    if (!raw) return res.redirect('/admin/posts');
+    if (!raw) return res.redirect(U('/posts'));
     const fields = normaliseFields({}, raw.data);
     fields.title = raw.data.title + ' (copy)';
     fields.slug = slugify(fields.slug + '-copy');
@@ -277,15 +295,15 @@ export function adminRoutes(ctx) {
     await saveDoc({ kind: 'post', slug: '', fields, body: raw.body });
     ctx.refresh();
     setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.post_duplicated', { slug: fields.slug }));
-    res.redirect('/admin/posts/' + fields.slug + '/edit');
+    res.redirect(U('/posts/' + fields.slug + '/edit'));
   });
 
   /* ------------------------------------------------------------ pages */
-  router.get('/admin/pages', requireAuth, (req, res) => {
+  router.get(A + '/pages', requireAuth, (req, res) => {
     render(res, 'pages', { req, title: 'Pages', pages: ctx.index.pages });
   });
 
-  router.get('/admin/pages/new', requireAuth, (req, res) => {
+  router.get(A + '/pages/new', requireAuth, (req, res) => {
     render(res, 'editor', {
       req, title: tr(req)('admin.new_page'), kind: 'page', isNew: true,
       doc: { file: '', data: { title: '', slug: '', description: '' }, body: '' },
@@ -293,7 +311,7 @@ export function adminRoutes(ctx) {
     });
   });
 
-  router.get('/admin/pages/:slug/edit', requireAuth, (req, res, next) => {
+  router.get(A + '/pages/:slug/edit', requireAuth, (req, res, next) => {
     const raw = rawOf({ kind: 'page', slug: req.params.slug });
     if (!raw) return next();
     raw.data.slug = raw.data.slug || raw.file.replace(/\.md$/, '');
@@ -303,7 +321,7 @@ export function adminRoutes(ctx) {
     });
   });
 
-  router.post('/admin/pages', requireAuth, requireCsrf, async (req, res, next) => {
+  router.post(A + '/pages', requireAuth, requireCsrf, async (req, res, next) => {
     try {
       const slug = String(req.body.originalSlug || '');
       const fields = normaliseFields(req.body, {});
@@ -311,19 +329,19 @@ export function adminRoutes(ctx) {
       ctx.refresh();
       const tSave = makeTranslator((req && req.locale) || ctx.site.locale);
     setFlash(res, 'ok', tSave(slug ? 'admin.post_updated' : 'admin.post_created', { file: saved.file }));
-      res.redirect('/admin/pages/' + fields.slug + '/edit?saved=1');
+      res.redirect(U('/pages/' + fields.slug + '/edit?saved=1'));
     } catch (err) { next(err); }
   });
 
-  router.post('/admin/pages/:slug/delete', requireAuth, requireCsrf, async (req, res) => {
+  router.post(A + '/pages/:slug/delete', requireAuth, requireCsrf, async (req, res) => {
     const ok = await deleteDoc({ kind: 'page', slug: req.params.slug });
     ctx.refresh();
     setFlash(res, ok ? 'ok' : 'warn', ok ? 'Deleted page ' + req.params.slug : 'Nothing to delete.');
-    res.redirect('/admin/pages');
+    res.redirect(U('/pages'));
   });
 
   /* -------------------------------------------------------- preview API */
-  router.post('/admin/preview', requireAuth, requireCsrf, (req, res) => {
+  router.post(A + '/preview', requireAuth, requireCsrf, (req, res) => {
     const input = req.body || {};
     const markdown = String(input.body || '');
     const fields = normaliseFields(input, {});
@@ -343,7 +361,7 @@ export function adminRoutes(ctx) {
   });
 
   /* ------------------------------------------------------- guestbook */
-  router.get('/admin/guestbook', requireAuth, (req, res) => {
+  router.get(A + '/guestbook', requireAuth, (req, res) => {
     const status = String(req.query.status || 'all');
     let entries = ctx.community.entries({ target: 'guestbook', status: 'all' });
     if (status !== 'all') entries = entries.filter((e) => (e.status || 'approved') === status);
@@ -357,25 +375,25 @@ export function adminRoutes(ctx) {
     });
   });
 
-  router.post('/admin/guestbook/:id/status', requireAuth, requireCsrf, async (req, res) => {
+  router.post(A + '/guestbook/:id/status', requireAuth, requireCsrf, async (req, res) => {
     const entry = await ctx.community.setStatus(req.params.id, String(req.body.status || 'approved'));
     const t = makeTranslator((req && req.locale) || ctx.site.locale);
     setFlash(res, 'ok', entry ? t('admin.approve_done', { id: entry.id, status: req.body.status }) : t('admin.nothing_to_delete'));
-    res.redirect('/admin/guestbook?status=' + encodeURIComponent(String(req.query.status || 'all')));
+    res.redirect(U('/guestbook?status=' + encodeURIComponent(String(req.query.status || 'all'))));
   });
 
-  router.post('/admin/guestbook/:id/delete', requireAuth, requireCsrf, async (req, res) => {
+  router.post(A + '/guestbook/:id/delete', requireAuth, requireCsrf, async (req, res) => {
     const removed = await ctx.community.remove(req.params.id);
     setFlash(res, 'ok', removed ? makeTranslator((req && req.locale) || ctx.site.locale)('admin.entry_deleted', { id: removed.id }) : makeTranslator((req && req.locale) || ctx.site.locale)('admin.nothing_to_delete'));
-    res.redirect('/admin/guestbook');
+    res.redirect(U('/guestbook'));
   });
 
   /* -------------------------------------------------------- settings */
-  router.get('/admin/settings', requireAuth, (req, res) => {
+  router.get(A + '/settings', requireAuth, (req, res) => {
     render(res, 'settings', { req, title: makeTranslator(req.locale || ctx.site.locale)('admin.settings'), settings: ctx.site, defaults: DEFAULTS });
   });
 
-  router.post('/admin/settings', requireAuth, requireCsrf, async (req, res, next) => {
+  router.post(A + '/settings', requireAuth, requireCsrf, async (req, res, next) => {
     try {
       const b = req.body;
       const parseList = (v) => String(v || '').split('\n').map((x) => x.trim()).filter(Boolean);
@@ -421,18 +439,18 @@ export function adminRoutes(ctx) {
       await fsp.writeFile(path.join(DATA_DIR, 'settings.json'), JSON.stringify(settings, null, 2) + '\n', 'utf8');
       ctx.refresh({ config: true });
       setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.settings_saved'));
-      res.redirect('/admin/settings');
+      res.redirect(U('/settings'));
     } catch (err) { next(err); }
   });
 
-  router.post('/admin/settings/reset', requireAuth, requireCsrf, async (req, res) => {
+  router.post(A + '/settings/reset', requireAuth, requireCsrf, async (req, res) => {
     await fsp.rm(path.join(DATA_DIR, 'settings.json'), { force: true });
     ctx.refresh({ config: true });
     setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.settings_reset'));
-    res.redirect('/admin/settings');
+    res.redirect(U('/settings'));
   });
 
-  router.post('/admin/password', requireAuth, requireCsrf, async (req, res, next) => {
+  router.post(A + '/password', requireAuth, requireCsrf, async (req, res, next) => {
     try {
       const current = String(req.body.current || '');
       const next1 = String(req.body.next || '');
@@ -441,28 +459,28 @@ export function adminRoutes(ctx) {
       const t = makeTranslator((req && req.locale) || ctx.site.locale);
       if (!plain && !verifyPassword(current, credentials.password)) {
         setFlash(res, 'err', t('admin.password_wrong'));
-        return res.redirect('/admin/settings');
+        return res.redirect(U('/settings'));
       }
       if (next1.length < 10) {
         setFlash(res, 'err', t('admin.password_short'));
-        return res.redirect('/admin/settings');
+        return res.redirect(U('/settings'));
       }
       if (next1 !== String(req.body.confirm || '')) {
         setFlash(res, 'err', t('admin.password_mismatch'));
-        return res.redirect('/admin/settings');
+        return res.redirect(U('/settings'));
       }
       saveCredentials({ ...credentials, username: credentials.username || 'admin', password: hashPassword(next1), mustChange: false, updatedAt: new Date().toISOString() });
       setFlash(res, 'ok', t('admin.password_ok'));
-      res.redirect('/admin/settings');
+      res.redirect(U('/settings'));
     } catch (err) { next(err); }
   });
 
   /* ----------------------------------------------------------- media */
-  router.get('/admin/media', requireAuth, (req, res) => {
+  router.get(A + '/media', requireAuth, (req, res) => {
     render(res, 'media', { req, title: makeTranslator(req.locale || ctx.site.locale)('admin.media'), files: listUploads() });
   });
 
-  router.post('/admin/media', requireAuth, upload.single('file'), requireCsrf, async (req, res, next) => {
+  router.post(A + '/media', requireAuth, upload.single('file'), requireCsrf, async (req, res, next) => {
     try {
       const file = req.file;
       const inline = req.body && req.body.dataUrl;
@@ -484,16 +502,16 @@ export function adminRoutes(ctx) {
 
       if (!buffer) {
         setFlash(res, 'err', makeTranslator((req && req.locale) || ctx.site.locale)('admin.paste_data_url'));
-        return res.redirect('/admin/media');
+        return res.redirect(U('/media'));
       }
       if (buffer.length > MAX_UPLOAD) {
         const t = makeTranslator((req && req.locale) || ctx.site.locale);
         setFlash(res, 'err', t('admin.too_big', { size: humanBytes(buffer.length), max: humanBytes(MAX_UPLOAD) }));
-        return res.redirect('/admin/media');
+        return res.redirect(U('/media'));
       }
       if (!ALLOWED_IMAGE.test(type)) {
         setFlash(res, 'err', makeTranslator((req && req.locale) || ctx.site.locale)('admin.not_image', { type: type || '?' }));
-        return res.redirect('/admin/media');
+        return res.redirect(U('/media'));
       }
 
       await fsp.mkdir(UPLOAD_DIR, { recursive: true });
@@ -501,19 +519,19 @@ export function adminRoutes(ctx) {
       await fsp.writeFile(path.join(UPLOAD_DIR, safe), buffer);
       ctx.site.uploads = listUploads();
       setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.uploaded', { name: safe }));
-      res.redirect('/admin/media');
+      res.redirect(U('/media'));
     } catch (err) { next(err); }
   });
 
-  router.post('/admin/media/delete', requireAuth, requireCsrf, async (req, res) => {
+  router.post(A + '/media/delete', requireAuth, requireCsrf, async (req, res) => {
     const name = path.basename(String(req.body.name || ''));
     await fsp.rm(path.join(UPLOAD_DIR, name), { force: true });
     setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.deleted', { name }));
-    res.redirect('/admin/media');
+    res.redirect(U('/media'));
   });
 
   /* ----------------------------------------------------------- tools */
-  router.get('/admin/tools', requireAuth, (req, res) => {
+  router.get(A + '/tools', requireAuth, (req, res) => {
     render(res, 'tools', {
       req,
       title: makeTranslator(req.locale || ctx.site.locale)('admin.tools'),
@@ -526,7 +544,7 @@ export function adminRoutes(ctx) {
     });
   });
 
-  router.get('/admin/export.json', requireAuth, (req, res) => {
+  router.get(A + '/export.json', requireAuth, (req, res) => {
     res.set('Content-Disposition', 'attachment; filename="oldie-export.json"').json(buildExport(ctx));
   });
 
@@ -535,16 +553,16 @@ export function adminRoutes(ctx) {
 
 /* ------------------------------------------------------------- helpers */
 
-function adminNav(t) {
+function adminNav(t, A = '/admin') {
   const label = (key, fallback) => (t ? t(key) : fallback);
   return [
-    { href: '/admin/dashboard', label: label('admin.dashboard', '📊 Dashboard') },
-    { href: '/admin/posts', label: label('admin.posts', '📝 Posts') },
-    { href: '/admin/pages', label: label('admin.pages', '📄 Pages') },
-    { href: '/admin/guestbook', label: label('admin.guestbook', '📬 Guestbook') },
-    { href: '/admin/media', label: label('admin.media', '🖼 Media') },
-    { href: '/admin/settings', label: label('admin.settings', '⚙ Settings') },
-    { href: '/admin/tools', label: label('admin.tools', '🛠 Tools') },
+    { href: A + '/dashboard', label: label('admin.dashboard', '📊 Dashboard') },
+    { href: A + '/posts', label: label('admin.posts', '📝 Posts') },
+    { href: A + '/pages', label: label('admin.pages', '📄 Pages') },
+    { href: A + '/guestbook', label: label('admin.guestbook', '📬 Guestbook') },
+    { href: A + '/media', label: label('admin.media', '🖼 Media') },
+    { href: A + '/settings', label: label('admin.settings', '⚙ Settings') },
+    { href: A + '/tools', label: label('admin.tools', '🛠 Tools') },
     { href: '/', label: label('admin.view_site', '🌐 View site') },
   ];
 }

@@ -2,7 +2,7 @@
   <h1>⚙ <%= t('admin.settings_title') %></h1>
   <div class="btn-row">
     <button class="btn primary" type="submit" form="settings-form">💾 <%= t('admin.save') %></button>
-    <form method="post" action="/admin/settings/reset" class="inline-form" data-confirm="<%= t('admin.settings_reset') %>">
+    <form method="post" action="<%= adminPath %>/settings/reset" class="inline-form" data-confirm="<%= t('admin.settings_reset') %>">
       <input type="hidden" name="_csrf" value="<%= csrf %>">
       <button class="btn" type="submit"><%= t('admin.reset_config') %></button>
     </form>
@@ -11,7 +11,7 @@
 
 <div class="alert warn"><%= t('admin.settings_note') %></div>
 
-<form id="settings-form" method="post" action="/admin/settings" class="settings-form">
+<form id="settings-form" method="post" action="<%= adminPath %>/settings" class="settings-form">
   <input type="hidden" name="_csrf" value="<%= csrf %>">
   <input type="hidden" name="lang" value="<%= locale %>">
 
@@ -76,7 +76,7 @@
 
 <fieldset style="margin-top:14px">
   <legend><%= t('admin.password') %></legend>
-  <form method="post" action="/admin/password" class="grid-2">
+  <form method="post" action="<%= adminPath %>/password" class="grid-2">
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <div class="field"><label for="current"><%= t('admin.current_password') %></label><input id="current" name="current" type="password" autocomplete="current-password" required></div>
     <div class="field"><label for="next"><%= t('admin.new_password') %></label><input id="next" name="next" type="password" autocomplete="new-password" required minlength="10"></div>

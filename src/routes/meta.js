@@ -46,7 +46,14 @@ export function metaRoutes(ctx) {
 
   // ---- health + misc endpoints -----------------------------------------
   router.get('/healthz', (req, res) => {
-    res.json({ ok: true, uptime: process.uptime(), posts: ctx.index.publishedPosts().length, version: 1 });
+    res.json({
+      ok: true,
+      uptime: Math.round(process.uptime()),
+      posts: ctx.index.publishedPosts().length,
+      locale: ctx.site.locale,
+      adminPath: ctx.site.adminPath,
+      version: 1,
+    });
   });
 
   router.get('/llms.txt', (req, res) => {

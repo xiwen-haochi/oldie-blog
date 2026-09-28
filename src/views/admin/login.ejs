@@ -16,7 +16,7 @@
     <span class="tb-title"><%= t('admin.login_warning') %></span>
     <nav class="tb-lang" aria-label="<%= t('bar.language') %>">
       <% langs.forEach(function (l) { %>
-        <a href="/admin/login?lang=<%= l.code %>" hreflang="<%= l.code %>" lang="<%= l.code %>"<%= l.code === locale ? ' aria-current="true" class="on"' : '' %>><%= l.label %></a>
+        <a href="<%= adminPath %>/login?lang=<%= l.code %>" hreflang="<%= l.code %>" lang="<%= l.code %>"<%= l.code === locale ? ' aria-current="true" class="on"' : '' %>><%= l.label %></a>
       <% }) %>
     </nav>
   </div>
@@ -32,7 +32,7 @@
     <% } %>
     <% if (error) { %><div class="alert err"><%= error %></div><% } %>
 
-    <form method="post" action="/admin/login" class="login-form">
+    <form method="post" action="<%= adminPath %>/login" class="login-form">
       <input type="hidden" name="_csrf" value="<%= csrf %>">
       <input type="hidden" name="next" value="<%= next %>">
       <div class="row">

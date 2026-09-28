@@ -50,14 +50,12 @@ deployed yesterday:
 | ⌨️ | **DOS terminal** | `Ctrl`+`K` opens a green-on-black prompt on every page. `dir`, `type <slug>`, `search`, `stats`, `neofetch`, `fortune`, `guestbook` — all answered by the real server, so nothing is faked. |
 | 🎵 | **Chiptune theme** | Square waves and noise hats generated live with the Web Audio API. Zero bytes of audio, never autoplays, remembers your choice. |
 | 📻 | **Radio narration** | "Listen to this post" reads the article aloud with `speechSynthesis`, complete with a blinking VU meter. |
-| ⏳ | **Time Machine** | One click flips the whole site into 1998 mode: Times New Roman, centred layout, navy desktop, no JavaScript chrome. |
 | 📊 | **Hit counter** | Odometer digits, today/unique/live-online counts, per-path stats and a 30-day sparkline in the admin. Starts at 1998. |
 | 🌐 | **Webring** | Prev / next / random navigation through a configurable list of neighbour sites. |
 | 📼 | **.TXT downloads** | Every post has a `POST-XXXX.TXT` button — plain text, exactly how people shared writing in 1998. |
 | 📬 | **Guestbook + comments** | Moderation queue, honeypot, link/keyword spam scoring, per-post comments. |
 | 🎲 | **Random post** | Deterministic per day, so "random" stays reproducible. |
 | 🗺 | **`.json` per post** | Machine-readable Markdown/HTML/text for every article. |
-
 | 🌐 | **Language switch** | Chinese by default, English in one click. `?lang=en` is shareable, `hreflang` tells search engines, and the choice is remembered in one cookie. |
 
 Plus: a 56k dial-up progress bar, scrolling marquee, blinking status line,
@@ -138,6 +136,44 @@ pnpm new:post "My post title" --tags=retro,web --draft
 
 Saving in the admin writes a normal `.md` file to `content/` — check
 `git status` and you will see exactly what changed.
+
+---
+
+## Where the admin lives
+
+Public pages are public. The admin is a door you choose:
+
+```json
+// config/site.config.json
+{ "adminPath": "/my-secret-door" }
+```
+
+`admin`, `/admin`, `/my-secret-door/` all work — the value is normalised,
+sanitised, and can never climb out of the site root. Everything (login, editor,
+media, tools, redirects, navigation) moves with it, and `GET /healthz` reports
+the current value so you never have to guess.
+
+The public site never links to it, the sitemap never lists it, and robots.txt
+deliberately does **not** name it: putting a secret door in robots.txt is an
+invitation, not a lock. Admin pages also send `X-Robots-Tag: noindex, nofollow`
+and `X-Frame-Options: DENY`.
+
+---
+
+## Speed
+
+Cold load measured in a headless browser: **~300 ms**, server response **5–20 ms**.
+
+- **Fixed a real 6-second stall.** The hand-rolled gzip middleware handed
+  `undefined` back to Node's `res.end()` on the "too small to compress" path
+  after intercepting `write()`, which left the socket waiting. Small assets (the
+  syntax theme, the favicon) paid a full timeout on every single page load.
+- **Assets are cached hard.** CSS/JS carry `?v=<hash>`, so they keep a long
+  `max-age` even in development instead of re-downloading 58 KB per visit.
+- **HTML revalidates.** `Cache-Control: no-cache` plus an ETag turns a repeat
+  visit into a few-byte 304 instead of a full page.
+- **Hit counting never blocks the response** — it writes to disk in background.
+- Paint stays cheap via `contain` on the heavy card/widget bevels.
 
 ---
 

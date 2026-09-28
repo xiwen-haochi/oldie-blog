@@ -2,7 +2,7 @@
    oldie-blog — "site.css" 1990s design system
    Windows 95 chrome + GeoCities soul. No frameworks, no build step.
    Sections: tokens · reset · desktop · chrome · controls · layout · sidebar
-             content · posts · terminal · guestbook · footer · 1998 mode · a11y
+             content · posts · terminal · guestbook · footer · i18n · a11y
    ========================================================================= */
 
 /* ---------------------------------------------------------------- tokens */
@@ -214,6 +214,7 @@ legend { font-family: var(--font-ui); font-size: 12px; padding: 0 4px; }
 .widget-body {
   background: var(--face); border: 1px solid #000; box-shadow: var(--bevel-out);
   padding: 8px; font-size: 11px; line-height: 1.6;
+  contain: layout paint style;
 }
 .widget ul { list-style: none; margin: 0; padding: 0; }
 .widget li { padding: 2px 0; border-bottom: 1px dotted var(--face-dark); }
@@ -238,14 +239,6 @@ legend { font-family: var(--font-ui); font-size: 12px; padding: 0 4px; }
 }
 .counter-label { text-align: center; font-size: 10px; margin-top: 4px; color: #333; }
 
-/* award badges */
-.awards { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
-.award {
-  width: 52px; height: 52px; display: grid; place-items: center; text-align: center;
-  font-size: 17px; background: radial-gradient(circle at 35% 30%, #fff8d0, #d4af37 70%, #8a6d1f);
-  border: 2px outset #ffe9a8; box-shadow: var(--hard-shadow); cursor: help;
-}
-.award:hover { transform: scale(1.06) rotate(-3deg); }
 
 /* --------------------------------------------------------------- content */
 .page-head {
@@ -265,6 +258,8 @@ legend { font-family: var(--font-ui); font-size: 12px; padding: 0 4px; }
 .post-list > li {
   border: 1px solid var(--face-dark); background: var(--paper-dim);
   box-shadow: var(--bevel-out); padding: 10px 12px; margin-bottom: 12px;
+  /* the bevel shadows are expensive to repaint; isolate each card */
+  contain: layout paint style;
 }
 .post-list h3, .post-list h2 { margin: 0 0 4px; font-family: var(--font-ui); font-size: 15px; line-height: 1.3; }
 .post-list h3 a, .post-list h2 a { text-decoration: none; }
@@ -591,56 +586,6 @@ form.bbs-form label { font-weight: 700; }
   to   { height: 5px; background: #1d5c1d; }
 }
 .radio-meter .btn { font-size: 10.5px; padding: 1px 8px; }
-
-/* ------------------------------------------------- "Time Machine" 1998 */
-[data-theme="1998"] {
-  --desktop: #000080; --face: #c0c0c0; --paper: #ffffff; --accent: #000080;
-  --link: #0000ee; --font-body: "Times New Roman", Times, serif; --font-ui: "Times New Roman", serif;
-  font-size: 16px;
-}
-[data-theme="1998"] body {
-  background: #000080 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><rect width='8' height='8' fill='%23000080'/><rect width='4' height='4' fill='%23000060'/><rect x='4' y='4' width='4' height='4' fill='%23000060'/></svg>");
-  color: #000; text-align: center;
-}
-[data-theme="1998"] .browser { max-width: 720px; background: #fff; border: 3px ridge #c0c0c0; box-shadow: none; }
-[data-theme="1998"] .titlebar, [data-theme="1998"] .utility-bar, [data-theme="1998"] .statusbar,
-[data-theme="1998"] .sidebar, [data-theme="1998"] .widget-body, [data-theme="1998"] .site-footer {
-  background: #fff; color: #000; border-color: #000;
-}
-[data-theme="1998"] .titlebar { background-image: none; }
-[data-theme="1998"] .win-body { display: block; }
-[data-theme="1998"] .sidebar {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px;
-  border-right: 0; border-bottom: 2px solid #000; text-align: left;
-}
-[data-theme="1998"] .widget { margin-bottom: 0; }
-[data-theme="1998"] .sidebar { border-right: 0; border-top: 2px solid #000; padding: 10px; }
-[data-theme="1998"] .content { padding: 12px; }
-[data-theme="1998"] .btn {
-  background: #c0c0c0; border: 2px outset #fff; box-shadow: none; border-radius: 0;
-  font-family: "Times New Roman", serif; font-size: 13px;
-}
-[data-theme="1998"] .btn:active { border-style: inset; }
-[data-theme="1998"] .article-title { font-family: "Times New Roman", serif; color: #000080; text-shadow: none; }
-[data-theme="1998"] .prose { font-family: "Times New Roman", serif; font-size: 16px; max-width: none; }
-[data-theme="1998"] .prose pre, [data-theme="1998"] .ascii-art {
-  background: #fff; color: #000; border: 1px solid #000; text-shadow: none; white-space: pre-wrap;
-}
-[data-theme="1998"] .marquee-bar { background: #fff; color: #000080; border: 2px solid #000; }
-[data-theme="1998"] .marquee-bar .track { animation-duration: 60s; }
-[data-theme="1998"] .dock, [data-theme="1998"] .terminal { display: none !important; }
-[data-theme="1998"] .counter-display { background: #fff; border: 2px inset #c0c0c0; }
-[data-theme="1998"] .digit { background: #000; color: #33ff33; border: 1px solid #666; }
-[data-theme="1998"] .widget-title { background: #c0c0c0; color: #000; border: 1px solid #000; }
-[data-theme="1998"] .post-list > li, [data-theme="1998"] .gb-entry, [data-theme="1998"] .toc,
-[data-theme="1998"] .page-head { box-shadow: none; background: #fff; }
-[data-theme="1998"] a { color: #0000ee; }
-[data-theme="1998"] a:visited { color: #551a8b; }
-.tm-banner {
-  display: none; margin-bottom: 10px; padding: 6px; border: 2px dashed #000080;
-  font-family: "Times New Roman", serif; font-size: 12px; color: #000080; background: #ffffcc;
-}
-[data-theme="1998"] .tm-banner { display: block; }
 
 /* ------------------------------------------------------- reduced motion */
 @media (prefers-reduced-motion: reduce) {

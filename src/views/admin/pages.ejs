@@ -1,6 +1,6 @@
 <div class="admin-head">
   <h1>📄 <%= t('admin.pages') %></h1>
-  <a class="btn primary" href="/admin/pages/new"><%= t('admin.new_page') %></a>
+  <a class="btn primary" href="<%= adminPath %>/pages/new"><%= t('admin.new_page') %></a>
 </div>
 <p class="form-note">content/pages/*.md → <code>/&lt;slug&gt;</code></p>
 <table class="table">
@@ -8,13 +8,13 @@
   <tbody>
     <% pages.forEach(function (p) { %>
       <tr>
-        <td><a href="/admin/pages/<%= p.slug %>/edit"><strong><%= p.title %></strong></a><div class="mono muted" style="font-size:11px">/&lt;%= p.slug %&gt; · content/pages/<%= p.file %></div></td>
+        <td><a href="<%= adminPath %>/pages/<%= p.slug %>/edit"><strong><%= p.title %></strong></a><div class="mono muted" style="font-size:11px">/&lt;%= p.slug %&gt; · content/pages/<%= p.file %></div></td>
         <td class="mono" style="font-size:11.5px"><%= formatDate(p.updated || p.date, { locale: dateLocale }) %></td>
         <td><%= p.wordCount %></td>
         <td class="nowrap">
-          <a class="btn tiny" href="/admin/pages/<%= p.slug %>/edit">✏️</a>
+          <a class="btn tiny" href="<%= adminPath %>/pages/<%= p.slug %>/edit">✏️</a>
           <a class="btn tiny" href="/<%= p.slug %>" target="_blank" rel="noopener">👁</a>
-          <form method="post" action="/admin/pages/<%= p.slug %>/delete" class="inline-form" data-confirm="<%= t('admin.delete_confirm', { slug: p.file }) %>">
+          <form method="post" action="<%= adminPath %>/pages/<%= p.slug %>/delete" class="inline-form" data-confirm="<%= t('admin.delete_confirm', { slug: p.file }) %>">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
             <button class="btn tiny danger" type="submit">🗑</button>
           </form>

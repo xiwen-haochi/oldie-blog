@@ -1,12 +1,12 @@
 <div class="admin-head">
   <h1>📝 <%= t('admin.posts') %></h1>
   <div class="btn-row">
-    <a class="btn primary" href="/admin/posts/new"><%= t('admin.new_post') %></a>
-    <a class="btn" href="/admin/pages"><%= t('admin.pages') %></a>
+    <a class="btn primary" href="<%= adminPath %>/posts/new"><%= t('admin.new_post') %></a>
+    <a class="btn" href="<%= adminPath %>/pages"><%= t('admin.pages') %></a>
   </div>
 </div>
 
-<form class="filter-bar" method="get" action="/admin/posts">
+<form class="filter-bar" method="get" action="<%= adminPath %>/posts">
   <input type="hidden" name="lang" value="<%= locale %>">
   <input type="search" name="q" value="<%= q %>" placeholder="<%= t('admin.filter_placeholder') %>">
   <select name="filter">
@@ -16,7 +16,7 @@
     <option value="featured" <%= filter === 'featured' ? 'selected' : '' %>>★ (<%= counts.featured %>)</option>
   </select>
   <button class="btn" type="submit"><%= t('admin.filter') %></button>
-  <a class="btn ghost" href="/admin/posts"><%= t('admin.reset') %></a>
+  <a class="btn ghost" href="<%= adminPath %>/posts"><%= t('admin.reset') %></a>
 </form>
 
 <table class="table post-table">
@@ -27,7 +27,7 @@
     <% posts.forEach(function (p) { %>
       <tr>
         <td>
-          <a href="/admin/posts/<%= p.slug %>/edit"><strong><%= p.title %></strong></a>
+          <a href="<%= adminPath %>/posts/<%= p.slug %>/edit"><strong><%= p.title %></strong></a>
           <div class="mono muted" style="font-size:11px">content/posts/<%= p.file %> · <%= p.wordCount %> · <%= p.readingTime %> <%= t('card.min') %></div>
         </td>
         <td class="mono" style="font-size:11.5px"><%= formatDate(p.date, { locale: dateLocale }) %></td>
@@ -38,13 +38,13 @@
           <% if (p.noindex) { %><span class="stamp">NOINDEX</span><% } %>
         </td>
         <td class="nowrap">
-          <a class="btn tiny" href="/admin/posts/<%= p.slug %>/edit" title="<%= t('admin.edit') %>">✏️</a>
+          <a class="btn tiny" href="<%= adminPath %>/posts/<%= p.slug %>/edit" title="<%= t('admin.edit') %>">✏️</a>
           <a class="btn tiny" href="/posts/<%= p.slug %>" target="_blank" rel="noopener" title="<%= t('admin.view') %>">👁</a>
-          <form method="post" action="/admin/posts/<%= p.slug %>/duplicate" class="inline-form">
+          <form method="post" action="<%= adminPath %>/posts/<%= p.slug %>/duplicate" class="inline-form">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
             <button class="btn tiny" type="submit" title="<%= t('admin.duplicate') %>">⧉</button>
           </form>
-          <form method="post" action="/admin/posts/<%= p.slug %>/delete" class="inline-form" data-confirm="<%= t('admin.delete_confirm', { slug: p.slug }) %>">
+          <form method="post" action="<%= adminPath %>/posts/<%= p.slug %>/delete" class="inline-form" data-confirm="<%= t('admin.delete_confirm', { slug: p.slug }) %>">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
             <button class="btn tiny danger" type="submit">🗑</button>
           </form>

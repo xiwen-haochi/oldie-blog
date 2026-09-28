@@ -8,7 +8,7 @@
   </div>
 </div>
 
-<form class="filter-bar" method="get" action="/admin/guestbook">
+<form class="filter-bar" method="get" action="<%= adminPath %>/guestbook">
   <input type="hidden" name="lang" value="<%= locale %>">
   <select name="status">
     <option value="all" <%= status === 'all' ? 'selected' : '' %>><%= t('admin.all') %></option>
@@ -36,17 +36,17 @@
     </div>
     <div class="gb-actions">
       <% if ((e.status || 'approved') !== 'approved') { %>
-        <form method="post" action="/admin/guestbook/<%= e.id %>/status?status=<%= status %>" class="inline-form">
+        <form method="post" action="<%= adminPath %>/guestbook/<%= e.id %>/status?status=<%= status %>" class="inline-form">
           <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="status" value="approved">
           <button class="btn tiny" type="submit"><%= t('admin.approve') %></button>
         </form>
       <% } %>
-      <form method="post" action="/admin/guestbook/<%= e.id %>/status?status=<%= status %>" class="inline-form">
+      <form method="post" action="<%= adminPath %>/guestbook/<%= e.id %>/status?status=<%= status %>" class="inline-form">
         <input type="hidden" name="_csrf" value="<%= csrf %>">
         <input type="hidden" name="status" value="<%= (e.status || 'approved') === 'spam' ? 'approved' : 'spam' %>">
         <button class="btn tiny" type="submit"><%= (e.status || 'approved') === 'spam' ? '↩' : t('admin.spam') %></button>
       </form>
-      <form method="post" action="/admin/guestbook/<%= e.id %>/delete" class="inline-form" data-confirm="<%= t('admin.delete_confirm', { slug: '#' + e.id }) %>">
+      <form method="post" action="<%= adminPath %>/guestbook/<%= e.id %>/delete" class="inline-form" data-confirm="<%= t('admin.delete_confirm', { slug: '#' + e.id }) %>">
         <input type="hidden" name="_csrf" value="<%= csrf %>">
         <button class="btn tiny danger" type="submit">✖ <%= t('admin.delete') %></button>
       </form>

@@ -1,9 +1,9 @@
 <div class="admin-head">
   <h1>📊 <%= t('admin.dashboard') %></h1>
   <div class="btn-row">
-    <a class="btn primary" href="/admin/posts/new"><%= t('admin.new_post') %></a>
-    <a class="btn" href="/admin/pages/new"><%= t('admin.new_page') %></a>
-    <a class="btn" href="/admin/tools"><%= t('admin.tools') %></a>
+    <a class="btn primary" href="<%= adminPath %>/posts/new"><%= t('admin.new_post') %></a>
+    <a class="btn" href="<%= adminPath %>/pages/new"><%= t('admin.new_page') %></a>
+    <a class="btn" href="<%= adminPath %>/tools"><%= t('admin.tools') %></a>
     <a class="btn" href="/"><%= t('admin.view_site') %></a>
   </div>
 </div>
@@ -47,10 +47,10 @@
       <tbody>
         <% recent.forEach(function (p) { %>
           <tr>
-            <td><a href="/admin/posts/<%= p.slug %>/edit"><%= p.title %></a><div class="mono muted" style="font-size:11px">/posts/<%= p.slug %></div></td>
+            <td><a href="<%= adminPath %>/posts/<%= p.slug %>/edit"><%= p.title %></a><div class="mono muted" style="font-size:11px">/posts/<%= p.slug %></div></td>
             <td class="mono" style="font-size:11px"><%= formatDate(p.date, { locale: dateLocale }) %></td>
             <td><%- p.draft ? '<span class="stamp draft">' + t('card.draft') + '</span>' : '<span class="stamp featured">' + t('admin.live') + '</span>' %><%- p.featured ? ' <span class="stamp">★</span>' : '' %></td>
-            <td class="nowrap"><a class="btn tiny" href="/admin/posts/<%= p.slug %>/edit"><%= t('admin.edit') %></a></td>
+            <td class="nowrap"><a class="btn tiny" href="<%= adminPath %>/posts/<%= p.slug %>/edit"><%= t('admin.edit') %></a></td>
           </tr>
         <% }) %>
       </tbody>
@@ -67,18 +67,18 @@
         <div class="gb-head"><span><%= e.name %></span><span class="stamp-time"><%= e.location || 'unknown' %></span></div>
         <div class="gb-body"><%= truncate(e.message, 160) %></div>
         <div class="gb-meta btn-row">
-          <form method="post" action="/admin/guestbook/<%= e.id %>/status" class="inline-form">
+          <form method="post" action="<%= adminPath %>/guestbook/<%= e.id %>/status" class="inline-form">
             <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="status" value="approved">
             <button class="btn tiny" type="submit"><%= t('admin.approve') %></button>
           </form>
-          <form method="post" action="/admin/guestbook/<%= e.id %>/status" class="inline-form">
+          <form method="post" action="<%= adminPath %>/guestbook/<%= e.id %>/status" class="inline-form">
             <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="status" value="spam">
             <button class="btn tiny" type="submit"><%= t('admin.spam') %></button>
           </form>
         </div>
       </div>
     <% }) %>
-    <p><a class="btn tiny" href="/admin/guestbook">→</a></p>
+    <p><a class="btn tiny" href="<%= adminPath %>/guestbook">→</a></p>
   </section>
 
   <section class="admin-panel">

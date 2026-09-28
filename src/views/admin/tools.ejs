@@ -1,7 +1,7 @@
 <div class="admin-head">
   <h1>🛠 <%= t('admin.tools_title') %></h1>
   <div class="btn-row">
-    <a class="btn" href="/admin/export.json" download><%= t('admin.export') %></a>
+    <a class="btn" href="<%= adminPath %>/export.json" download><%= t('admin.export') %></a>
     <a class="btn" href="/feed.xml" target="_blank" rel="noopener">📡 RSS</a>
     <a class="btn" href="/sitemap.xml" target="_blank" rel="noopener">🗺</a>
     <a class="btn" href="/healthz" target="_blank" rel="noopener">💓</a>
@@ -22,7 +22,7 @@
     <h2 class="widget-title"><%= t('admin.content_posts') %></h2>
     <ul class="file-list mono">
       <% files.forEach(function (f) { %>
-        <li><a href="/admin/tools?file=<%= f %>"><%= f %></a></li>
+        <li><a href="<%= adminPath %>/tools?file=<%= f %>"><%= f %></a></li>
       <% }) %>
       <% if (!files.length) { %><li class="muted"><%= t('admin.empty_list') %></li><% } %>
     </ul>

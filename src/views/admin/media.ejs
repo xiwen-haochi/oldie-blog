@@ -3,7 +3,7 @@
   <span class="form-note"><%= t('admin.media_files', { n: files.length }) %></span>
 </div>
 
-<form method="post" action="/admin/media" enctype="multipart/form-data" class="upload-form">
+<form method="post" action="<%= adminPath %>/media" enctype="multipart/form-data" class="upload-form">
   <input type="hidden" name="_csrf" value="<%= csrf %>">
   <div class="grid-2">
     <div class="field">
@@ -28,7 +28,7 @@
       <figcaption class="mono">
         <a href="<%= u.url %>" target="_blank" rel="noopener"><%= u.name %></a><br>
         <%= humanBytes(u.size) %> · <%= formatDate(u.mtime, { locale: dateLocale }) %>
-        <form method="post" action="/admin/media/delete" data-confirm="<%= t('admin.delete_confirm', { slug: u.name }) %>">
+        <form method="post" action="<%= adminPath %>/media/delete" data-confirm="<%= t('admin.delete_confirm', { slug: u.name }) %>">
           <input type="hidden" name="_csrf" value="<%= csrf %>">
           <input type="hidden" name="name" value="<%= u.name %>">
           <button class="btn tiny danger" type="submit">🗑</button>

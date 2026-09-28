@@ -157,6 +157,8 @@ export function robotsTxt(site, { disallowAdmin = true } = {}) {
     'Allow: /assets/',
   ];
   if (disallowAdmin) {
+    // NB: the *configured* admin path is deliberately NOT listed. Writing a
+    // secret back door into robots.txt is an invitation, not a lock.
     lines.push('Disallow: /admin', 'Disallow: /api/terminal', 'Disallow: /dashboard');
   }
   lines.push('', '# Be a nice bot, this server is one small computer.', 'Crawl-delay: 1', '');

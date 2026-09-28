@@ -30,38 +30,6 @@
     setTimeout(function () { el.remove(); }, 3100);
   }
 
-  /* ============================================================ THEME 1998 */
-  var Theme = {
-    key: 'theme',
-    current: function () { return document.documentElement.getAttribute('data-theme') || 'classic'; },
-    apply: function (mode) {
-      document.documentElement.setAttribute('data-theme', mode);
-      store.set(Theme.key, mode);
-      $$('[data-toggle-theme]').forEach(function (b) {
-        b.classList.toggle('on', mode === '1998');
-        b.setAttribute('aria-pressed', mode === '1998' ? 'true' : 'false');
-      });
-    },
-    toggle: function () { Theme.apply(Theme.current() === '1998' ? 'classic' : '1998'); },
-    init: function () {
-      // ?theme=1998 is shareable: "look at my site in 1998"
-      var forced = /[?&]theme=(1998|classic)\b/.exec(location.search);
-      if (forced) {
-        Theme.apply(forced[1]);
-      } else {
-        var saved = store.get(Theme.key, null);
-        if (saved) Theme.apply(saved);
-      }
-      document.addEventListener('click', function (e) {
-        var t = e.target.closest('[data-toggle-theme]');
-        if (!t) return;
-        e.preventDefault();
-        Theme.toggle();
-        toast(Theme.current() === '1998' ? say('themeOn', '⏳ 1998 MODE') : say('themeOff', '↩ back to the present'));
-      });
-    },
-  };
-
   /* ========================================================= CHIPTUNE PLAYER */
   var Chiptune = {
     ctx: null, master: null, timer: null, step: 0, playing: false, volume: 0.16,
@@ -300,11 +268,6 @@
         var arg = (lower.split(/\s+/)[1] || 'toggle');
         if (arg === 'off') Chiptune.stop(); else if (arg === 'on') Chiptune.start(); else Chiptune.toggle();
         return Terminal.echo('♪ chiptune ' + (Chiptune.playing ? 'playing' : 'stopped'), 'warn');
-      }
-      if (head === 'theme') {
-        var t = (lower.split(/\s+/)[1] || '');
-        if (t === '1998') Theme.apply('1998'); else if (t === 'classic') Theme.apply('classic'); else Theme.toggle();
-        return Terminal.echo('⏳ theme: ' + Theme.current(), 'warn');
       }
       if (head === 'open' || head === 'start') {
         var url = raw.split(/\s+/).slice(1).join(' ') || '/';
@@ -596,7 +559,6 @@
 
   /* ==================================================================== boot */
   function init() {
-    try { Theme.init(); } catch (e) { console.warn('theme', e); }
     try { Terminal.boot(); } catch (e) { console.warn('terminal', e); }
     try { Chiptune.init(); } catch (e) { console.warn('chiptune', e); }
     try { Radio.init(); } catch (e) { console.warn('radio', e); }

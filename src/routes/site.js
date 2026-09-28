@@ -248,13 +248,6 @@ export function siteRoutes(ctx) {
     res.redirect(post.url + '#comments');
   });
 
-  /* -------------------------------------------------------- subscribe */
-  router.post('/subscribe', async (req, res) => {
-    if (!checkCsrf(req, req.body._csrf)) return res.redirect('/');
-    const ok = await ctx.community.subscribe(req.body.email);
-    res.redirect('/?subscribed=' + (ok ? '1' : '0') + '#main');
-  });
-
   /* ---------------------------------------------------------- random */
   router.get('/random', (req, res) => {
     const post = ctx.index.randomPost();

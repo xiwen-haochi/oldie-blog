@@ -66,18 +66,6 @@
   </div>
   <% } %>
 
-  <div class="widget">
-    <h3 class="widget-title">🏆 <%= t('side.awards') %></h3>
-    <div class="widget-body">
-      <div class="awards">
-        <span class="award" title="Hand-coded with love">💖</span>
-        <span class="award" title="No frameworks were harmed">🧱</span>
-        <span class="award" title="Y2K compliant">📼</span>
-        <span class="award" title="Table layout enthusiast">📊</span>
-        <span class="award" title="Loads in under a second on 56k">📶</span>
-      </div>
-    </div>
-  </div>
 
   <div class="widget">
     <h3 class="widget-title">📬 <%= t('side.guestbook') %></h3>
@@ -94,18 +82,6 @@
     </div>
   </div>
 
-  <div class="widget">
-    <h3 class="widget-title">📮 <%= t('side.zine') %></h3>
-    <div class="widget-body">
-      <p style="margin:0 0 6px"><%= t('side.zine_body') %></p>
-      <form method="post" action="/subscribe" class="flex" style="gap:4px">
-        <input type="hidden" name="_csrf" value="<%= csrf %>">
-        <input type="email" name="email" placeholder="you@earth.net" required aria-label="e-mail" style="font-size:11px;padding:2px">
-        <button class="btn tiny" type="submit"><%= t('side.join') %></button>
-      </form>
-      <div class="mono" style="font-size:9.5px;margin-top:4px"><%= subscriberCount %> <%= t('side.subscribers') %> · <a href="/feed.xml"><%= t('side.or_rss') %></a></div>
-    </div>
-  </div>
 
   <div class="widget">
     <div class="widget-body center" style="font-size:10px">

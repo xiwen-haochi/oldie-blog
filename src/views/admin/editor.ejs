@@ -3,7 +3,7 @@
   const val = (k, dflt) => (d[k] === undefined || d[k] === null ? (dflt === undefined ? '' : dflt) : d[k]);
   const tagStr = Array.isArray(d.tags) ? d.tags.join(', ') : (d.tags || '');
   const keyStr = Array.isArray(d.keywords) ? d.keywords.join(', ') : (d.keywords || '');
-  const action = kind === 'post' ? '/admin/posts' : '/admin/pages';
+  const action = kind === 'post' ? adminPath + '/posts' : adminPath + '/pages';
   const kindLabel = kind === 'post' ? t('admin.posts').replace(/^[^ ]+ /, '') : t('admin.pages').replace(/^[^ ]+ /, '');
 %>
 <div class="admin-head">

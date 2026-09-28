@@ -87,9 +87,24 @@ export function createApp(ctx = createContext()) {
   });
 
   // ---- static assets -----------------------------------------------------
-  const staticOpts = { maxAge: process.env.NODE_ENV === 'production' ? '30d' : 0, etag: true };
-  app.use(express.static(PUBLIC_DIR, { ...staticOpts, extensions: [] }));
-  app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d' }));
+  // CSS/JS are served with ?v=<hash>, so they are safe to cache hard even in
+  // development — the browser stops re-downloading 58 KB on every navigation.
+  const isProd = process.env.NODE_ENV === 'production';
+  const staticOpts = {
+    maxAge: isProd ? '30d' : '1h',
+    etag: true,
+    lastModified: true,
+    immutable: isProd,
+  };
+  app.use(express.static(PUBLIC_DIR, staticOpts));
+  app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d', etag: true }));
+
+  // HTML is cheap to revalidate and must never go stale: no-cache lets the
+  // browser re-ask and get a cheap 304 thanks to the ETag express sets.
+  app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-cache');
+    next();
+  });
 
   // ---- shared view locals ------------------------------------------------
   app.use((req, res, next) => {

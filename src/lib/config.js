@@ -18,6 +18,8 @@ export const DEFAULTS = {
   email: 'webmaster@example.com',
   url: 'http://localhost:4173',
   locale: 'zh-CN',
+  // where the admin lives. 'admin' and '/admin' and '/my-secret-door' all work.
+  adminPath: '/admin',
   langDir: 'ltr',
   timezone: 'Asia/Shanghai',
   postsPerPage: 8,
@@ -91,8 +93,21 @@ export function loadConfig({ env = process.env } = {}) {
     ...(config.admin || {}),
   };
   config.url = String(config.url).replace(/\/$/, '');
-  config.locale = config.locale || 'en';
+  config.locale = config.locale || 'zh-CN';
+  config.adminPath = normaliseAdminPath(config.adminPath);
   return config;
+}
+
+/** 'admin' → '/admin', '/my-secret-door/' → '/my-secret-door', junk → '/admin'. */
+export function normaliseAdminPath(input) {
+  const raw = typeof input === 'string' ? input.trim() : '';
+  if (!raw) return '/admin';
+  const parts = raw
+    .split('/')
+    .map((part) => part.replace(/[^\w\-\u4e00-\u9fff]/g, ''))
+    .filter((part) => part && part !== '.' && part !== '..');
+  const clean = '/' + parts.join('/');
+  return clean.length > 1 ? clean : '/admin';
 }
 
 /** Absolute URL helper – never emits a double slash. */

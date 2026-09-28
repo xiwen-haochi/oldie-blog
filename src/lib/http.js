@@ -3,39 +3,50 @@ import crypto from 'node:crypto';
 import { Sessions } from './sessions.js';
 
 const COMPRESSIBLE = /^(text\/|application\/(javascript|json|xml|manifest\+json)|image\/svg)/;
+const MIN_BYTES = 900;
 
 export function gzipMiddleware(req, res, next) {
   if (req.method === 'HEAD' || req.method === 'OPTIONS') return next();
-  if (!/gzip/.test(String(req.headers['accept-encoding'] || ''))) return next();
+  if (!/\bgzip\b/.test(String(req.headers['accept-encoding'] || ''))) return next();
 
   const originalEnd = res.end.bind(res);
-  let chunks = [];
+  const chunks = [];
+  let ended = false;
+
   const collect = (chunk) => {
     if (chunk === undefined || chunk === null) return;
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), 'utf8'));
   };
+  const done = (enc, cb) => (typeof enc === 'function' ? enc : typeof cb === 'function' ? cb : undefined);
+
+  res.setHeader('Vary', 'Accept-Encoding');
 
   res.write = function (chunk, enc, cb) {
     collect(chunk);
-    if (typeof enc === 'function') enc();
-    if (typeof cb === 'function') cb();
+    const finish = done(enc, cb);
+    if (finish) finish();
     return true;
   };
 
   res.end = function (chunk, enc, cb) {
+    if (ended) return res;
+    ended = true;
     collect(chunk);
-    const body = Buffer.concat(chunks);
-    chunks = [];
+    const body = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
+    chunks.length = 0;
+    const finish = done(enc, cb);
+
     const type = String(res.getHeader('Content-Type') || '');
-    if (body.length > 900 && COMPRESSIBLE.test(type) && !res.getHeader('Content-Encoding')) {
+    const wantsGzip = body.length > MIN_BYTES && COMPRESSIBLE.test(type) && !res.getHeader('Content-Encoding');
+    if (wantsGzip) {
       res.setHeader('Content-Encoding', 'gzip');
-      res.setHeader('Vary', 'Accept-Encoding');
       res.removeHeader('Content-Length');
-      originalEnd(zlib.gzipSync(body, { level: 6 }));
-      return res;
+      return originalEnd(zlib.gzipSync(body, { level: 6 }), finish);
     }
-    return originalEnd(chunk, enc, cb);
+    if (body.length) return originalEnd(body, finish);
+    return originalEnd(finish);
   };
+
   return next();
 }
 
@@ -99,16 +110,10 @@ export function countPageview(ctx) {
       req.bot = true;
       return next();
     }
-    try {
-      res.locals.liveStats = await ctx.stats.hit({
-        path: req.path,
-        ip: req.clientIp,
-        ua,
-        visitorId: req.visitorId,
-      });
-    } catch (err) {
-      console.error('[stats]', err.message);
-    }
+    // counting touches the disk; never make the visitor wait for it
+    ctx.stats.hit({ path: req.path, ip: req.clientIp, ua, visitorId: req.visitorId })
+      .then((live) => { res.locals.liveStats = live; })
+      .catch((err) => { console.error('[stats]', err.message); });
     next();
   };
 }

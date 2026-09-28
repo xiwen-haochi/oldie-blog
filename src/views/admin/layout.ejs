@@ -34,7 +34,7 @@
       <div class="admin-nav-foot">
         <div class="mono">node <%= process.versions.node %></div>
         <div class="mono"><%= t('admin.uptime') %> <%= Math.floor(process.uptime() / 60) %>m</div>
-        <form method="post" action="/admin/logout">
+        <form method="post" action="<%= adminPath %>/logout">
           <input type="hidden" name="_csrf" value="<%= csrf %>">
           <button class="btn tiny" type="submit"><%= t('admin.logout') %></button>
         </form>
