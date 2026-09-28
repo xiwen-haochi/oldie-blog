@@ -19,6 +19,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'smoke-test-password';
 
+// unique per run: the suite can be run repeatedly against the same data dir
+const RUN_TAG = Math.random().toString(36).slice(2, 8);
 const results = [];
 let failures = 0;
 
@@ -339,10 +341,10 @@ async function main() {
       email: 'smoke@example.com',
       url: 'https://example.com',
       location: 'Test Lab',
-      message: 'Automated smoke test was here.',
+      message: 'Automated smoke test was here. [' + RUN_TAG + ']',
     });
     assert.equal(res.status, 302, 'sign status ' + res.status);
-    assert.ok(!(await text('/guestbook')).includes('Smoke Tester'), 'a pending entry must stay private');
+    assert.ok(!(await text('/guestbook')).includes('[' + RUN_TAG + ']'), 'a pending entry must stay private');
     return 'queued';
   });
   await check('honeypot spam is dropped', async () => {
@@ -353,9 +355,9 @@ async function main() {
   });
   await check('a comment waits in the moderation queue', async () => {
     const csrf = csrfFrom(await text('/posts/welcome-to-my-homepage'));
-    const res = await post('/comments', { _csrf: csrf, post: 'welcome-to-my-homepage', name: 'Reader', message: 'Great page!' });
+    const res = await post('/comments', { _csrf: csrf, post: 'welcome-to-my-homepage', name: 'Reader', message: 'Great page! [' + RUN_TAG + ']' });
     assert.equal(res.status, 302);
-    assert.ok(!(await text('/posts/welcome-to-my-homepage')).includes('Great page!'), 'a pending comment must stay private');
+    assert.ok(!(await text('/posts/welcome-to-my-homepage')).includes('Great page! [' + RUN_TAG + ']'), 'a pending comment must stay private');
     return 'queued';
   });
 
@@ -416,13 +418,13 @@ async function main() {
     });
 
   await check('approving a pending entry publishes it', async () => {
-    // the admin flow approves both the guestbook entry and the comment
-    const guestbookPage = await (await get('/admin/guestbook?status=pending')).text();
-    const id = (guestbookPage.match(/\/admin\/guestbook\/(\d+)\/status/) || [])[1];
+    // the suite runs in a throwaway data dir, so the first pending entry is ours
+    const page = await (await get('/admin/guestbook?status=pending')).text();
+    const id = (page.match(/\/admin\/guestbook\/(\d+)\/status/) || [])[1];
     assert.ok(id, 'the pending entry should be listed in the admin');
     const res = await post('/admin/guestbook/' + id + '/status', { _csrf: adminCsrf, status: 'approved' });
     assert.equal(res.status, 302);
-    assert.ok((await text('/guestbook')).includes('Smoke Tester'), 'approved entry is still not public');
+    assert.ok((await text('/guestbook')).includes('[' + RUN_TAG + ']'), 'the approved entry is still not public');
     return 'published';
   });
 
