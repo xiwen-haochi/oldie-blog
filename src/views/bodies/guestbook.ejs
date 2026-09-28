@@ -11,8 +11,12 @@
 
 <div class="grid-2" style="align-items:start;margin-bottom:16px">
   <form class="bbs-form" method="post" action="/guestbook" id="sign">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <input type="hidden" name="lang" value="<%= locale %>">
     <h3 style="margin:0 0 8px;font-family:var(--font-ui);font-size:13px"><%= t('gb.sign_heading') %></h3>
-    <% if (flash) { %><div class="alert <%= flash.type %>"><%= flash.text %></div><% } %>
+    <% if (flash) { %>
+      <div class="alert <%= flash.type %>"><%= flash.text %></div>
+    <% } %>
     <div class="row">
       <label for="g-name"><%= t('gb.name') %> *</label>
       <input id="g-name" name="name" required maxlength="40" value="<%= form.name || '' %>">
@@ -36,7 +40,6 @@
       <textarea id="g-message" name="message" rows="5" required maxlength="1500" placeholder="<%= t('gb.message_hint') %>"><%= form.message || '' %></textarea>
     </div>
     <input type="text" name="website" tabindex="-1" autocomplete="off" style="display:none" aria-hidden="true">
-    <input type="hidden" name="lang" value="<%= locale %>">
     <div class="btn-row">
       <button class="btn primary" type="submit"><%= t('gb.submit') %></button>
       <span class="form-note"><%= t('gb.submit_note') %></span>
@@ -73,10 +76,16 @@
     </div>
     <div class="gb-body"><%= e.message %></div>
     <div class="gb-meta">
-      <% if (e.url) { %><a href="<%= e.url %>" rel="nofollow noopener" target="_blank">🌐 <%= e.host %></a> · <% } %>
-      <% if (e.email) { %>📧 <a href="mailto:<%= e.email %>"><%= t('gb.reply') %></a> · <% } %>
+      <% if (e.url) { %>
+        <a href="<%= e.url %>" rel="nofollow noopener" target="_blank">🌐 <%= e.host %></a> ·
+      <% } %>
+      <% if (e.email) { %>
+        📧 <a href="mailto:<%= e.email %>"><%= t('gb.reply') %></a> ·
+      <% } %>
       <span class="mono"><%= t('gb.entry') %> #<%= e.id %></span>
-      <% if (e.status === 'pending') { %> · <span class="stamp draft"><%= t('gb.awaiting') %></span><% } %>
+      <% if (e.status === 'pending') { %>
+        · <span class="stamp draft"><%= t('gb.awaiting') %></span>
+      <% } %>
     </div>
   </div>
 <% }) %>

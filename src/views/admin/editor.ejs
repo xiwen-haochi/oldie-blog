@@ -4,13 +4,16 @@
   const tagStr = Array.isArray(d.tags) ? d.tags.join(', ') : (d.tags || '');
   const keyStr = Array.isArray(d.keywords) ? d.keywords.join(', ') : (d.keywords || '');
   const action = kind === 'post' ? adminPath + '/posts' : adminPath + '/pages';
+  // the create routes do not pass originalSlug; never let that be undefined
+  const fresh = typeof isNew === 'undefined' ? true : isNew;
+  const orig = typeof originalSlug === 'undefined' ? '' : (originalSlug || '');
   const kindLabel = kind === 'post' ? t('admin.posts').replace(/^[^ ]+ /, '') : t('admin.pages').replace(/^[^ ]+ /, '');
 %>
 <div class="admin-head">
-  <h1>✏️ <%= isNew ? t('admin.new', { kind: kindLabel }) : kindLabel %> <span class="mono muted" style="font-size:13px">content/<%= kind === 'post' ? 'posts' : 'pages' %>/<%= doc.file || '(unsaved)' %></span></h1>
+  <h1>✏️ <%= fresh ? t('admin.new', { kind: kindLabel }) : kindLabel %> <span class="mono muted" style="font-size:13px">content/<%= kind === 'post' ? 'posts' : 'pages' %>/<%= doc.file || '(unsaved)' %></span></h1>
   <div class="btn-row">
-    <button class="btn primary" type="submit" form="editor-form">💾 <%= t('admin.save') %> (<%= isNew ? t('admin.create') : t('admin.update') %>)</button>
-    <% if (!isNew) { %>
+    <button class="btn primary" type="submit" form="editor-form">💾 <%= t('admin.save') %> (<%= fresh ? t('admin.create') : t('admin.update') %>)</button>
+    <% if (!fresh) { %>
       <a class="btn" href="/<%= kind === 'post' ? 'posts/' + d.slug : (d.slug || '') %>" target="_blank" rel="noopener">👁 <%= t('admin.view') %></a>
     <% } %>
     <a class="btn ghost" href="/<%= kind === 'post' ? 'admin/posts' : 'admin/pages' %>"><%= t('admin.back') %></a>

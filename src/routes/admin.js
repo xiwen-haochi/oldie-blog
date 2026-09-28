@@ -92,6 +92,8 @@ export function adminRoutes(ctx) {
       site: ctx.site,
       ctx,
       nav: adminNav(i18n.t, A),
+      isNew: false,
+      originalSlug: '',
       flash: res.locals.flash || null,
       csrf: (locals.req && locals.req.session && locals.req.session.csrf) || '',
       ...i18n,
