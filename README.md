@@ -218,6 +218,40 @@ straight from another document. Two things happen on the way out:
    figures, `video` and inline `svg` survive.
 
 So you can paste freely without taking the blog's styling down with it.
+## Before you publish
+
+```bash
+pnpm clean            # move your posts/pages/messages into content/.backup-<date>
+pnpm clean --force    # delete instead of backing up
+```
+
+It leaves a starter post behind and moves everything else to the backup.
+Then edit the two files that carry your identity by hand:
+
+- `config/site.config.json` — title, author, e-mail, tagline, nav, webring names (**this one is meant to be committed**)
+- `content/pages/about.md` — the about page
+
+Everything else is local runtime data: hits, guestbook, subscribers, sessions,
+admin settings (S3 keys, AI key) and the admin password. `.gitignore` keeps them
+out of the repository, and the app re-checks on boot and shouts if one slips in.
+
+### Runtime data can live in SQLite
+
+JSON files are the default (one file per store, readable, easy to back up).
+Switch to SQLite in **Settings → Runtime data storage** and restart:
+
+- it is Node's own `node:sqlite` (22.5+), so **nothing to install**
+- everything in one `data/oldie.sqlite`, WAL mode, survives power cuts
+- both backends share one interface, switch back any time
+
+| Where | Holds | Committed? |
+| --- | --- | --- |
+| `data/*.json` or `data/oldie.sqlite` | hits, guestbook, subscribers, sessions | no, ignored |
+| `data/settings.json` | admin settings (S3 keys, AI key) | no, ignored |
+| `config/admin.json` | admin password (scrypt) | no, ignored |
+| `config/site.config.json` | title, nav, other public bits | yes, on purpose |
+| `content/*.md` | posts and pages | your call |
+
 ## Where the admin lives
 
 Public pages are public. The admin is a door you choose:

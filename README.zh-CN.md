@@ -215,6 +215,40 @@ pnpm new:post "文章标题" --tags=retro,web --draft
    `javascript:` 一律去掉；表格、图片、`video`、内联 `svg` 保留。
 
 所以你可以放心粘贴，页面样式不会被带崩。
+## 发布到 GitHub 之前
+
+```bash
+pnpm clean            # 把我的文章/页面/留言/访问量挪到 content/.backup-<日期>
+pnpm clean --force    # 直接删掉，不留备份
+```
+
+跑完会给你留一篇《第一篇文章》当模板，其余内容都进了备份目录。
+然后手动改这两处身份信息：
+
+- `config/site.config.json` —— 站名、作者、邮箱、副标题、导航、webring 名字（**这个文件是要进仓库的**）
+- `content/pages/about.md` —— 关于页
+
+其余全是本地数据，`pnpm clean` 会清空，而且 `.gitignore` 已经保证它们不会进仓库：
+访问量、留言板、订阅者、会话、后台设置（含 S3 密钥和 AI key）、管理员密码。
+启动时程序会自己检查一遍：发现敏感文件被 git 跟踪就直接报警。
+
+### 运行时数据可以换 SQLite
+
+默认是 JSON（一个文件一个 store，好读好备份）。想要 SQLite 就在
+「设置 → 运行时数据存储」里切到 SQLite，重启生效：
+
+- 底层是 Node 自带的 `node:sqlite`（22.5+），**不需要装任何依赖**
+- 全部数据在一个 `data/oldie.sqlite`，WAL 模式，断电也不容易坏
+- 两种后端接口完全一样，随时切回去
+
+| 存哪 | 内容 | 会进 git 吗 |
+| --- | --- | --- |
+| `data/*.json` 或 `data/oldie.sqlite` | 访问量、留言、订阅、会话 | ❌ 已忽略 |
+| `data/settings.json` | 后台设置（含 S3 密钥、AI key） | ❌ 已忽略 |
+| `config/admin.json` | 管理员密码（scrypt） | ❌ 已忽略 |
+| `config/site.config.json` | 站名、导航等公开信息 | ✅ 应该进 |
+| `content/*.md` | 文章和页面 | ✅ 你决定 |
+
 ## 后台放在哪里
 
 公开页面人人都能看，后台则是你自己选的一扇门：
