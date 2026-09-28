@@ -5,6 +5,8 @@
 > in the corner — and a real SEO layer underneath.
 
 [![node](https://img.shields.io/badge/node-%3E%3D22.13-3fa633?logo=node.js)](https://nodejs.org)
+
+English · [简体中文](./README.zh-CN.md)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![deps](https://img.shields.io/badge/dependencies-6-informational)](#why-so-few-dependencies)
 
