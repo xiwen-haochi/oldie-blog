@@ -4,6 +4,12 @@
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+  var I18N = {};
+  try {
+    var blob = document.getElementById('i18n-admin');
+    if (blob) I18N = JSON.parse(blob.textContent || '{}');
+  } catch (e) { /* fall back to the keys below */ }
+  var say = function (key, fallback) { return I18N[key] || fallback; };
   var form = $('#editor-form');
 
   /* --------------------------------------------------- delete confirms */
@@ -57,7 +63,7 @@
     var text = body.value;
     var words = (text.match(/[\u4e00-\u9fff]/g) || []).length + (text.match(/[A-Za-z0-9_'-]+/g) || []).length;
     var mins = Math.max(1, Math.round((words / 260) * 10) / 10);
-    if (stats) stats.textContent = words + ' words · ' + mins + ' min read · ' + text.length + ' chars';
+    if (stats) stats.textContent = words + ' · ' + mins + ' min · ' + text.length + ' chars';
   }
   if (body) body.addEventListener('input', paintStats);
   paintStats();
@@ -142,7 +148,7 @@
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d.error) throw new Error(d.error);
-        if (previewPane) previewPane.innerHTML = d.html || '<p class="form-note">Nothing to preview yet.</p>';
+        if (previewPane) previewPane.innerHTML = d.html || '<p class="form-note">' + escapeHtml(say('previewEmpty', 'Nothing to preview yet.')) + '</p>';
         if (metaPane) {
           metaPane.innerHTML =
             '<table class="table"><tbody>' +
@@ -165,7 +171,7 @@
         }
       })
       .catch(function (err) {
-        if (previewPane) previewPane.innerHTML = '<div class="alert err">Preview failed: ' + err.message + '</div>';
+        if (previewPane) previewPane.innerHTML = '<div class="alert err">' + escapeHtml(say('previewFailed', 'Preview failed: {msg}').replace('{msg}', err.message)) + '</div>';
       });
   }
   function row(k, v) {
@@ -202,14 +208,14 @@
   if (body) {
     var snapshot = localStorage.getItem(KEY);
     if (snapshot && snapshot !== body.value && snapshot.length > 40) {
-      var restore = window.confirm('Found an unsaved local draft of this post (' + snapshot.length + ' chars). Restore it?');
+      var restore = window.confirm(say('unsaved', 'Found an unsaved local draft ({n} chars). Restore it?').replace('{n}', snapshot.length));
       if (restore) { body.value = snapshot; body.dispatchEvent(new Event('input')); }
     }
     setInterval(function () {
       if (!body || !body.value.trim()) return;
       try {
         localStorage.setItem(KEY, body.value);
-        if (autosave) autosave.textContent = 'local autosave ' + new Date().toLocaleTimeString();
+        if (autosave) autosave.textContent = say('autosave', 'local autosave {time}').replace('{time}', new Date().toLocaleTimeString());
       } catch (err) { /* quota */ }
     }, 8000);
     window.addEventListener('beforeunload', function (e) {

@@ -7,9 +7,12 @@ import { toPlainText } from '../lib/markdown.js';
 import { checkCsrf } from '../lib/sessions.js';
 import { spamScore } from '../lib/community.js';
 import { formatDate, isoDate, slugify } from '../lib/text.js';
+import { makeTranslator } from '../lib/i18n.js';
 
 export function siteRoutes(ctx) {
   const router = express.Router();
+  // localised meta text: ?lang= wins, then the cookie, then the site config
+  const tr = (req) => makeTranslator((req && req.locale) || ctx.site.locale || 'zh-CN');
 
   const render = (res, view, locals) => res.render('pages/' + view, locals);
 
@@ -36,15 +39,16 @@ export function siteRoutes(ctx) {
 
   /* ------------------------------------------------------- post index */
   router.get('/posts', (req, res) => {
+    const t = tr(req);
     const posts = ctx.index.publishedPosts();
     const pager = paginate(posts, req.query.page, ctx.site.postsPerPage || 8);
     const page = pageMeta(ctx.site, {
       title: 'All dispatches',
-      description: 'Every dispatch published on ' + ctx.site.title + ', newest first.',
+      description: t('meta.posts', { site: ctx.site.title }),
       url: pager.page > 1 ? '/posts?page=' + pager.page : '/posts',
       prevUrl: pager.hasPrev ? '/posts?page=' + pager.prev : '',
       nextUrl: pager.hasNext ? '/posts?page=' + pager.next : '',
-      jsonLd: [collectionLd(ctx.site, { name: 'All dispatches', description: 'Archive of every post', url: '/posts' })],
+      jsonLd: [collectionLd(ctx.site, { name: t('posts.title'), description: t('meta.posts', { site: ctx.site.title }), url: '/posts' })],
     });
     res.render('pages/posts', enrichLocals(ctx, req, res, {
       page, pager, pagerUrl: (n) => '/posts?page=' + n, featured: [],
@@ -114,10 +118,11 @@ export function siteRoutes(ctx) {
 
   /* --------------------------------------------------------- archive */
   router.get('/archive', (req, res) => {
+    const t = tr(req);
     const posts = ctx.index.publishedPosts();
     const page = pageMeta(ctx.site, {
       title: 'Archive',
-      description: 'Every post on ' + ctx.site.title + ' grouped by year and month.',
+      description: t('meta.archive', { site: ctx.site.title }),
       url: '/archive',
       jsonLd: [breadcrumbLd(ctx.site, [{ name: 'Home', href: '/' }, { name: 'Archive', href: '/archive' }])],
     });
@@ -132,9 +137,10 @@ export function siteRoutes(ctx) {
 
   /* ------------------------------------------------------------ tags */
   router.get('/tags', (req, res) => {
+    const t = tr(req);
     const page = pageMeta(ctx.site, {
       title: 'Tags',
-      description: 'Browse every post on ' + ctx.site.title + ' by topic.',
+      description: t('meta.tags', { site: ctx.site.title }),
       url: '/tags',
       jsonLd: [breadcrumbLd(ctx.site, [{ name: 'Home', href: '/' }, { name: 'Tags', href: '/tags' }])],
     });
@@ -142,6 +148,7 @@ export function siteRoutes(ctx) {
   });
 
   router.get('/tags/:tag', (req, res, next) => {
+    const t = tr(req);
     const posts = ctx.index.postsByTag(req.params.tag);
     if (!posts.length) return next();
     const tag = ctx.index.allTags().find((t) => t.slug === slugify(req.params.tag)) || { name: req.params.tag, slug: slugify(req.params.tag), count: posts.length };
@@ -150,7 +157,7 @@ export function siteRoutes(ctx) {
       title: '#' + tag.name,
       description: posts.length + ' posts tagged ' + tag.name + ' on ' + ctx.site.title + '.',
       url: '/tags/' + tag.slug,
-      jsonLd: [collectionLd(ctx.site, { name: 'Posts tagged ' + tag.name, description: '', url: '/tags/' + tag.slug })],
+      jsonLd: [collectionLd(ctx.site, { name: '#' + tag.name, description: t('meta.tagged', { n: pager.total, tag: tag.name }), url: '/tags/' + tag.slug })],
     });
     res.render('pages/tag', enrichLocals(ctx, req, res, {
       page, tag, pager, pagerUrl: (n) => '/tags/' + tag.slug + '?page=' + n,
@@ -159,11 +166,12 @@ export function siteRoutes(ctx) {
 
   /* ---------------------------------------------------------- search */
   router.get('/search', (req, res) => {
+    const t = tr(req);
     const q = String(req.query.q || '').slice(0, 120);
     const results = q ? search(ctx.searchIndex, parseQuery(q), 40) : [];
     const page = pageMeta(ctx.site, {
       title: q ? 'Search: ' + q : 'Search',
-      description: 'Search all posts on ' + ctx.site.title + '. Supports tag:, quotes and -exclusions.',
+      description: t('meta.search', { site: ctx.site.title }),
       url: '/search',
       noindex: true,
       jsonLd: [breadcrumbLd(ctx.site, [{ name: 'Home', href: '/' }, { name: 'Search', href: '/search' }])],
@@ -175,11 +183,12 @@ export function siteRoutes(ctx) {
 
   /* ------------------------------------------------------- guestbook */
   router.get('/guestbook', (req, res) => {
+    const t = tr(req);
     const all = ctx.community.entries({ target: 'guestbook', status: 'approved' });
     const pager = paginate(all, req.query.page, 20);
     const page = pageMeta(ctx.site, {
       title: 'Guestbook',
-      description: 'Sign the guestbook of ' + ctx.site.author + '.',
+      description: t('meta.guestbook', { author: ctx.site.author }),
       url: '/guestbook',
       jsonLd: [breadcrumbLd(ctx.site, [{ name: 'Home', href: '/' }, { name: 'Guestbook', href: '/guestbook' }])],
     });
@@ -212,7 +221,7 @@ export function siteRoutes(ctx) {
       ua: req.get('user-agent'),
       autoApprove: (spam < 3) && ctx.site.autoApproveGuestbook !== false,
     });
-    res.locals.flash = { type: 'ok', text: '📮 Signed! It is live on the page (or waiting for a human nod).' };
+    res.locals.flash = { type: 'ok', text: tr(req)('gb.signed') };
     res.redirect('/guestbook#sign');
   });
 

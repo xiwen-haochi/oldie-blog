@@ -1,81 +1,155 @@
 {
-  "title": "Oldie Blog",
-  "tagline": "Best viewed with Netscape Navigator 4.0 at 800x600",
-  "description": "A hand-made 1990s personal homepage that survived the dot-com winter: Markdown in, fast HTML out, webrings, guestbooks and a DOS terminal in every corner.",
-  "author": "The Webmaster",
+  "title": "老博客",
+  "tagline": "建议用 800×600 分辨率、Netscape Navigator 4.0 观看",
+  "description": "一个活过 dot-com 寒冬的 1990 年代个人主页：Markdown 写内容，服务端渲染出 HTML，还有 webring、留言板和角落里的 DOS 终端。",
+  "author": "站长",
   "email": "webmaster@example.com",
   "since": "1998",
   "url": "http://localhost:4173",
-  "locale": "en",
+  "locale": "zh-CN",
   "postsPerPage": 8,
+  "i18n": {
+    "en": {
+      "tagline": "Best viewed in Netscape Navigator 4.0 at 800x600",
+      "description": "A 1990s personal homepage that outlived the dot-com winter: Markdown in, server-rendered HTML out, plus a webring, a guestbook and a DOS terminal.",
+      "nav": [
+        {
+          "label": "HOME",
+          "href": "/"
+        },
+        {
+          "label": "POSTS",
+          "href": "/posts"
+        },
+        {
+          "label": "ARCHIVE",
+          "href": "/archive"
+        },
+        {
+          "label": "TAGS",
+          "href": "/tags"
+        },
+        {
+          "label": "GUESTBOOK",
+          "href": "/guestbook"
+        },
+        {
+          "label": "ABOUT",
+          "href": "/about"
+        }
+      ],
+      "banners": [
+        {
+          "text": "★ NOW BROADCASTING: every post here is hand-written Markdown, rendered in milliseconds ★",
+          "href": "/about"
+        },
+        {
+          "text": "★ SIGN MY GUESTBOOK! It takes 10 seconds and makes my day ★",
+          "href": "/guestbook"
+        },
+        {
+          "text": "★ PRESS Ctrl+K ANYWHERE FOR A DOS TERMINAL ★",
+          "href": "/about#colophon"
+        }
+      ],
+      "webring": [
+        {
+          "title": "The Really Lame Webring",
+          "url": "https://example.com/ring/",
+          "note": "ringmaster: uncle gronk"
+        },
+        {
+          "title": "Dial-Up Survivors",
+          "url": "https://example.com/modem/",
+          "note": "56k and proud"
+        },
+        {
+          "title": "MIDI Heaven",
+          "url": "https://example.com/midi/",
+          "note": "please play quietly"
+        },
+        {
+          "title": "Under Construction Since 1997",
+          "url": "https://example.com/uc/",
+          "note": "still working on it"
+        },
+        {
+          "title": "The Guestbook Gallery",
+          "url": "https://example.com/gb/",
+          "note": "sign mine, i sign yours"
+        }
+      ],
+      "footer": "Hand-written in a text editor. No frameworks were harmed in the making of this page."
+    }
+  },
   "nav": [
     {
-      "label": "HOME",
+      "label": "首页",
       "href": "/"
     },
     {
-      "label": "DISPATCHES",
+      "label": "日志",
       "href": "/posts"
     },
     {
-      "label": "ARCHIVE",
+      "label": "归档",
       "href": "/archive"
     },
     {
-      "label": "TAGS",
+      "label": "标签",
       "href": "/tags"
     },
     {
-      "label": "GUESTBOOK",
+      "label": "留言板",
       "href": "/guestbook"
     },
     {
-      "label": "ABOUT",
+      "label": "关于",
       "href": "/about"
     }
   ],
   "webring": [
     {
-      "title": "The Really Lame Webring",
+      "title": "真的很酷的环形网",
       "url": "https://example.com/ring/",
-      "note": "ringmaster: uncle gronk"
+      "note": "网主：老张"
     },
     {
-      "title": "Dial-Up Survivors",
+      "title": "拨号上网幸存者",
       "url": "https://example.com/modem/",
-      "note": "56k and proud"
+      "note": "56k 以此为荣"
     },
     {
-      "title": "MIDI Heaven",
+      "title": "MIDI 天堂",
       "url": "https://example.com/midi/",
-      "note": "please play quietly"
+      "note": "请小声播放"
     },
     {
-      "title": "Under Construction Since 1997",
+      "title": "自 1997 年施工中",
       "url": "https://example.com/uc/",
-      "note": "still working on it"
+      "note": "仍在施工"
     },
     {
-      "title": "The Guestbook Gallery",
+      "title": "留言簿美术馆",
       "url": "https://example.com/gb/",
-      "note": "sign mine, i sign yours"
+      "note": "互签友好"
     }
   ],
   "banners": [
     {
-      "text": "★ NOW BROADCASTING: this page is hand-written Markdown served in under 100ms ★",
+      "text": "★ 正在播出：本站所有文章都是 Markdown 手写，服务器几毫秒渲染完成 ★",
       "href": "/about"
     },
     {
-      "text": "★ SIGN MY GUESTBOOK! It takes 10 seconds and makes my day ★",
+      "text": "★ 记得给我的留言簿签名！只要十秒钟，站长会很开心 ★",
       "href": "/guestbook"
     },
     {
-      "text": "★ PRESS Ctrl+K FOR A DOS TERMINAL ON EVERY PAGE ★",
+      "text": "★ 任意页面按 Ctrl+K 都能打开 DOS 终端 ★",
       "href": "/about#colophon"
     }
   ],
-  "footer": "Hand-coded in a text editor. No frameworks were harmed in the making of this page.",
+  "footer": "纯手写代码，没有框架，服务器上只跑一个 Node 进程。",
   "theme": {
     "accent": "#008080",
     "accent2": "#000080",

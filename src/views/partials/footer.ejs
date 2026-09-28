@@ -1,52 +1,52 @@
 <footer class="site-footer">
   <div class="footer-grid">
     <div>
-      <h4>📡 Netscape</h4>
+      <h4><%= t('footer.netscape') %></h4>
       <ul style="list-style:none;padding:0;margin:0">
-        <li><a href="/feed.xml">📡 RSS 2.0 feed</a></li>
-        <li><a href="/atom.xml">📡 Atom 1.0 feed</a></li>
+        <li><a href="/feed.xml">📡 RSS 2.0</a></li>
+        <li><a href="/atom.xml">📡 Atom 1.0</a></li>
         <li><a href="/feed.json">📡 JSON Feed</a></li>
         <li><a href="/sitemap.xml">🗺 sitemap.xml</a></li>
         <li><a href="/site.webmanifest">📱 web app manifest</a></li>
       </ul>
     </div>
     <div>
-      <h4>📂 This page</h4>
+      <h4><%= t('footer.this_page') %></h4>
       <ul style="list-style:none;padding:0;margin:0">
-        <li><a href="/posts">📝 all posts</a></li>
-        <li><a href="/archive">🗄 archive by year</a></li>
-        <li><a href="/tags">🏷 tags</a></li>
-        <li><a href="/search">🔍 search</a></li>
-        <li><a href="/guestbook">📬 guestbook</a></li>
+        <li><a href="/posts">📝 <%= t('admin.posts').replace(/^[^ ]+ /, '') %></a></li>
+        <li><a href="/archive">🗄 <%= t('archive.title').replace(/^[^ ]+ /, '') %></a></li>
+        <li><a href="/tags">🏷 <%= t('tags.title').replace(/^[^ ]+ /, '') %></a></li>
+        <li><a href="/search">🔍 <%= t('search.title').replace(/^[^ ]+ /, '') %></a></li>
+        <li><a href="/guestbook">📬 <%= t('gb.title').replace(/^[^ ]+ /, '') %></a></li>
       </ul>
     </div>
     <div>
-      <h4>⚙ Extras</h4>
+      <h4><%= t('footer.extras') %></h4>
       <ul style="list-style:none;padding:0;margin:0">
-        <li><a href="#" data-toggle-terminal>⌨️ DOS terminal</a> <span class="mono">(Ctrl+K)</span></li>
-        <li><a href="#" data-toggle-music>🎵 chiptune BGM</a></li>
-        <li><a href="#" data-toggle-theme>⏳ Time Machine 1998</a></li>
-        <li><a href="/posts/<%= (latestPost && latestPost.slug) || 'hello-world' %>.txt" download>💾 download latest as .TXT</a></li>
+        <li><a href="#" data-toggle-terminal>⌨️ <%= t('footer.dos_terminal') %></a> <span class="mono">(Ctrl+K)</span></li>
+        <li><a href="#" data-toggle-music>🎵 <%= t('footer.chiptune') %></a></li>
+        <li><a href="#" data-toggle-theme>⏳ <%= t('footer.time_machine') %></a></li>
+        <li><a href="/posts/<%= (latestPost && latestPost.slug) || 'hello-world' %>.txt" download>💾 <%= t('footer.download_latest') %></a></li>
       </ul>
     </div>
     <div>
-      <h4>🌐 Webring</h4>
+      <h4>🌐 <%= t('side.webring') %></h4>
       <div class="webring-nav" style="justify-content:flex-start">
-        <a class="btn tiny" href="<%= webringHref(-1) %>">◀ PREV</a>
-        <a class="btn tiny" href="<%= webringHref(1) %>">NEXT ▶</a>
-        <a class="btn tiny" href="<%= webringHref(0) %>">RANDOM</a>
+        <a class="btn tiny" href="<%= webringHref(-1) %>">◀ <%= t('side.prev') %></a>
+        <a class="btn tiny" href="<%= webringHref(1) %>"><%= t('side.next') %> ▶</a>
+        <a class="btn tiny" href="<%= webringHref(0) %>"><%= t('side.random_site') %></a>
       </div>
-      <p class="mono" style="font-size:10px;margin:6px 0 0">You are visiting site #<%= webringIndex %> of <%= (site.webring || []).length %> in the ring.</p>
+      <p class="mono" style="font-size:10px;margin:6px 0 0"><%= t('footer.you_are_visiting', { n: webringIndex, total: (site.webring || []).length }) %></p>
     </div>
   </div>
   <div class="divider"></div>
   <div class="legal">
-    <p style="margin:0">© 1998–<%= year %> <%= site.author %>. All rights reserved, except the parts everyone is welcome to remix.</p>
+    <p style="margin:0"><%= t('footer.copyright', { year: year, author: site.author }) %></p>
     <p style="margin:3px 0 0"><%= site.footer %></p>
     <p style="margin:3px 0 0" class="mono">
-      Hosted on <span class="blink">■</span> one small computer <span class="blink">■</span>
-      · page generated in <span id="gen-time">—</span> ms
-      · <a href="/about#colophon">colophon</a>
+      <%= t('footer.hosted_on') %> <span class="blink">■</span> ·
+      <%= t('footer.generated_in') %> <span id="gen-time">—</span> <%= t('footer.ms') %> ·
+      <a href="/about#colophon">colophon</a>
     </p>
     <% if (site.icp) { %><p style="margin:3px 0 0" class="mono"><%= site.icp %></p><% } %>
   </div>

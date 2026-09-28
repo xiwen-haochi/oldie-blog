@@ -92,13 +92,13 @@ async function main() {
 
   section('public pages');
   const pages = [
-    ['/', 'Welcome to my home page'],
-    ['/posts', 'All dispatches'],
-    ['/archive', 'archives'],
-    ['/tags', 'Tag cloud'],
-    ['/guestbook', 'guestbook'],
-    ['/search?q=markdown', 'Search this site'],
-    ['/about', 'colophon'],
+    ['/', '欢迎来到我的主页'],
+    ['/posts', '全部日志'],
+    ['/archive', '往期归档'],
+    ['/tags', '标签云'],
+    ['/guestbook', '留言簿'],
+    ['/search?q=markdown', '站内搜索'],
+    ['/about', '制作说明'],
   ];
   for (const entry of pages) {
     const p = entry[0];
@@ -111,6 +111,58 @@ async function main() {
       return html.length + ' bytes';
     });
   }
+
+  section('language switching');
+  await check('defaults to Chinese', async () => {
+    const html = await text('/');
+    assert.match(html, /<html lang="zh-CN"/, 'html lang must be zh-CN');
+    assert.match(html, /欢迎来到我的主页！/);
+    assert.match(html, /环形网/, 'sidebar not localised');
+    assert.ok(!html.includes('You are visitor'), 'English chrome leaked');
+    return 'zh-CN';
+  });
+  await check('?lang=en switches the whole chrome', async () => {
+    const html = await text('/?lang=en');
+    assert.match(html, /<html lang="en"/);
+    assert.match(html, /Welcome to my home page/);
+    assert.ok(!html.includes('欢迎来到我的主页'), 'Chinese chrome leaked');
+    return 'en';
+  });
+  await check('language choice is remembered in a cookie', async () => {
+    const html = await text('/?lang=en');
+    assert.match(html, /Welcome to my home page/, 'cookie was not stored');
+    const again = await text('/');
+    assert.match(again, /Welcome to my home page/, 'cookie not honoured on the next request');
+    // put the test session back to Chinese for the remaining checks
+    await text('/?lang=zh-CN');
+    return 'persisted';
+  });
+  await check('switcher + hreflang alternates are rendered', async () => {
+    const html = await text('/');
+    assert.match(html, /class="tb-lang"/);
+    assert.match(html, /hreflang="zh-CN"/);
+    assert.match(html, /hreflang="en"/);
+    assert.match(html, /og:locale:alternate/);
+    return 'hreflang ok';
+  });
+  await check('posts render in both languages', async () => {
+    const zh = await text('/posts/用-markdown-写博客这件事');
+    assert.match(zh, /用 Markdown 写博客这件事/);
+    const en = await text('/posts/用-markdown-写博客这件事?lang=en');
+    assert.match(en, /READ MORE|继续阅读/);
+    await text('/?lang=zh-CN');
+    return 'CJK slug ok';
+  });
+
+  section('browser chrome (no fake window controls)');
+  await check('no minimise/maximise/close buttons', async () => {
+    const html = await text('/');
+    assert.ok(!html.includes('class="menubar"'), 'fake app menu bar still present');
+    assert.ok(!html.includes('tb-titlebar-buttons'), 'window buttons still present');
+    const titlebar = html.slice(html.indexOf('class="titlebar"'), html.indexOf('class="titlebar"') + 900);
+    assert.ok(!titlebar.includes('tb-btn'), 'a button survived inside the titlebar');
+    return 'clean';
+  });
 
   section('SEO surface');
   await check('home head: canonical, og, json-ld, feeds', async () => {
@@ -135,7 +187,7 @@ async function main() {
     ['/sitemap.xml', /<urlset/],
     ['/robots.txt', /Sitemap:/],
     ['/site.webmanifest', /"display"/],
-    ['/llms.txt', /# Oldie Blog/],
+    ['/llms.txt', /^# /m],
   ];
   for (const entry of feeds) {
     const p = entry[0];
@@ -228,7 +280,7 @@ async function main() {
   await check('unknown URL renders the 404 page', async () => {
     const res = await get('/definitely-not-here');
     assert.equal(res.status, 404);
-    assert.match(await res.text(), /PAGE NOT FOUND/);
+    assert.match(await res.text(), /页面不存在/);
     return 'rendered';
   });
   await check('missing post 404s', async () => {
@@ -265,8 +317,8 @@ async function main() {
     const dash = await get('/admin/dashboard');
     assert.equal(dash.status, 200, 'dashboard status ' + dash.status);
     const body = await dash.text();
-    assert.match(body, /Control panel/);
-    assert.match(body, /SEO health/);
+    assert.match(body, /控制台/);
+    assert.match(body, /SEO 自检/);
     adminOk = true;
     return 'signed in';
   });
@@ -398,7 +450,7 @@ async function main() {
         confirm: 'a-brand-new-long-password',
       });
       assert.equal(res.status, 302);
-      assert.ok((await text('/admin/settings')).includes('Password updated'), 'no confirmation');
+      assert.ok((await text('/admin/settings')).includes('密码已更新'), 'no confirmation');
       return 'rotated';
     });
 
@@ -424,7 +476,7 @@ async function main() {
     });
 
     await check('tools page and JSON export', async () => {
-      assert.match(await text('/admin/tools'), /SEO checklist/);
+      assert.match(await text('/admin/tools'), /SEO 自检清单/);
       const res = await get('/admin/export.json');
       assert.equal(res.status, 200);
       const data = await res.json();

@@ -1,9 +1,8 @@
-<div class="breadcrumbs"><a href="/">index.html</a><span class="sep">\</span> dispatches.md</div>
+<div class="breadcrumbs"><a href="/">index.html</a><span class="sep">\</span> posts.md</div>
 <section class="page-head">
-  <h1 class="ph-title">📚 All dispatches</h1>
+  <h1 class="ph-title">📚 <%= t('posts.title') %></h1>
   <div class="ph-body">
-    <p style="margin:0">Showing <%= pager.range[0] %>–<%= pager.range[1] %> of <strong><%= pager.total %></strong> post<%= pager.total === 1 ? '' : 's' %>, newest first.
-      Written in Markdown, served hot.</p>
+    <p style="margin:0"><%= t('posts.showing', { from: pager.range[0], to: pager.range[1], total: pager.total }) %></p>
   </div>
 </section>
 
@@ -13,5 +12,5 @@
 </ul>
 <%- include('../partials/pager', { pager, pagerUrl }) %>
 <% } else { %>
-<div class="alert warn">Nothing here yet. <a href="/">Go back home</a>.</div>
+<div class="alert warn"><%= t('posts.none') %> <a href="/"><%= t('404.home').replace(/^[^ ]+ /, '') %></a>.</div>
 <% } %>

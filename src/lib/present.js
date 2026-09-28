@@ -1,6 +1,8 @@
 import {
   formatDate, isoDate, truncate, slugify, pad, timeAgo, humanBytes, stripHtml, escapeHtml,
 } from './text.js';
+import { makeTranslator, availableLocales, localeMeta } from './i18n.js';
+import { absUrl } from './config.js';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
   'August', 'September', 'October', 'November', 'December'];
@@ -37,7 +39,7 @@ export function toDateInput(value) {
 export function baseLocals(ctx) {
   const site = ctx.site;
   return {
-    truncate, formatDate, isoDate, slugify, pad, monthName, timeAgo, humanBytes, stripHtml, escapeHtml, toDateInput,
+    truncate, formatDate, isoDate, slugify, pad, monthName, timeAgo, humanBytes, stripHtml, escapeHtml, toDateInput, absUrl,
     webringHref: (d) => webringHrefOf(ctx.site, d),
     webringIndex: webringIndexOf(ctx.site),
     assetV: site.assetV || '1',
@@ -45,16 +47,43 @@ export function baseLocals(ctx) {
 }
 
 export function enrichLocals(ctx, req, res, extra = {}) {
-  const site = ctx.site;
+  const locale = req.locale || ctx.site.locale || 'zh-CN';
+  // config/site.config.json may carry per-locale overrides (i18n.zh-CN = {...})
+  const localised = (ctx.site.i18n && ctx.site.i18n[locale]) || {};
+  const site = Object.keys(localised).length
+    ? { ...ctx.site, ...localised, theme: ctx.site.theme, i18n: ctx.site.i18n }
+    : ctx.site;
+  const t = makeTranslator(locale);
+  const langs = availableLocales();
   const posts = ctx.index.publishedPosts();
   const latest = posts[0] || null;
   const lastUpdated = latest
     ? formatDate(latest.updated || latest.date, { locale: site.locale, style: 'short' })
     : formatDate(new Date(), { locale: site.locale, style: 'short' });
 
+  // language switcher: same page, different locale, query param wins over cookie
+  const langSwitchUrl = (code) => {
+    const q = new URLSearchParams(req.query || {});
+    q.set('lang', code);
+    q.delete('page');
+    return req.path + '?' + q.toString();
+  };
+  const alternates = langs.map((l) => ({
+    code: l.code,
+    href: langSwitchUrl(l.code),
+    current: l.code === locale,
+  }));
+
   return {
     site,
     ctx,
+    t,
+    locale,
+    localeMeta: localeMeta(locale),
+    langs,
+    langSwitchUrl,
+    alternates,
+    dateLocale: localeMeta(locale).dateLocale,
     currentPath: req.path,
     year: new Date().getFullYear(),
     stats: ctx.stats.summary(),

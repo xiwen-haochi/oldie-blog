@@ -2,20 +2,18 @@
   <span class="tb-icon" aria-hidden="true">🖥</span>
   <span class="tb-title" id="tb-title"><%= page.windowTitle || site.title %></span>
   <span class="tb-text" id="tb-url"><%= site.url.replace(/^https?:\/\//, '') %><%= currentPath %></span>
-  <span class="tb-buttons" aria-hidden="true">
-    <span class="tb-btn" title="minimise">_</span>
-    <span class="tb-btn" title="maximise">□</span>
-    <span class="tb-btn" title="close" onclick="window.close()">✕</span>
-  </span>
+  <nav class="tb-lang" aria-label="<%= t('bar.language') %>">
+    <% langs.forEach(function (l) { %>
+      <a href="<%= langSwitchUrl(l.code) %>" hreflang="<%= l.code %>" lang="<%= l.code %>"<%= l.code === locale ? ' aria-current="true" class="on"' : '' %>><%= l.label %></a>
+    <% }) %>
+  </nav>
 </div>
-<div class="menubar">
-  <a href="/" title="Go to the front page">File</a>
-  <a href="/archive">Edit</a>
-  <a href="/tags">View</a>
-  <a href="/posts">Go</a>
-  <a href="/about">Help</a>
+<div class="utility-bar">
+  <a href="/" class="mono"><%= t('bar.home') %></a>
   <span class="sep" aria-hidden="true"></span>
-  <a href="/feed.xml" class="mono" style="font-size:11px">RSS</a>
-  <a href="/search" class="mono" style="font-size:11px" title="Search this site (Ctrl+K)">FIND…</a>
-  <a href="#" id="tb-theme" class="mono" style="font-size:11px" title="Toggle the 1998 Time Machine theme">1998 MODE</a>
+  <a href="/feed.xml" class="mono"><%= t('bar.rss') %></a>
+  <a href="/search" class="mono"><%= t('bar.find') %>…</a>
+  <a href="#" data-toggle-theme class="mono"><%= t('bar.theme') %></a>
+  <span class="sep" aria-hidden="true"></span>
+  <span class="mono muted" id="tb-clock"><%= t('bar.status.hits') %> <%= stats.total %></span>
 </div>

@@ -4,34 +4,36 @@
   const tagStr = Array.isArray(d.tags) ? d.tags.join(', ') : (d.tags || '');
   const keyStr = Array.isArray(d.keywords) ? d.keywords.join(', ') : (d.keywords || '');
   const action = kind === 'post' ? '/admin/posts' : '/admin/pages';
+  const kindLabel = kind === 'post' ? t('admin.posts').replace(/^[^ ]+ /, '') : t('admin.pages').replace(/^[^ ]+ /, '');
 %>
 <div class="admin-head">
-  <h1><%= isNew ? '✍️ New ' + kind : '✏️ Editing ' + kind %> <span class="mono muted" style="font-size:13px">content/<%= kind === 'post' ? 'posts' : 'pages' %>/<%= doc.file || '(unsaved)' %></span></h1>
+  <h1>✏️ <%= isNew ? t('admin.new', { kind: kindLabel }) : kindLabel %> <span class="mono muted" style="font-size:13px">content/<%= kind === 'post' ? 'posts' : 'pages' %>/<%= doc.file || '(unsaved)' %></span></h1>
   <div class="btn-row">
-    <button class="btn primary" type="submit" form="editor-form">💾 SAVE (<%= isNew ? 'create' : 'update' %>)</button>
+    <button class="btn primary" type="submit" form="editor-form">💾 <%= t('admin.save') %> (<%= isNew ? t('admin.create') : t('admin.update') %>)</button>
     <% if (!isNew) { %>
-      <a class="btn" href="/<%= kind === 'post' ? 'posts/' + d.slug : (d.slug || '') %>" target="_blank" rel="noopener">👁 VIEW</a>
+      <a class="btn" href="/<%= kind === 'post' ? 'posts/' + d.slug : (d.slug || '') %>" target="_blank" rel="noopener">👁 <%= t('admin.view') %></a>
     <% } %>
-    <a class="btn ghost" href="/<%= kind === 'post' ? 'admin/posts' : 'admin/pages' %>">← back</a>
+    <a class="btn ghost" href="/<%= kind === 'post' ? 'admin/posts' : 'admin/pages' %>"><%= t('admin.back') %></a>
   </div>
 </div>
 
 <form id="editor-form" method="post" action="<%= action %>" class="editor-form">
   <input type="hidden" name="_csrf" value="<%= csrf %>">
   <input type="hidden" name="originalSlug" value="<%= originalSlug || '' %>">
+  <input type="hidden" name="lang" value="<%= locale %>">
 
   <div class="editor-main">
     <div class="field">
-      <label for="title">📌 Title</label>
-      <input id="title" name="title" value="<%= val('title') %>" placeholder="Why the web was better when…" required data-slug-source>
-      <div class="form-note mono" id="slug-preview">/posts/<%= val('slug') || '…' %></div>
+      <label for="title"><%= t('admin.field_title') %></label>
+      <input id="title" name="title" value="<%= val('title') %>" placeholder="<%= t('admin.placeholder_title') %>" required data-slug-source>
+      <div class="form-note mono" id="slug-preview">/<%= kind === 'post' ? 'posts/' : '' %><%= val('slug') || '…' %></div>
     </div>
 
     <div class="field">
-      <label for="body">📝 Body (Markdown + raw HTML)</label>
+      <label for="body"><%= t('admin.field_body') %></label>
       <textarea id="body" name="body" rows="26" spellcheck="true" data-editor><%= doc.body %></textarea>
       <div class="editor-toolbar">
-        <span class="form-note" id="editor-stats">0 words · 0 min read</span>
+        <span class="form-note" id="editor-stats">0</span>
         <span class="spacer"></span>
         <button class="btn tiny" type="button" data-wrap="**">B</button>
         <button class="btn tiny" type="button" data-wrap="_">I</button>
@@ -42,7 +44,7 @@
         <button class="btn tiny" type="button" data-wrap="[text](url)">link</button>
         <button class="btn tiny" type="button" data-wrap="![](url)">image</button>
         <button class="btn tiny" type="button" data-wrap="<!-- more -->">more…</button>
-        <label class="btn tiny" for="upload-inline" title="insert an uploaded image">📎 image</label>
+        <label class="btn tiny" for="upload-inline" title="<%= t('admin.paste_data_url') %>">📎</label>
         <input type="file" id="upload-inline" accept="image/*" hidden>
         <span class="form-note" id="autosave-state"></span>
       </div>
@@ -51,79 +53,77 @@
 
   <aside class="editor-side">
     <fieldset>
-      <legend>📋 Publishing</legend>
+      <legend><%= t('admin.publishing') %></legend>
       <div class="field">
-        <label for="slug">🔗 Slug</label>
-        <input id="slug" name="slug" value="<%= val('slug') %>" placeholder="auto from title" data-slug-target>
+        <label for="slug"><%= t('admin.field_slug') %></label>
+        <input id="slug" name="slug" value="<%= val('slug') %>" placeholder="<%= t('admin.field_slug_hint') %>" data-slug-target>
       </div>
       <div class="field">
-        <label for="date">📅 Date</label>
+        <label for="date"><%= t('admin.field_date') %></label>
         <input id="date" name="date" type="date" value="<%= toDateInput(val('date', new Date().toISOString().slice(0, 10))) %>">
       </div>
       <div class="field">
-        <label for="updated">🔁 Updated (optional)</label>
+        <label for="updated"><%= t('admin.field_updated') %></label>
         <input id="updated" name="updated" type="date" value="<%= toDateInput(val('updated')) %>">
       </div>
-      <label class="checkline"><input type="checkbox" name="draft" <%= d.draft ? 'checked' : '' %>> 💤 Draft (hidden from visitors)</label>
-      <label class="checkline"><input type="checkbox" name="featured" <%= d.featured ? 'checked' : '' %>> ★ Featured on the home page</label>
-      <label class="checkline"><input type="checkbox" name="noindex" <%= d.noindex ? 'checked' : '' %>> 🚫 noindex (hide from search engines)</label>
+      <label class="checkline"><input type="checkbox" name="draft" <%= d.draft ? 'checked' : '' %>> <%= t('admin.draft_label') %></label>
+      <label class="checkline"><input type="checkbox" name="featured" <%= d.featured ? 'checked' : '' %>> <%= t('admin.featured_label') %></label>
+      <label class="checkline"><input type="checkbox" name="noindex" <%= d.noindex ? 'checked' : '' %>> <%= t('admin.noindex_label') %></label>
     </fieldset>
 
     <fieldset>
-      <legend>🔍 SEO</legend>
+      <legend><%= t('admin.seo') %></legend>
       <div class="field">
-        <label for="description">Description (≤ 300 chars)</label>
+        <label for="description"><%= t('admin.field_description') %></label>
         <textarea id="description" name="description" rows="3" maxlength="400" data-desc-source><%= val('description') %></textarea>
       </div>
       <div class="field">
-        <label for="tags">Tags (comma separated)</label>
-        <input id="tags" name="tags" value="<%= tagStr %>" placeholder="markdown, web-design">
+        <label for="tags"><%= t('admin.field_tags') %></label>
+        <input id="tags" name="tags" value="<%= tagStr %>">
       </div>
       <div class="field">
-        <label for="keywords">Extra keywords</label>
+        <label for="keywords"><%= t('admin.field_keywords') %></label>
         <input id="keywords" name="keywords" value="<%= keyStr %>">
       </div>
       <div class="field">
-        <label for="cover">Cover image path</label>
+        <label for="cover"><%= t('admin.field_cover') %></label>
         <input id="cover" name="cover" value="<%= val('cover') %>" placeholder="/uploads/cover.png">
       </div>
       <div class="field">
-        <label for="coverAlt">Cover alt text (a11y + SEO)</label>
+        <label for="coverAlt"><%= t('admin.field_cover_alt') %></label>
         <input id="coverAlt" name="coverAlt" value="<%= val('coverAlt') %>">
       </div>
       <div class="field">
-        <label for="canonical">Canonical URL override</label>
-        <input id="canonical" name="canonical" value="<%= val('canonical') %>" placeholder="https://elsewhere.com/original">
+        <label for="canonical"><%= t('admin.field_canonical') %></label>
+        <input id="canonical" name="canonical" value="<%= val('canonical') %>">
       </div>
       <div class="field">
-        <label for="author">Author</label>
-        <input id="author" name="author" value="<%= val('author') %>" placeholder="<%= site.author %>">
+        <label for="author"><%= t('admin.field_author') %></label>
+        <input id="author" name="author" value="<%= val('author') %>">
       </div>
     </fieldset>
 
     <fieldset>
-      <legend>🧪 Live preview</legend>
+      <legend><%= t('admin.preview') %></legend>
       <div class="preview-tabs">
-        <button class="btn tiny on" type="button" data-preview-tab="preview">👁 HTML</button>
-        <button class="btn tiny" type="button" data-preview-tab="meta">🏷 Meta</button>
-        <button class="btn tiny" type="button" data-preview-tab="raw">📄 .md</button>
+        <button class="btn tiny on" type="button" data-preview-tab="preview"><%= t('admin.tab_html') %></button>
+        <button class="btn tiny" type="button" data-preview-tab="meta"><%= t('admin.tab_meta') %></button>
+        <button class="btn tiny" type="button" data-preview-tab="raw"><%= t('admin.tab_raw') %></button>
       </div>
-      <div id="preview-pane" class="preview-pane">
-        <p class="form-note">Type in the body — the preview updates as you pause.</p>
-      </div>
+      <div id="preview-pane" class="preview-pane"><p class="form-note"><%= t('admin.preview_empty') %></p></div>
       <div id="meta-pane" class="preview-pane" hidden></div>
       <div id="raw-pane" class="preview-pane" hidden><pre class="ascii-art" id="raw-preview" style="font-size:10px"></pre></div>
     </fieldset>
 
     <fieldset>
-      <legend>🖼 Recent uploads</legend>
+      <legend><%= t('admin.uploads') %></legend>
       <div class="upload-grid">
         <% uploads.slice(0, 8).forEach(function (u) { %>
           <button class="upload-pick" type="button" data-insert-image="<%= u.url %>" title="<%= u.name %> · <%= humanBytes(u.size) %>">
             <img src="<%= u.url %>" alt="<%= u.name %>" loading="lazy">
           </button>
         <% }) %>
-        <% if (!uploads.length) { %><p class="form-note">No uploads yet — use 📎 in the toolbar.</p><% } %>
+        <% if (!uploads.length) { %><p class="form-note"><%= t('admin.no_uploads') %></p><% } %>
       </div>
     </fieldset>
   </aside>

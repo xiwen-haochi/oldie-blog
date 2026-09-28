@@ -103,6 +103,22 @@ kbd {
   border: 1px solid #000;
 }
 
+/* --------------------------------------------------- utility bar + langs */
+.utility-bar {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  padding: 3px 8px; background: var(--face); border-bottom: 1px solid var(--face-dark);
+  font-family: var(--font-ui); font-size: 11.5px;
+}
+.utility-bar a { color: #000; text-decoration: none; padding: 1px 2px; }
+.utility-bar a:hover { text-decoration: underline; color: var(--win-blue); }
+.utility-bar .sep { width: 1px; height: 12px; background: var(--face-dark); }
+.tb-lang { display: flex; gap: 2px; }
+.tb-lang a {
+  font-family: var(--font-ui); font-size: 10.5px; color: #dfe7ff; text-decoration: none;
+  padding: 1px 6px; border: 1px solid rgba(255,255,255,.35);
+}
+.tb-lang a:hover { background: #fff; color: var(--win-blue); }
+.tb-lang a.on { background: #fff; color: var(--win-blue); font-weight: 700; }
 /* --------------------------------------------------------------- desktop */
 .desktop { min-height: 100vh; padding: 10px 10px 40px; }
 .browser {
@@ -132,17 +148,6 @@ kbd {
 }
 .tb-btn:active { box-shadow: var(--bevel-in); }
 
-.menubar {
-  display: flex; flex-wrap: wrap; gap: 2px; padding: 2px 4px;
-  background: var(--face); border-bottom: 1px solid var(--face-dark);
-  font-family: var(--font-ui); font-size: 12px;
-}
-.menubar a, .menubar span {
-  padding: 2px 8px; color: #000; text-decoration: none; cursor: default;
-  border: 1px solid transparent;
-}
-.menubar a:hover, .menubar .hot { border: 1px solid #000; background: var(--win-blue); color: #fff; }
-.menubar .sep { width: 1px; background: var(--face-dark); border-right: 1px solid var(--paper); margin: 2px 4px; }
 
 .statusbar {
   display: flex; gap: 4px; padding: 3px; background: var(--face);
@@ -598,7 +603,7 @@ form.bbs-form label { font-weight: 700; }
   color: #000; text-align: center;
 }
 [data-theme="1998"] .browser { max-width: 720px; background: #fff; border: 3px ridge #c0c0c0; box-shadow: none; }
-[data-theme="1998"] .titlebar, [data-theme="1998"] .menubar, [data-theme="1998"] .statusbar,
+[data-theme="1998"] .titlebar, [data-theme="1998"] .utility-bar, [data-theme="1998"] .statusbar,
 [data-theme="1998"] .sidebar, [data-theme="1998"] .widget-body, [data-theme="1998"] .site-footer {
   background: #fff; color: #000; border-color: #000;
 }
@@ -646,7 +651,7 @@ form.bbs-form label { font-weight: 700; }
 /* --------------------------------------------------------------- print */
 @media print {
   body { background: #fff; }
-  .dock, .terminal, .marquee-bar, .statusbar, .menubar, .sidebar, .btn { display: none !important; }
+  .dock, .terminal, .marquee-bar, .statusbar, .utility-bar, .sidebar, .btn { display: none !important; }
   .browser { border: 0; box-shadow: none; max-width: 100%; }
   .content { padding: 0; }
   a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 10px; color: #555; }

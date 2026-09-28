@@ -1,11 +1,17 @@
 <% if (pager.pages > 1) { %>
 <nav class="pager" aria-label="Pagination">
   <% if (pager.hasPrev) { %>
-    <a class="btn tiny" href="<%= pagerUrl(pager.prev) %>" rel="prev">◀ PREV</a>
+    <a class="btn tiny" href="<%= pagerUrl(pager.prev) %>" rel="prev">◀ <%= locale === 'en' ? 'PREV' : '上一页' %></a>
   <% } %>
-  <span class="page-info">PAGE <%= pager.page %> / <%= pager.pages %> · <%= pager.total %> ITEMS</span>
+  <span class="page-info">
+    <% if (locale === 'en') { %>
+      PAGE <%= pager.page %> / <%= pager.pages %> · <%= pager.total %> ITEMS
+    <% } else { %>
+      第 <%= pager.page %> / <%= pager.pages %> 页 · 共 <%= pager.total %> 条
+    <% } %>
+  </span>
   <% if (pager.hasNext) { %>
-    <a class="btn tiny" href="<%= pagerUrl(pager.next) %>" rel="next">NEXT ▶</a>
+    <a class="btn tiny" href="<%= pagerUrl(pager.next) %>" rel="next"><%= locale === 'en' ? 'NEXT' : '下一页' %> ▶</a>
   <% } %>
 </nav>
 <% } %>

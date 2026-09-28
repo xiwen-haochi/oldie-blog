@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="<%= site.locale %>" dir="<%= site.langDir || 'ltr' %>" data-theme="classic">
+<html lang="<%= localeMeta.htmlLang %>" dir="<%= localeMeta.dir || 'ltr' %>" data-theme="classic">
 <head>
 <%- include('partials/head') %>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
-<div class="tm-banner">⚠ You are viewing this page in <b>1998 MODE</b>. Some modern niceties have been switched off on purpose. <a href="#" data-toggle-theme>Return to the present ➜</a></div>
+<div class="tm-banner">
+  ⚠ <%= t('time_machine.banner') %>
+  <a href="#" data-toggle-theme><%= t('time_machine.back') %></a>
+</div>
 
 <% if (site.theme.showMarquee && (site.banners || []).length) { %>
 <div class="marquee-bar" aria-hidden="true">
@@ -32,6 +35,7 @@
 </div>
 
 <% if (site.theme.showTerminal) { %><%- include('partials/dock') %><% } %>
+<script id="i18n-data" type="application/json"><%- JSON.stringify(clientStrings) %></script>
 <script src="/js/site.js?v=<%= site.assetV %>" defer></script>
 <% if (site.analytics) { %><%- site.analytics %><% } %>
 </body>

@@ -1,31 +1,31 @@
 <div class="breadcrumbs"><a href="/">index.html</a><span class="sep">\</span> tags.html</div>
 <section class="page-head">
-  <h1 class="ph-title">🏷 Tag cloud</h1>
-  <div class="ph-body"><p style="margin:0"><%= tags.length %> topic<%= tags.length === 1 ? '' : 's' %> in use. Bigger words = bigger ego.</p></div>
+  <h1 class="ph-title">🏷 <%= t('tags.title') %></h1>
+  <div class="ph-body"><p style="margin:0"><%= t('tags.subtitle', { n: tags.length }) %></p></div>
 </section>
 
 <% if (tags.length) { %>
 <div class="tagcloud" style="font-size:14px">
-  <% tags.forEach(function (t) { %>
-    <a class="tag-pill" style="font-size:<%= Math.min(13 + t.count, 20) %>px" href="/tags/<%= t.slug %>">
-      <%= t.name %> <span class="n"><%= t.count %></span>
+  <% tags.forEach(function (tg) { %>
+    <a class="tag-pill" style="font-size:<%= Math.min(13 + tg.count, 20) %>px" href="/tags/<%= tg.slug %>">
+      <%= tg.name %> <span class="n"><%= tg.count %></span>
     </a>
   <% }) %>
 </div>
 
 <table class="table" style="margin-top:18px">
-  <thead><tr><th>Tag</th><th>Posts</th><th>Newest</th><th>Feed</th></tr></thead>
+  <thead><tr><th><%= t('tags.tag') %></th><th><%= t('tags.posts') %></th><th><%= t('tags.newest') %></th><th>RSS</th></tr></thead>
   <tbody>
-    <% tags.forEach(function (t) { %>
+    <% tags.forEach(function (tg) { %>
       <tr>
-        <td><a href="/tags/<%= t.slug %>"><strong><%= t.name %></strong></a></td>
-        <td><%= t.count %></td>
-        <td class="mono" style="font-size:11px"><%= formatDate(t.posts[0].date, { locale: site.locale }) %></td>
-        <td><a class="btn tiny" href="/feed/tag/<%= t.slug %>.xml">RSS</a></td>
+        <td><a href="/tags/<%= tg.slug %>"><strong><%= tg.name %></strong></a></td>
+        <td><%= tg.count %></td>
+        <td class="mono" style="font-size:11px"><%= formatDate(tg.posts[0].date, { locale: dateLocale }) %></td>
+        <td><a class="btn tiny" href="/feed/tag/<%= tg.slug %>.xml">RSS</a></td>
       </tr>
     <% }) %>
   </tbody>
 </table>
 <% } else { %>
-<div class="alert warn">No tags yet. Add <code>tags: [foo, bar]</code> to a post's front matter.</div>
+<div class="alert warn"><%= t('tags.none') %></div>
 <% } %>

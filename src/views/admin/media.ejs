@@ -1,23 +1,23 @@
 <div class="admin-head">
-  <h1>🖼 Media</h1>
-  <span class="form-note"><%= files.length %> file<%= files.length === 1 ? '' : 's' %> in <code>public/uploads/</code></span>
+  <h1>🖼 <%= t('admin.media_title') %></h1>
+  <span class="form-note"><%= t('admin.media_files', { n: files.length }) %></span>
 </div>
 
 <form method="post" action="/admin/media" enctype="multipart/form-data" class="upload-form">
   <input type="hidden" name="_csrf" value="<%= csrf %>">
   <div class="grid-2">
     <div class="field">
-      <label for="file">📁 Upload an image (max 4 MB)</label>
+      <label for="file"><%= t('admin.upload_file') %></label>
       <input id="file" type="file" name="file" accept="image/*">
     </div>
     <div class="field">
-      <label for="dataUrl">📋 …or paste a data URL / drag & drop</label>
+      <label for="dataUrl"><%= t('admin.paste_data_url') %></label>
       <textarea id="dataUrl" name="dataUrl" rows="2" placeholder="data:image/png;base64,…" data-paste-target></textarea>
     </div>
   </div>
   <div class="btn-row">
-    <button class="btn primary" type="submit">⬆️ UPLOAD</button>
-    <span class="form-note">png · jpg · gif · webp · svg · avif. Files are served from <code>/uploads/</code>.</span>
+    <button class="btn primary" type="submit"><%= t('admin.upload') %></button>
+    <span class="form-note"><%= t('admin.upload_types') %></span>
   </div>
 </form>
 
@@ -27,8 +27,8 @@
       <img src="<%= u.url %>" alt="<%= u.name %>" loading="lazy">
       <figcaption class="mono">
         <a href="<%= u.url %>" target="_blank" rel="noopener"><%= u.name %></a><br>
-        <%= humanBytes(u.size) %> · <%= formatDate(u.mtime, { style: 'short' }) %>
-        <form method="post" action="/admin/media/delete" data-confirm="Delete <%= u.name %>?">
+        <%= humanBytes(u.size) %> · <%= formatDate(u.mtime, { locale: dateLocale }) %>
+        <form method="post" action="/admin/media/delete" data-confirm="<%= t('admin.delete_confirm', { slug: u.name }) %>">
           <input type="hidden" name="_csrf" value="<%= csrf %>">
           <input type="hidden" name="name" value="<%= u.name %>">
           <button class="btn tiny danger" type="submit">🗑</button>
@@ -36,5 +36,5 @@
       </figcaption>
     </figure>
   <% }) %>
-  <% if (!files.length) { %><div class="alert">No media yet. The 1990s did not have stock photography, so this is fine.</div><% } %>
+  <% if (!files.length) { %><div class="alert"><%= t('admin.media_none') %></div><% } %>
 </div>

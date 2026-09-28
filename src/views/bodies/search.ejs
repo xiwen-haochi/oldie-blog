@@ -1,15 +1,16 @@
 <div class="breadcrumbs"><a href="/">index.html</a><span class="sep">\</span> find.html</div>
 <section class="page-head">
-  <h1 class="ph-title">🔍 Search this site</h1>
+  <h1 class="ph-title">🔍 <%= t('search.title') %></h1>
   <div class="ph-body">
-    <p style="margin:0 0 8px">Type in the box. Press <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to jump back here.</p>
+    <p style="margin:0 0 8px"><%= t('search.help') %></p>
     <form class="search-box" method="get" action="/search" role="search">
-      <input type="search" name="q" value="<%= query %>" placeholder="markdown, 1998, webring…" aria-label="search query" autocomplete="off" id="q">
-      <button class="btn" type="submit">🔎 SEARCH</button>
-      <% if (query) { %><a class="btn" href="/search">CLEAR</a><% } %>
+      <input type="hidden" name="lang" value="<%= locale %>">
+      <input type="search" name="q" value="<%= query %>" placeholder="<%= t('search.placeholder') %>" aria-label="search query" autocomplete="off" id="q">
+      <button class="btn" type="submit">🔎 <%= t('search.button') %></button>
+      <% if (query) { %><a class="btn" href="/search"><%= t('search.clear') %></a><% } %>
     </form>
     <p class="form-note" style="margin:8px 0 0">
-      Operators: <code>tag:markdown</code> · <code>"exact phrase"</code> · <code>-exclude</code> · <code>in:title</code>
+      <%= t('search.operators') %> <code>tag:markdown</code> · <code>"exact phrase"</code> · <code>-exclude</code> · <code>in:title</code>
     </p>
   </div>
 </section>
@@ -17,17 +18,17 @@
 <% if (!query) { %>
   <div class="grid-2">
     <div class="widget">
-      <h3 class="widget-title">🔥 Popular tags</h3>
+      <h3 class="widget-title">🔥 <%= t('search.popular') %></h3>
       <div class="widget-body">
         <div class="tagcloud">
-          <% tags.slice(0, 14).forEach(function (t) { %>
-            <a class="tag-pill" href="/tags/<%= t.slug %>"><%= t.name %> <span class="n"><%= t.count %></span></a>
+          <% tags.slice(0, 14).forEach(function (tg) { %>
+            <a class="tag-pill" href="/tags/<%= tg.slug %>"><%= tg.name %> <span class="n"><%= tg.count %></span></a>
           <% }) %>
         </div>
       </div>
     </div>
     <div class="widget">
-      <h3 class="widget-title">⌨ Try these</h3>
+      <h3 class="widget-title">⌨ <%= t('search.try') %></h3>
       <div class="widget-body">
         <ul>
           <li><a href="/search?q=tag:web-design">tag:web-design</a></li>
@@ -40,21 +41,19 @@
   </div>
 <% } else if (!results.length) { %>
   <div class="alert warn">
-    <b>❌ 0 hits for "<%= query %>".</b><br>
-    The search index covers titles, tags, descriptions and full body text of all
-    <%= postCount %> published posts. Try a shorter query or drop a filter.
+    <b>❌ 0</b> · <%= t('search.none', { posts: postCount }) %>
   </div>
 <% } else { %>
-  <p class="mono" style="font-size:12px"><%= results.length %> result<%= results.length === 1 ? '' : 's' %> for "<strong><%= query %></strong>" · <a href="/feed.xml">subscribe instead</a></p>
+  <p class="mono" style="font-size:12px"><%= t('search.results_for', { n: results.length, q: query }) %> · <a href="/feed.xml"><%= t('search.subscribe') %></a></p>
   <% results.forEach(function (r) { %>
     <div class="result">
       <h3><a href="<%= r.url %>"><%= r.title %></a></h3>
       <div class="url"><%= site.url.replace(/^https?:\/\//, '') %><%= r.url %></div>
       <p class="snip"><%- r.snippet %></p>
       <div class="post-meta">
-        <span>📅 <%= formatDate(r.date, { locale: site.locale }) %></span>
-        <span>⏱ <%= r.readingTime %> min</span>
-        <% r.tags.forEach(function (t) { %><a class="tag" href="/tags/<%= slugify(t) %>"><%= t %></a><% }) %>
+        <span>📅 <%= formatDate(r.date, { locale: dateLocale }) %></span>
+        <span>⏱ <%= r.readingTime %> <%= t('card.min') %></span>
+        <% r.tags.forEach(function (tag) { %><a class="tag" href="/tags/<%= slugify(tag) %>"><%= tag %></a><% }) %>
       </div>
     </div>
   <% }) %>

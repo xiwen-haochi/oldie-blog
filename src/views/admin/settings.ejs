@@ -1,81 +1,87 @@
 <div class="admin-head">
-  <h1>⚙ Site settings</h1>
+  <h1>⚙ <%= t('admin.settings_title') %></h1>
   <div class="btn-row">
-    <button class="btn primary" type="submit" form="settings-form">💾 SAVE SETTINGS</button>
-    <form method="post" action="/admin/settings/reset" class="inline-form" data-confirm="Delete data/settings.json and fall back to config/site.config.json?">
+    <button class="btn primary" type="submit" form="settings-form">💾 <%= t('admin.save') %></button>
+    <form method="post" action="/admin/settings/reset" class="inline-form" data-confirm="<%= t('admin.settings_reset') %>">
       <input type="hidden" name="_csrf" value="<%= csrf %>">
-      <button class="btn" type="submit">↩ RESET TO CONFIG FILE</button>
+      <button class="btn" type="submit"><%= t('admin.reset_config') %></button>
     </form>
   </div>
 </div>
 
-<div class="alert warn">
-  Settings saved here are written to <code>data/settings.json</code> (gitignored) and override
-  <code>config/site.config.json</code>. Edit the config file for changes you want to commit.
-</div>
+<div class="alert warn"><%= t('admin.settings_note') %></div>
 
 <form id="settings-form" method="post" action="/admin/settings" class="settings-form">
   <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <input type="hidden" name="lang" value="<%= locale %>">
 
   <fieldset>
-    <legend>🪪 Identity</legend>
+    <legend><%= t('admin.identity') %></legend>
     <div class="grid-2">
-      <div class="field"><label for="title">Site title</label><input id="title" name="title" value="<%= settings.title %>" required></div>
-      <div class="field"><label for="tagline">Tagline</label><input id="tagline" name="tagline" value="<%= settings.tagline %>"></div>
+      <div class="field"><label for="title"><%= t('admin.site_title') %></label><input id="title" name="title" value="<%= settings.title %>" required></div>
+      <div class="field"><label for="tagline"><%= t('admin.tagline') %></label><input id="tagline" name="tagline" value="<%= settings.tagline %>"></div>
     </div>
-    <div class="field"><label for="description">Meta description</label><textarea id="description" name="description" rows="2"><%= settings.description %></textarea></div>
+    <div class="field"><label for="description"><%= t('admin.meta_description') %></label><textarea id="description" name="description" rows="2"><%= settings.description %></textarea></div>
     <div class="grid-2">
-      <div class="field"><label for="author">Author</label><input id="author" name="author" value="<%= settings.author %>"></div>
-      <div class="field"><label for="email">E-mail</label><input id="email" name="email" type="email" value="<%= settings.email %>"></div>
-      <div class="field"><label for="since">Since (the year this site "began")</label><input id="since" name="since" value="<%= settings.since || '' %>" placeholder="1998"></div>
-      <div class="field"><label for="url">Canonical base URL</label><input id="url" name="url" value="<%= settings.url %>" placeholder="https://example.com"></div>
-      <div class="field"><label for="locale">Locale</label><input id="locale" name="locale" value="<%= settings.locale %>" placeholder="en"></div>
-      <div class="field"><label for="postsPerPage">Posts per page</label><input id="postsPerPage" name="postsPerPage" type="number" min="1" max="50" value="<%= settings.postsPerPage %>"></div>
+      <div class="field"><label for="author"><%= t('admin.author') %></label><input id="author" name="author" value="<%= settings.author %>"></div>
+      <div class="field"><label for="email"><%= t('admin.email') %></label><input id="email" name="email" type="email" value="<%= settings.email %>"></div>
+      <div class="field"><label for="since"><%= t('admin.since') %></label><input id="since" name="since" value="<%= settings.since || '' %>"></div>
+      <div class="field"><label for="url"><%= t('admin.canonical_url') %></label><input id="url" name="url" value="<%= settings.url %>"></div>
+      <div class="field">
+        <label for="locale"><%= t('admin.locale') %></label>
+        <select id="locale" name="locale">
+          <% langs.forEach(function (l) { %>
+            <option value="<%= l.code %>" <%= settings.locale === l.code ? 'selected' : '' %>><%= l.label %></option>
+          <% }) %>
+        </select>
+        <div class="form-note">zh-CN · en</div>
+      </div>
+      <div class="field"><label for="postsPerPage"><%= t('admin.per_page') %></label><input id="postsPerPage" name="postsPerPage" type="number" min="1" max="50" value="<%= settings.postsPerPage %>"></div>
     </div>
   </fieldset>
 
   <fieldset>
-    <legend>🧭 Navigation (one per line: <code>LABEL | /path</code>)</legend>
+    <legend><%= t('admin.navigation') %></legend>
     <div class="field"><textarea name="nav" rows="7" class="mono"><%= (settings.nav || []).map(function (n) { return n.label + ' | ' + n.href; }).join('\n') %></textarea></div>
   </fieldset>
 
   <fieldset>
-    <legend>🌐 Webring (one per line: <code>Name | https://url # note</code>)</legend>
+    <legend><%= t('admin.webring') %></legend>
     <div class="field"><textarea name="webring" rows="6" class="mono"><%= (settings.webring || []).map(function (m) { return m.title + ' | ' + m.url + (m.note ? ' # ' + m.note : ''); }).join('\n') %></textarea></div>
   </fieldset>
 
   <fieldset>
-    <legend>📢 Scrolling banners (one per line: <code>text | /link</code>)</legend>
+    <legend><%= t('admin.banners') %></legend>
     <div class="field"><textarea name="banners" rows="4" class="mono"><%= (settings.banners || []).map(function (b) { return b.text + ' | ' + (b.href || '#'); }).join('\n') %></textarea></div>
   </fieldset>
 
   <fieldset>
-    <legend>🎨 Appearance</legend>
+    <legend><%= t('admin.appearance') %></legend>
     <div class="grid-2">
-      <div class="field"><label for="accent">Accent colour</label><input id="accent" name="accent" type="color" value="<%= settings.theme.accent || '#008080' %>"></div>
-      <div class="field"><label for="accent2">Title bar colour</label><input id="accent2" name="accent2" type="color" value="<%= settings.theme.accent2 || '#000080' %>"></div>
+      <div class="field"><label for="accent"><%= t('admin.accent') %></label><input id="accent" name="accent" type="color" value="<%= settings.theme.accent || '#008080' %>"></div>
+      <div class="field"><label for="accent2"><%= t('admin.accent2') %></label><input id="accent2" name="accent2" type="color" value="<%= settings.theme.accent2 || '#000080' %>"></div>
     </div>
-    <label class="checkline"><input type="checkbox" name="showMarquee" <%= settings.theme.showMarquee ? 'checked' : '' %>> 📢 Scrolling announcement bar</label>
-    <label class="checkline"><input type="checkbox" name="showTerminal" <%= settings.theme.showTerminal ? 'checked' : '' %>> ⌨️ DOS terminal dock</label>
-    <label class="checkline"><input type="checkbox" name="showCounter" <%= settings.theme.showCounter ? 'checked' : '' %>> 📊 Hit counter</label>
-    <div class="field"><label for="footer">Footer text</label><input id="footer" name="footer" value="<%= settings.footer %>"></div>
-    <div class="field"><label for="icp">ICP / legal line</label><input id="icp" name="icp" value="<%= settings.icp || '' %>"></div>
+    <label class="checkline"><input type="checkbox" name="showMarquee" <%= settings.theme.showMarquee ? 'checked' : '' %>> <%= t('admin.show_marquee') %></label>
+    <label class="checkline"><input type="checkbox" name="showTerminal" <%= settings.theme.showTerminal ? 'checked' : '' %>> <%= t('admin.show_terminal') %></label>
+    <label class="checkline"><input type="checkbox" name="showCounter" <%= settings.theme.showCounter ? 'checked' : '' %>> <%= t('admin.show_counter') %></label>
+    <div class="field"><label for="footer"><%= t('admin.footer_text') %></label><input id="footer" name="footer" value="<%= settings.footer %>"></div>
+    <div class="field"><label for="icp"><%= t('admin.icp') %></label><input id="icp" name="icp" value="<%= settings.icp || '' %>"></div>
     <div class="field">
-      <label for="analytics">Analytics snippet (raw HTML, injected into every page)</label>
+      <label for="analytics"><%= t('admin.analytics') %></label>
       <textarea id="analytics" name="analytics" rows="3" class="mono" placeholder="&lt;script&gt;…&lt;/script&gt;"><%= settings.analytics || '' %></textarea>
-      <div class="form-note">Leave empty to stay tracker-free — which is the point.</div>
+      <div class="form-note"><%= t('admin.analytics_hint') %></div>
     </div>
   </fieldset>
 </form>
 
 <fieldset style="margin-top:14px">
-  <legend>🔐 Password</legend>
+  <legend><%= t('admin.password') %></legend>
   <form method="post" action="/admin/password" class="grid-2">
     <input type="hidden" name="_csrf" value="<%= csrf %>">
-    <div class="field"><label for="current">Current password</label><input id="current" name="current" type="password" autocomplete="current-password" required></div>
-    <div class="field"><label for="next">New password (10+ chars)</label><input id="next" name="next" type="password" autocomplete="new-password" required minlength="10"></div>
-    <div class="field"><label for="confirm">Repeat new password</label><input id="confirm" name="confirm" type="password" autocomplete="new-password" required minlength="10"></div>
-    <div class="field"><label>&nbsp;</label><button class="btn" type="submit">🔑 UPDATE PASSWORD</button></div>
+    <div class="field"><label for="current"><%= t('admin.current_password') %></label><input id="current" name="current" type="password" autocomplete="current-password" required></div>
+    <div class="field"><label for="next"><%= t('admin.new_password') %></label><input id="next" name="next" type="password" autocomplete="new-password" required minlength="10"></div>
+    <div class="field"><label for="confirm"><%= t('admin.repeat_password') %></label><input id="confirm" name="confirm" type="password" autocomplete="new-password" required minlength="10"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn" type="submit"><%= t('admin.update_password') %></button></div>
   </form>
-  <div class="form-note">Stored salted+hashed in <code>config/admin.json</code> (scrypt). Delete that file to force a fresh password at next boot.</div>
+  <div class="form-note"><%= t('admin.password_hint') %></div>
 </fieldset>

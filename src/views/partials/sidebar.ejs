@@ -1,55 +1,54 @@
 <aside class="sidebar" aria-label="Sidebar">
-  <!-- webmaster card -->
   <div class="widget">
     <div class="widget-body center">
       <div style="font-size:34px;line-height:1" aria-hidden="true">🖥️</div>
       <div style="font-weight:700;font-family:var(--font-display);font-size:13px"><%- '&lt;' + String(site.author).split(' ')[0] + '&gt;' %></div>
-      <div class="mono" style="font-size:10px">webmaster since <%= site.since || '1998' %></div>
-      <div class="mono" style="font-size:10px">last updated: <%= lastUpdated %></div>
+      <div class="mono" style="font-size:10px"><%= t('side.webmaster_since') %> <%= site.since || '1998' %></div>
+      <div class="mono" style="font-size:10px"><%= t('side.last_updated') %>: <%= lastUpdated %></div>
       <div style="margin-top:5px">
-        <a class="btn tiny" href="mailto:<%= site.email %>">📧 EMAIL ME</a>
+        <a class="btn tiny" href="mailto:<%= site.email %>">📧 <%= t('side.email_me') %></a>
       </div>
     </div>
   </div>
 
-  <!-- navigation -->
   <div class="widget">
-    <h3 class="widget-title">🧭 Navigation</h3>
+    <h3 class="widget-title">🧭 <%= t('side.navigation') %></h3>
     <div class="widget-body">
       <ul class="navlist">
         <% (site.nav || []).forEach(function (item, i) { %>
         <li>
-          <a href="<%= item.href %>" <%= currentPath === item.href ? 'aria-current="page"' : '' %>><%= item.label %></a>
+          <a href="<%= item.href %>"<%= currentPath === item.href ? ' aria-current="page"' : '' %>><%= item.label %></a>
           <span class="key"><%= i + 1 %></span>
         </li>
         <% }) %>
-        <li><a href="/random" title="Surprise me">🎲 RANDOM</a></li>
-        <li><a href="/sitemap.xml" class="mono">🗺 SITEMAP.XML</a></li>
+        <li><a href="/random" title="<%= t('side.random') %>">🎲 <%= t('side.random') %></a></li>
+        <li><a href="/sitemap.xml" class="mono">🗺 <%= t('side.sitemap') %></a></li>
       </ul>
     </div>
   </div>
 
-  <!-- hit counter -->
   <% if (site.theme.showCounter) { %>
   <div class="widget">
-    <h3 class="widget-title">📊 You are visitor #</h3>
+    <h3 class="widget-title">📊 <%= t('side.visitor') %></h3>
     <div class="widget-body">
-      <div class="counter-display" id="hit-counter" aria-label="Total visits: <%= stats.total %>">
+      <div class="counter-display" id="hit-counter" aria-label="<%= t('side.visitor') %> <%= stats.total %>">
         <% String(stats.total).padStart(8, '0').split('').forEach(function (d) { %><span class="digit"><%= d %></span><% }) %>
       </div>
       <div class="counter-label">
-        <span id="hit-session">#<%= stats.sessionRank %></span> this visit ·
-        today <span id="hit-today"><%= stats.today %></span>
+        <span id="hit-session">#<%= stats.sessionRank %></span> <%= t('side.this_visit') %> ·
+        <%= t('side.today') %> <span id="hit-today"><%= stats.today %></span>
       </div>
-      <div class="counter-label mono" style="font-size:9.5px">unique: <span id="hit-unique"><%= stats.unique %></span> · uptime <span id="hit-uptime">—</span></div>
+      <div class="counter-label mono" style="font-size:9.5px">
+        <%= t('side.unique') %>: <span id="hit-unique"><%= stats.unique %></span> ·
+        <%= t('side.uptime') %> <span id="hit-uptime">—</span>
+      </div>
     </div>
   </div>
   <% } %>
 
-  <!-- webring -->
   <% if ((site.webring || []).length) { %>
   <div class="widget">
-    <h3 class="widget-title">🌐 Webring</h3>
+    <h3 class="widget-title">🌐 <%= t('side.webring') %></h3>
     <div class="widget-body">
       <ul>
         <% site.webring.slice(0, 5).forEach(function (m) { %>
@@ -57,19 +56,18 @@
         <% }) %>
       </ul>
       <div class="webring-nav" style="margin-top:6px">
-        <a class="btn tiny" href="<%= webringHref(-1) %>" rel="prev">◀ PREV</a>
+        <a class="btn tiny" href="<%= webringHref(-1) %>" rel="prev">◀ <%= t('side.prev') %></a>
         <span class="ring-label">RING</span>
-        <a class="btn tiny" href="<%= webringHref(1) %>" rel="next">NEXT ▶</a>
-        <a class="btn tiny" href="<%= webringHref(0) %>" rel="random">RANDOM</a>
+        <a class="btn tiny" href="<%= webringHref(1) %>" rel="next"><%= t('side.next') %> ▶</a>
+        <a class="btn tiny" href="<%= webringHref(0) %>" rel="random"><%= t('side.random_site') %></a>
       </div>
-      <div class="counter-label mono" style="font-size:9.5px">members: <%= (site.webring || []).length %></div>
+      <div class="counter-label mono" style="font-size:9.5px"><%= t('side.members') %>: <%= (site.webring || []).length %></div>
     </div>
   </div>
   <% } %>
 
-  <!-- awards -->
   <div class="widget">
-    <h3 class="widget-title">🏆 Web awards</h3>
+    <h3 class="widget-title">🏆 <%= t('side.awards') %></h3>
     <div class="widget-body">
       <div class="awards">
         <span class="award" title="Hand-coded with love">💖</span>
@@ -81,9 +79,8 @@
     </div>
   </div>
 
-  <!-- guestbook teaser -->
   <div class="widget">
-    <h3 class="widget-title">📬 Guestbook</h3>
+    <h3 class="widget-title">📬 <%= t('side.guestbook') %></h3>
     <div class="widget-body">
       <% if (latestGuestbook) { %>
         <div style="border-bottom:1px dotted #808080;padding-bottom:5px;margin-bottom:5px">
@@ -92,29 +89,28 @@
           <div style="font-size:11px">“<%= truncate(latestGuestbook.message, 90) %>”</div>
         </div>
       <% } %>
-      <a class="btn tiny" href="/guestbook">✍️ SIGN IT</a>
-      <a class="btn tiny" href="/guestbook#entries">READ ALL (<%= guestbookCount %>)</a>
+      <a class="btn tiny" href="/guestbook">✍️ <%= t('side.sign_it') %></a>
+      <a class="btn tiny" href="/guestbook#entries"><%= t('side.read_all') %> (<%= guestbookCount %>)</a>
     </div>
   </div>
 
-  <!-- zine -->
   <div class="widget">
-    <h3 class="widget-title">📮 The Zine</h3>
+    <h3 class="widget-title">📮 <%= t('side.zine') %></h3>
     <div class="widget-body">
-      <p style="margin:0 0 6px">One e-mail every other week. Plain text, zero tracking pixels.</p>
+      <p style="margin:0 0 6px"><%= t('side.zine_body') %></p>
       <form method="post" action="/subscribe" class="flex" style="gap:4px">
         <input type="hidden" name="_csrf" value="<%= csrf %>">
-        <input type="email" name="email" placeholder="you@earth.net" required aria-label="e-mail address" style="font-size:11px;padding:2px">
-        <button class="btn tiny" type="submit">JOIN</button>
+        <input type="email" name="email" placeholder="you@earth.net" required aria-label="e-mail" style="font-size:11px;padding:2px">
+        <button class="btn tiny" type="submit"><%= t('side.join') %></button>
       </form>
-      <div class="mono" style="font-size:9.5px;margin-top:4px"><%= subscriberCount %> subscribers · <a href="/feed.xml">or just RSS</a></div>
+      <div class="mono" style="font-size:9.5px;margin-top:4px"><%= subscriberCount %> <%= t('side.subscribers') %> · <a href="/feed.xml"><%= t('side.or_rss') %></a></div>
     </div>
   </div>
 
   <div class="widget">
     <div class="widget-body center" style="font-size:10px">
-      <span class="blink">★</span> BEST VIEWED IN NETSCAPE 4.0 AT 800×600 <span class="blink">★</span><br>
-      <a href="#main" onclick="return false" class="mono" data-scroll-top>▲ RETURN TO TOP</a>
+      <span class="blink">★</span> <%= t('side.best_viewed') %> <span class="blink">★</span><br>
+      <a href="#main" onclick="return false" class="mono" data-scroll-top>▲ <%= t('side.back_to_top') %></a>
     </div>
   </div>
 </aside>

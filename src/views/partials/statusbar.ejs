@@ -1,6 +1,6 @@
 <div class="statusbar">
-  <span id="sb-status">📶 Connecting at 56,000 bps…</span>
+  <span id="sb-status">📶 <%= t('bar.status.connecting') %></span>
   <span class="grow" id="sb-path"><%= currentPath %></span>
-  <span class="mono">hits: <span id="sb-hits"><%= stats.total %></span></span>
-  <span class="mono">online: <span id="sb-online"><%= stats.online %></span></span>
+  <span class="mono"><%= t('bar.status.hits') %>: <span id="sb-hits"><%= stats.total %></span></span>
+  <span class="mono"><%= t('bar.status.online') %>: <span id="sb-online"><%= stats.online %></span></span>
 </div>

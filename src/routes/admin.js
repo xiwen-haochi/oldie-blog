@@ -12,6 +12,7 @@ import { renderMarkdown, toPlainText, excerpt } from '../lib/markdown.js';
 import { slugify, formatDate, humanBytes, readingTime, truncate } from '../lib/text.js';
 import { UPLOAD_DIR, DATA_DIR, ROOT } from '../lib/paths.js';
 import { DEFAULTS } from '../lib/config.js';
+import { makeTranslator, availableLocales, localeMeta, clientStrings } from '../lib/i18n.js';
 
 const loginLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 10 });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024, files: 1 } });
@@ -41,26 +42,47 @@ export function adminRoutes(ctx) {
     });
   };
 
+  /** Admin chrome is localized exactly like the public site. */
+  const tr = (req) => makeTranslator((req && req.locale) || ctx.site.locale || 'zh-CN');
+  const chrome = (req) => {
+    const locale = (req && req.locale) || ctx.site.locale || 'zh-CN';
+    return {
+      t: makeTranslator(locale),
+      locale,
+      localeMeta: localeMeta(locale),
+      langs: availableLocales(),
+      clientStrings: clientStrings(locale),
+      dateLocale: localeMeta(locale).dateLocale,
+      langSwitchUrl: (code) => {
+        const path = (req && req.path) || '/admin';
+        return path + '?lang=' + encodeURIComponent(code);
+      },
+    };
+  };
+
   const render = (res, view, locals = {}) => {
+    const i18n = chrome(locals.req || res.req);
     if (view === 'login') {
       return res.render('admin/login', {
         site: ctx.site,
         ctx,
-        nav: adminNav(),
+        nav: adminNav(i18n.t),
         csrf: (locals.req && locals.req.session && locals.req.session.csrf) || '',
         next: '/admin',
         error: null,
         form: {},
         mustChange: !!(loadCredentials().mustChange),
+        ...i18n,
         ...locals,
       });
     }
     return res.render('aw/' + view, {
       site: ctx.site,
       ctx,
-      nav: adminNav(),
+      nav: adminNav(i18n.t),
       flash: res.locals.flash || null,
       csrf: (locals.req && locals.req.session && locals.req.session.csrf) || '',
+      ...i18n,
       ...locals,
     });
   };
@@ -144,10 +166,10 @@ export function adminRoutes(ctx) {
     const community = ctx.community.stats();
     const posts = ctx.index.allPosts();
     const queue = ctx.community.moderationQueue().slice(0, 6);
-    const seo = seoHealth(ctx);
+    const seo = seoHealth(ctx, req.locale);
     render(res, 'dashboard', {
       req,
-      title: 'Dashboard',
+      title: tr(req)('admin.dashboard'),
       stats,
       community,
       queue,
@@ -172,7 +194,7 @@ export function adminRoutes(ctx) {
     if (q) posts = posts.filter((p) => (p.title + ' ' + p.slug + ' ' + p.tags.join(' ')).toLowerCase().includes(q));
     render(res, 'posts', {
       req,
-      title: 'Posts',
+      title: tr(req)('admin.posts'),
       posts,
       filter,
       q,
@@ -189,7 +211,7 @@ export function adminRoutes(ctx) {
   router.get('/admin/posts/new', requireAuth, (req, res) => {
     render(res, 'editor', {
       req,
-      title: 'New post',
+      title: tr(req)('admin.new_post'),
       kind: 'post',
       doc: {
         file: '',
@@ -216,7 +238,7 @@ export function adminRoutes(ctx) {
     raw.data.slug = raw.data.slug || raw.file.replace(/\.md$/, '').replace(/^\d{4}-\d{2}-\d{2}-/, '');
     render(res, 'editor', {
       req,
-      title: 'Edit: ' + (raw.data.title || req.params.slug),
+      title: (raw.data.title || req.params.slug) + ' · ' + tr(req)('admin.edit'),
       kind: 'post',
       doc: raw,
       isNew: false,
@@ -231,7 +253,8 @@ export function adminRoutes(ctx) {
       const fields = normaliseFields(req.body, {});
       const saved = await saveDoc({ kind: 'post', slug, fields, body: req.body.body || '' });
       ctx.refresh();
-      setFlash(res, 'ok', (slug ? 'Updated ' : 'Created ') + saved.file);
+      const tSave = makeTranslator((req && req.locale) || ctx.site.locale);
+    setFlash(res, 'ok', tSave(slug ? 'admin.post_updated' : 'admin.post_created', { file: saved.file }));
       res.redirect('/admin/posts/' + fields.slug + '/edit?saved=1');
     } catch (err) { next(err); }
   });
@@ -253,7 +276,7 @@ export function adminRoutes(ctx) {
     fields.draft = true;
     await saveDoc({ kind: 'post', slug: '', fields, body: raw.body });
     ctx.refresh();
-    setFlash(res, 'ok', 'Duplicated as a draft: ' + fields.slug);
+    setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.post_duplicated', { slug: fields.slug }));
     res.redirect('/admin/posts/' + fields.slug + '/edit');
   });
 
@@ -264,7 +287,7 @@ export function adminRoutes(ctx) {
 
   router.get('/admin/pages/new', requireAuth, (req, res) => {
     render(res, 'editor', {
-      req, title: 'New page', kind: 'page', isNew: true,
+      req, title: tr(req)('admin.new_page'), kind: 'page', isNew: true,
       doc: { file: '', data: { title: '', slug: '', description: '' }, body: '' },
       uploads: listUploads(),
     });
@@ -275,7 +298,7 @@ export function adminRoutes(ctx) {
     if (!raw) return next();
     raw.data.slug = raw.data.slug || raw.file.replace(/\.md$/, '');
     render(res, 'editor', {
-      req, title: 'Edit: ' + (raw.data.title || req.params.slug), kind: 'page',
+      req, title: (raw.data.title || req.params.slug) + ' · ' + tr(req)('admin.edit'), kind: 'page',
       doc: raw, isNew: false, originalSlug: req.params.slug, uploads: listUploads(),
     });
   });
@@ -286,7 +309,8 @@ export function adminRoutes(ctx) {
       const fields = normaliseFields(req.body, {});
       const saved = await saveDoc({ kind: 'page', slug, fields, body: req.body.body || '' });
       ctx.refresh();
-      setFlash(res, 'ok', (slug ? 'Updated ' : 'Created ') + saved.file);
+      const tSave = makeTranslator((req && req.locale) || ctx.site.locale);
+    setFlash(res, 'ok', tSave(slug ? 'admin.post_updated' : 'admin.post_created', { file: saved.file }));
       res.redirect('/admin/pages/' + fields.slug + '/edit?saved=1');
     } catch (err) { next(err); }
   });
@@ -325,7 +349,7 @@ export function adminRoutes(ctx) {
     if (status !== 'all') entries = entries.filter((e) => (e.status || 'approved') === status);
     render(res, 'guestbook', {
       req,
-      title: 'Guestbook',
+      title: tr(req)('admin.guestbook'),
       entries,
       status,
       stats: ctx.community.stats(),
@@ -335,19 +359,20 @@ export function adminRoutes(ctx) {
 
   router.post('/admin/guestbook/:id/status', requireAuth, requireCsrf, async (req, res) => {
     const entry = await ctx.community.setStatus(req.params.id, String(req.body.status || 'approved'));
-    setFlash(res, 'ok', entry ? 'Entry #' + entry.id + ' → ' + req.body.status : 'Entry not found.');
+    const t = makeTranslator((req && req.locale) || ctx.site.locale);
+    setFlash(res, 'ok', entry ? t('admin.approve_done', { id: entry.id, status: req.body.status }) : t('admin.nothing_to_delete'));
     res.redirect('/admin/guestbook?status=' + encodeURIComponent(String(req.query.status || 'all')));
   });
 
   router.post('/admin/guestbook/:id/delete', requireAuth, requireCsrf, async (req, res) => {
     const removed = await ctx.community.remove(req.params.id);
-    setFlash(res, 'ok', removed ? 'Deleted entry #' + removed.id : 'Entry not found.');
+    setFlash(res, 'ok', removed ? makeTranslator((req && req.locale) || ctx.site.locale)('admin.entry_deleted', { id: removed.id }) : makeTranslator((req && req.locale) || ctx.site.locale)('admin.nothing_to_delete'));
     res.redirect('/admin/guestbook');
   });
 
   /* -------------------------------------------------------- settings */
   router.get('/admin/settings', requireAuth, (req, res) => {
-    render(res, 'settings', { req, title: 'Settings', settings: ctx.site, defaults: DEFAULTS });
+    render(res, 'settings', { req, title: makeTranslator(req.locale || ctx.site.locale)('admin.settings'), settings: ctx.site, defaults: DEFAULTS });
   });
 
   router.post('/admin/settings', requireAuth, requireCsrf, async (req, res, next) => {
@@ -395,7 +420,7 @@ export function adminRoutes(ctx) {
       await fsp.mkdir(DATA_DIR, { recursive: true });
       await fsp.writeFile(path.join(DATA_DIR, 'settings.json'), JSON.stringify(settings, null, 2) + '\n', 'utf8');
       ctx.refresh({ config: true });
-      setFlash(res, 'ok', 'Settings saved. data/settings.json now overrides config/site.config.json.');
+      setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.settings_saved'));
       res.redirect('/admin/settings');
     } catch (err) { next(err); }
   });
@@ -403,7 +428,7 @@ export function adminRoutes(ctx) {
   router.post('/admin/settings/reset', requireAuth, requireCsrf, async (req, res) => {
     await fsp.rm(path.join(DATA_DIR, 'settings.json'), { force: true });
     ctx.refresh({ config: true });
-    setFlash(res, 'ok', 'Overrides removed — back to config/site.config.json.');
+    setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.settings_reset'));
     res.redirect('/admin/settings');
   });
 
@@ -413,27 +438,28 @@ export function adminRoutes(ctx) {
       const next1 = String(req.body.next || '');
       const credentials = loadCredentials();
       const plain = ctx.site.admin && ctx.site.admin.password;
+      const t = makeTranslator((req && req.locale) || ctx.site.locale);
       if (!plain && !verifyPassword(current, credentials.password)) {
-        setFlash(res, 'err', 'Current password is wrong.');
+        setFlash(res, 'err', t('admin.password_wrong'));
         return res.redirect('/admin/settings');
       }
       if (next1.length < 10) {
-        setFlash(res, 'err', 'New password must be at least 10 characters.');
+        setFlash(res, 'err', t('admin.password_short'));
         return res.redirect('/admin/settings');
       }
       if (next1 !== String(req.body.confirm || '')) {
-        setFlash(res, 'err', 'The two new passwords do not match.');
+        setFlash(res, 'err', t('admin.password_mismatch'));
         return res.redirect('/admin/settings');
       }
       saveCredentials({ ...credentials, username: credentials.username || 'admin', password: hashPassword(next1), mustChange: false, updatedAt: new Date().toISOString() });
-      setFlash(res, 'ok', 'Password updated (scrypt, salted).');
+      setFlash(res, 'ok', t('admin.password_ok'));
       res.redirect('/admin/settings');
     } catch (err) { next(err); }
   });
 
   /* ----------------------------------------------------------- media */
   router.get('/admin/media', requireAuth, (req, res) => {
-    render(res, 'media', { req, title: 'Media', files: listUploads() });
+    render(res, 'media', { req, title: makeTranslator(req.locale || ctx.site.locale)('admin.media'), files: listUploads() });
   });
 
   router.post('/admin/media', requireAuth, upload.single('file'), requireCsrf, async (req, res, next) => {
@@ -457,15 +483,16 @@ export function adminRoutes(ctx) {
       }
 
       if (!buffer) {
-        setFlash(res, 'err', 'Pick a file or paste an image first.');
+        setFlash(res, 'err', makeTranslator((req && req.locale) || ctx.site.locale)('admin.paste_data_url'));
         return res.redirect('/admin/media');
       }
       if (buffer.length > MAX_UPLOAD) {
-        setFlash(res, 'err', 'Too big: ' + humanBytes(buffer.length) + ' (limit ' + humanBytes(MAX_UPLOAD) + ').');
+        const t = makeTranslator((req && req.locale) || ctx.site.locale);
+        setFlash(res, 'err', t('admin.too_big', { size: humanBytes(buffer.length), max: humanBytes(MAX_UPLOAD) }));
         return res.redirect('/admin/media');
       }
       if (!ALLOWED_IMAGE.test(type)) {
-        setFlash(res, 'err', 'Only images please: ' + (type || 'unknown type'));
+        setFlash(res, 'err', makeTranslator((req && req.locale) || ctx.site.locale)('admin.not_image', { type: type || '?' }));
         return res.redirect('/admin/media');
       }
 
@@ -473,7 +500,7 @@ export function adminRoutes(ctx) {
       const safe = slugify(name.replace(/\.[^.]+$/, '')) + '-' + Date.now().toString(36) + '.' + type.split('/')[1].replace('svg+xml', 'svg');
       await fsp.writeFile(path.join(UPLOAD_DIR, safe), buffer);
       ctx.site.uploads = listUploads();
-      setFlash(res, 'ok', 'Uploaded /uploads/' + safe);
+      setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.uploaded', { name: safe }));
       res.redirect('/admin/media');
     } catch (err) { next(err); }
   });
@@ -481,7 +508,7 @@ export function adminRoutes(ctx) {
   router.post('/admin/media/delete', requireAuth, requireCsrf, async (req, res) => {
     const name = path.basename(String(req.body.name || ''));
     await fsp.rm(path.join(UPLOAD_DIR, name), { force: true });
-    setFlash(res, 'ok', 'Deleted ' + name);
+    setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.deleted', { name }));
     res.redirect('/admin/media');
   });
 
@@ -489,8 +516,8 @@ export function adminRoutes(ctx) {
   router.get('/admin/tools', requireAuth, (req, res) => {
     render(res, 'tools', {
       req,
-      title: 'Tools',
-      health: seoHealth(ctx),
+      title: makeTranslator(req.locale || ctx.site.locale)('admin.tools'),
+      health: seoHealth(ctx, req.locale),
       files: listFiles('post'),
       pageFiles: listFiles('page'),
       subscribers: ctx.community.subscriberList(),
@@ -508,16 +535,17 @@ export function adminRoutes(ctx) {
 
 /* ------------------------------------------------------------- helpers */
 
-function adminNav() {
+function adminNav(t) {
+  const label = (key, fallback) => (t ? t(key) : fallback);
   return [
-    { href: '/admin/dashboard', label: '📊 Dashboard' },
-    { href: '/admin/posts', label: '📝 Posts' },
-    { href: '/admin/pages', label: '📄 Pages' },
-    { href: '/admin/guestbook', label: '📬 Guestbook' },
-    { href: '/admin/media', label: '🖼 Media' },
-    { href: '/admin/settings', label: '⚙ Settings' },
-    { href: '/admin/tools', label: '🛠 Tools' },
-    { href: '/', label: '🌐 View site' },
+    { href: '/admin/dashboard', label: label('admin.dashboard', '📊 Dashboard') },
+    { href: '/admin/posts', label: label('admin.posts', '📝 Posts') },
+    { href: '/admin/pages', label: label('admin.pages', '📄 Pages') },
+    { href: '/admin/guestbook', label: label('admin.guestbook', '📬 Guestbook') },
+    { href: '/admin/media', label: label('admin.media', '🖼 Media') },
+    { href: '/admin/settings', label: label('admin.settings', '⚙ Settings') },
+    { href: '/admin/tools', label: label('admin.tools', '🛠 Tools') },
+    { href: '/', label: label('admin.view_site', '🌐 View site') },
   ];
 }
 
@@ -535,33 +563,36 @@ function listUploads() {
   }
 }
 
-/** The SEO checklist shown on the dashboard and tools page. */
-export function seoHealth(ctx) {
+/** The SEO checklist shown on the dashboard and the tools page. */
+export function seoHealth(ctx, locale) {
   const posts = ctx.index.publishedPosts();
   const checks = [];
-  const add = (ok, label, detail) => checks.push({ ok, label, detail });
+  const t = makeTranslator(locale || ctx.site.locale);
+  const zh = (locale || ctx.site.locale || 'zh-CN').startsWith('zh');
+  const add = (ok, labelKey, detail) => checks.push({ ok, label: t(labelKey), detail });
 
-  add(!!ctx.site.title, 'Site title set', ctx.site.title || 'config/site.config.json → title');
+  add(!!ctx.site.title, 'seo.title', ctx.site.title || 'config/site.config.json → title');
   add(String(ctx.site.url).startsWith('https') || process.env.NODE_ENV !== 'production',
-    'Canonical URL is absolute', ctx.site.url + ' (use https:// and your real domain in production)');
-  add(!!ctx.site.description, 'Meta description present', truncate(ctx.site.description, 80));
+    'seo.canonical', ctx.site.url + (zh ? '（生产环境请改成 https:// 加你的真实域名）' : ' (use https:// and your real domain in production)'));
+  add(!!ctx.site.description, 'seo.description', truncate(ctx.site.description, 80));
 
   const noDesc = posts.filter((p) => !p.description);
-  add(noDesc.length === 0, 'Every post has a description', noDesc.length ? noDesc.length + ' missing: ' + noDesc.slice(0, 3).map((p) => p.slug).join(', ') : 'all good');
+  const allGood = zh ? '都没问题' : 'all good';
+  add(noDesc.length === 0, 'seo.post_description', noDesc.length ? (zh ? '缺 ' + noDesc.length + ' 篇：' : noDesc.length + ' missing: ') + noDesc.slice(0, 3).map((p) => p.slug).join(', ') : allGood);
 
   const noTags = posts.filter((p) => !p.tags.length);
-  add(noTags.length === 0, 'Every post is tagged', noTags.length ? noTags.length + ' untagged' : 'all good');
+  add(noTags.length === 0, 'seo.post_tags', noTags.length ? (zh ? noTags.length + ' 篇没打标签' : noTags.length + ' untagged') : allGood);
 
   const short = posts.filter((p) => p.wordCount < 100);
-  add(short.length === 0, 'Posts are at least 100 words', short.length ? short.length + ' very short' : 'all good');
+  add(short.length === 0, 'seo.length', short.length ? (zh ? short.length + ' 篇太短' : short.length + ' very short') : allGood);
 
   const noAlt = posts.filter((p) => p.cover && !p.coverAlt);
-  add(noAlt.length === 0, 'Cover images have alt text', noAlt.length ? noAlt.length + ' missing alt text' : 'all good');
+  add(noAlt.length === 0, 'seo.alt', noAlt.length ? (zh ? noAlt.length + ' 张缺 alt 文本' : noAlt.length + ' missing alt text') : allGood);
 
   const dupes = {};
   posts.forEach((p) => { dupes[p.slug] = (dupes[p.slug] || 0) + 1; });
   const dupList = Object.keys(dupes).filter((k) => dupes[k] > 1);
-  add(dupList.length === 0, 'No duplicate slugs', dupList.length ? dupList.join(', ') : 'all good');
+  add(dupList.length === 0, 'seo.dupes', dupList.length ? dupList.join(', ') : allGood);
 
   const score = Math.round((checks.filter((c) => c.ok).length / checks.length) * 100);
   return { checks, score };

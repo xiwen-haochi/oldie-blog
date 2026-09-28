@@ -1,82 +1,82 @@
 <div class="breadcrumbs"><a href="/">index.html</a><span class="sep">\</span> guestbook.html</div>
 <section class="page-head">
-  <h1 class="ph-title">📬 The guestbook</h1>
+  <h1 class="ph-title">📬 <%= t('gb.title') %></h1>
   <div class="ph-body">
     <p style="margin:0">
-      <strong><%= entries.length %></strong> entr<%= entries.length === 1 ? 'y' : 'ies' %> ·
-      signed since <%= site.since || '1998' %> ·
-      <span class="blink">please sign, it is basically the whole point</span>
+      <%= t('gb.summary', { n: entries.length, since: site.since || '1998' }) %>
+      · <span class="blink"><%= t('gb.please_sign') %></span>
     </p>
   </div>
 </section>
 
 <div class="grid-2" style="align-items:start;margin-bottom:16px">
   <form class="bbs-form" method="post" action="/guestbook" id="sign">
-    <h3 style="margin:0 0 8px;font-family:var(--font-ui);font-size:13px">✍️ Sign my guestbook</h3>
+    <h3 style="margin:0 0 8px;font-family:var(--font-ui);font-size:13px"><%= t('gb.sign_heading') %></h3>
     <% if (flash) { %><div class="alert <%= flash.type %>"><%= flash.text %></div><% } %>
     <div class="row">
-      <label for="g-name">Name *</label>
+      <label for="g-name"><%= t('gb.name') %> *</label>
       <input id="g-name" name="name" required maxlength="40" value="<%= form.name || '' %>">
     </div>
     <div class="grid-2">
       <div class="row">
-        <label for="g-email">E-mail (never published)</label>
+        <label for="g-email"><%= t('gb.email') %></label>
         <input id="g-email" name="email" type="email" maxlength="80" value="<%= form.email || '' %>">
       </div>
       <div class="row">
-        <label for="g-url">Homepage</label>
+        <label for="g-url"><%= t('gb.homepage') %></label>
         <input id="g-url" name="url" type="url" maxlength="120" placeholder="https://" value="<%= form.url || '' %>">
       </div>
     </div>
     <div class="row">
-      <label for="g-location">Where are you dialing from?</label>
-      <input id="g-location" name="location" maxlength="60" placeholder="e.g. Shanghai, CN" value="<%= form.location || '' %>">
+      <label for="g-location"><%= t('gb.location') %></label>
+      <input id="g-location" name="location" maxlength="60" placeholder="<%= t('gb.location_hint') %>" value="<%= form.location || '' %>">
     </div>
     <div class="row">
-      <label for="g-message">Message *</label>
-      <textarea id="g-message" name="message" rows="5" required maxlength="1500" placeholder="Tell me what you think of the page. Any time."><%= form.message || '' %></textarea>
+      <label for="g-message"><%= t('gb.message') %> *</label>
+      <textarea id="g-message" name="message" rows="5" required maxlength="1500" placeholder="<%= t('gb.message_hint') %>"><%= form.message || '' %></textarea>
     </div>
     <input type="text" name="website" tabindex="-1" autocomplete="off" style="display:none" aria-hidden="true">
+    <input type="hidden" name="lang" value="<%= locale %>">
     <div class="btn-row">
-      <button class="btn primary" type="submit">📮 SIGN IT</button>
-      <span class="form-note">Entries appear after a quick human check. Spam goes to the bin.</span>
+      <button class="btn primary" type="submit"><%= t('gb.submit') %></button>
+      <span class="form-note"><%= t('gb.submit_note') %></span>
     </div>
   </form>
 
   <div class="widget">
-    <h3 class="widget-title">📜 Guestbook rules</h3>
+    <h3 class="widget-title">📜 <%= t('gb.rules') %></h3>
     <div class="widget-body">
       <ol style="margin:0;padding-left:18px">
-        <li>Introduce yourself — a handle is fine.</li>
-        <li>Say something nice about at least one thing.</li>
-        <li>No 10kb walls of ASCII art (I love ASCII art, but not that much).</li>
-        <li>Link back if you sign mine. Circular favour chains encouraged.</li>
+        <li><%= t('gb.rule1') %></li>
+        <li><%= t('gb.rule2') %></li>
+        <li><%= t('gb.rule3') %></li>
+        <li><%= t('gb.rule4') %></li>
       </ol>
       <div class="divider"></div>
       <p class="mono" style="font-size:10.5px;margin:0">
-        <span class="blink">●</span> moderation queue: <%= pendingCount %> waiting<br>
-        <span class="blink">●</span> spam caught: <%= spamCount %> deleted
+        <span class="blink">●</span> <%= t('gb.queue') %>: <%= pendingCount %><br>
+        <span class="blink">●</span> <%= t('gb.spam_caught') %>: <%= spamCount %>
       </p>
     </div>
   </div>
 </div>
 
-<h2 class="widget-title" style="margin:0 0 8px" id="entries">📖 Entries</h2>
+<h2 class="widget-title" style="margin:0 0 8px" id="entries"><%= t('gb.entries') %></h2>
 <% if (!entries.length) { %>
-  <div class="alert">The guestbook is brand new. Be the first name in the book! ✍️</div>
+  <div class="alert"><%= t('gb.none') %></div>
 <% } %>
 <% entries.forEach(function (e) { %>
   <div class="gb-entry<%= e.status === 'pending' ? ' pending' : '' %>" id="gb-<%= e.id %>">
     <div class="gb-head">
       <span class="who">📝 <%= e.name %></span>
-      <span class="stamp-time"><%= formatDate(e.date, { locale: site.locale }) %> · <%= e.location || 'location unknown' %></span>
+      <span class="stamp-time"><%= formatDate(e.date, { locale: dateLocale }) %> · <%= e.location || 'location unknown' %></span>
     </div>
     <div class="gb-body"><%= e.message %></div>
     <div class="gb-meta">
       <% if (e.url) { %><a href="<%= e.url %>" rel="nofollow noopener" target="_blank">🌐 <%= e.host %></a> · <% } %>
-      <% if (e.email) { %>📧 <a href="mailto:<%= e.email %>">reply</a> · <% } %>
-      <span class="mono">entry #<%= e.id %></span>
-      <% if (e.status === 'pending') { %> · <span class="stamp draft">AWAITING MODERATION</span><% } %>
+      <% if (e.email) { %>📧 <a href="mailto:<%= e.email %>"><%= t('gb.reply') %></a> · <% } %>
+      <span class="mono"><%= t('gb.entry') %> #<%= e.id %></span>
+      <% if (e.status === 'pending') { %> · <span class="stamp draft"><%= t('gb.awaiting') %></span><% } %>
     </div>
   </div>
 <% }) %>

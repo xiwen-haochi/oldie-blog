@@ -8,6 +8,12 @@
   var $ = function (sel, root) { return (root || document).querySelector(sel); };
   var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
   var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+  var I18N = {};
+  try {
+    var blob = document.getElementById('i18n-data');
+    if (blob) I18N = JSON.parse(blob.textContent || '{}');
+  } catch (e) { /* no translations available */ }
+  var say = function (key, fallback) { return I18N[key] || fallback; };
   var store = {
     get: function (k, d) { try { var v = localStorage.getItem('oldie:' + k); return v === null ? d : v; } catch (e) { return d; } },
     set: function (k, v) { try { localStorage.setItem('oldie:' + k, v); } catch (e) { /* private mode */ } },
@@ -51,7 +57,7 @@
         if (!t) return;
         e.preventDefault();
         Theme.toggle();
-        toast(Theme.current() === '1998' ? '⏳ TIME MACHINE: 1998 MODE' : '↩ back to the present');
+        toast(Theme.current() === '1998' ? say('themeOn', '⏳ 1998 MODE') : say('themeOff', '↩ back to the present'));
       });
     },
   };
@@ -111,7 +117,7 @@
     },
     start: function () {
       var ctx = Chiptune.ensure();
-      if (!ctx) { toast('⚠ This browser has no Web Audio API', 'warn'); return; }
+      if (!ctx) { toast(say('noAudio', '⚠ no Web Audio API'), 'warn'); return; }
       if (ctx.state === 'suspended') ctx.resume();
       Chiptune.playing = true;
       Chiptune.tick();
@@ -140,7 +146,7 @@
         if (!t) return;
         e.preventDefault();
         Chiptune.toggle();
-        toast(Chiptune.playing ? '♫ chiptune theme: ON (0 bytes downloaded)' : '♪ music off');
+        toast(Chiptune.playing ? say('musicOn', '♫ on') : say('musicOff', '♪ off'));
       });
       // remember the choice, but never autoplay without a gesture
       if (store.get('music', 'off') === 'on') {
@@ -350,10 +356,10 @@
       Radio.speaking = false;
       if (Radio.meter) Radio.meter.remove();
       Radio.meter = null;
-      $$('[data-listen-post]').forEach(function (b) { b.textContent = '📻 LISTEN TO THIS POST'; });
+      $$('[data-listen-post]').forEach(function (b) { b.textContent = say('listen', '📻 LISTEN'); });
     },
     play: function () {
-      if (!('speechSynthesis' in window)) { toast('⚠ Your browser cannot speak. It was invented later than 1998.', 'warn'); return; }
+      if (!('speechSynthesis' in window)) { toast(say('noSpeech', '⚠ speech unavailable'), 'warn'); return; }
       var body = $('[data-post-body]');
       if (!body) return;
       Radio.stop();
@@ -368,12 +374,12 @@
       var u = new SpeechSynthesisUtterance(chunks.join(' … '));
       u.rate = 0.96; u.pitch = 0.85; u.volume = 1;
       u.lang = document.documentElement.lang || 'en-US';
-      u.onend = function () { Radio.stop(); toast('📻 that was the bulletin'); };
+      u.onend = function () { Radio.stop(); toast(say('onAir', '📻 off air')); };
       u.onerror = function () { Radio.stop(); };
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
       Radio.speaking = true;
-      $$('[data-listen-post]').forEach(function (b) { b.textContent = '⏹ STOP NARRATION'; });
+      $$('[data-listen-post]').forEach(function (b) { b.textContent = say('stop', '⏹ STOP'); });
     },
     init: function () {
       document.addEventListener('click', function (e) {
@@ -428,11 +434,11 @@
         pct = 100;
         clearInterval(timer);
         wrap.classList.add('done');
-        if (sb) sb.innerHTML = '📄 Document: Done &nbsp;·&nbsp; transferred in ' + perfMs() + ' ms';
+        if (sb) sb.textContent = say('done', '📄 Document: Done') + ' · ' + perfMs() + ' ms';
         setTimeout(function () { wrap.style.height = '0'; wrap.style.opacity = '0'; }, 700);
       }
       bar.style.width = pct + '%';
-      if (sb) sb.innerHTML = '📶 Connecting at 56,000 bps… ' + Math.floor(pct) + '%';
+      if (sb) sb.textContent = say('connecting', '📶 Connecting…') + ' ' + Math.floor(pct) + '%';
     }, 55);
   }
 
@@ -448,7 +454,7 @@
 
     var status = $('#sb-status');
     if (status && !status.textContent.match(/Document/)) {
-      setTimeout(function () { status.innerHTML = '📄 Document: Done'; }, 1400);
+      setTimeout(function () { status.textContent = say('done', '📄 Document: Done'); }, 1400);
     }
 
     var path = $('#sb-path');

@@ -58,6 +58,8 @@ deployed yesterday:
 | 🎲 | **Random post** | Deterministic per day, so "random" stays reproducible. |
 | 🗺 | **`.json` per post** | Machine-readable Markdown/HTML/text for every article. |
 
+| 🌐 | **Language switch** | Chinese by default, English in one click. `?lang=en` is shareable, `hreflang` tells search engines, and the choice is remembered in one cookie. |
+
 Plus: a 56k dial-up progress bar, scrolling marquee, blinking status line,
 "best viewed in Netscape 4.0" banner, and a status bar that reports the real
 server time.
@@ -136,6 +138,28 @@ pnpm new:post "My post title" --tags=retro,web --draft
 
 Saving in the admin writes a normal `.md` file to `content/` — check
 `git status` and you will see exactly what changed.
+
+---
+
+## Internationalisation
+
+The interface ships in **Chinese (zh-CN)** and **English**, switchable from the
+title bar or with `?lang=en` on any URL.
+
+Resolution order: `?lang=` → `oldie_lang` cookie → `site.config.json` →
+`Accept-Language`. The switcher writes the cookie for a year and every page
+emits `<link rel="alternate" hreflang="…">` plus `og:locale:alternate`, so the
+two languages never compete with each other in search results.
+
+```bash
+# add a third language
+# 1. copy an object in src/lib/i18n.js, give it a code + label
+# 2. nothing else — templates, routes and the admin pick it up automatically
+```
+
+Dates, "N posts", pagination and the whole admin chrome follow the active
+language. Your **content** is yours: posts can be written in either language,
+and the search index handles CJK (unigram + bigram tokenising).
 
 ---
 

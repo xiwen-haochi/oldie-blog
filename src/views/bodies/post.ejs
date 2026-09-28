@@ -1,7 +1,7 @@
 <article class="article">
   <div class="breadcrumbs">
     <a href="/">index</a><span class="sep">\</span>
-    <a href="/posts">dispatches</a><span class="sep">\</span>
+    <a href="/posts"><%= t('posts.title').replace(/^[^ ]+ /, '') %></a><span class="sep">\</span>
     <% if (post.tags[0]) { %><a href="/tags/<%= slugify(post.tags[0]) %>"><%= post.tags[0] %></a><span class="sep">\</span><% } %>
     <span><%= post.slug %>.md</span>
   </div>
@@ -11,26 +11,26 @@
   <header class="article-header">
     <h1 class="article-title"><%= post.title %></h1>
     <div class="article-meta">
-      <span>📅 <time datetime="<%= isoDate(post.date) %>"><%= formatDate(post.date, { locale: site.locale }) %></time></span>
-      <% if (post.updated) { %><span>🔁 updated <%= formatDate(post.updated, { locale: site.locale }) %></span><% } %>
+      <span>📅 <time datetime="<%= isoDate(post.date) %>"><%= formatDate(post.date, { locale: dateLocale }) %></time></span>
+      <% if (post.updated) { %><span>🔁 <%= t('post.updated') %> <%= formatDate(post.updated, { locale: dateLocale }) %></span><% } %>
       <span>✍️ <%= post.author || site.author %></span>
-      <span>⏱ <%= post.readingTime %> min read</span>
-      <span>🔤 <%= post.wordCount %> words</span>
-      <% post.tags.forEach(function (t) { %><a class="tag" href="/tags/<%= slugify(t) %>">#<%= t %></a><% }) %>
+      <span>⏱ <%= post.readingTime %> <%= t('post.min_read') %></span>
+      <span>🔤 <%= post.wordCount %> <%= t('post.words') %></span>
+      <% post.tags.forEach(function (tag) { %><a class="tag" href="/tags/<%= slugify(tag) %>">#<%= tag %></a><% }) %>
     </div>
   </header>
 
   <div class="linkbar">
-    <a class="btn" href="#" data-listen-post>📻 LISTEN TO THIS POST</a>
-    <a class="btn" href="<%= post.url %>.txt" download>💾 DOWNLOAD .TXT</a>
-    <a class="btn" href="#" data-copy="<%= post.canonicalUrl %>">🔗 COPY LINK</a>
-    <a class="btn" href="#comments">💬 <%= commentCount %> COMMENT<%= commentCount === 1 ? '' : 'S' %></a>
-    <button class="btn" type="button" data-terminal-cat="<%= post.slug %>">⌨️ CAT IN TERMINAL</button>
+    <a class="btn" href="#" data-listen-post><%= t('post.listen') %></a>
+    <a class="btn" href="<%= post.url %>.txt" download><%= t('post.download') %></a>
+    <a class="btn" href="#" data-copy="<%= post.canonicalUrl %>"><%= t('post.copy') %></a>
+    <a class="btn" href="#comments">💬 <%= t('post.comments') %> (<%= commentCount %>)</a>
+    <button class="btn" type="button" data-terminal-cat="<%= post.slug %>"><%= t('post.cat_terminal') %></button>
   </div>
 
   <% if (post.toc && post.toc.length > 1) { %>
   <details class="toc" open>
-    <summary>📑 On this page</summary>
+    <summary><%= t('post.toc') %></summary>
     <ol>
       <% post.toc.forEach(function (h) { %>
         <li class="lvl-<%= h.level %>"><a href="#<%= h.id %>"><%= h.text %></a></li>
@@ -45,7 +45,7 @@
 
   <footer class="post-footer">
     <div class="share-row">
-      <span class="label mono">SHARE:</span>
+      <span class="label mono"><%= t('post.share') %></span>
       <a class="btn tiny" href="https://twitter.com/intent/tweet?text=<%= encodeURIComponent(post.title) %>&url=<%= encodeURIComponent(post.canonicalUrl) %>" target="_blank" rel="noopener">🐦 TWITTER</a>
       <a class="btn tiny" href="https://news.ycombinator.com/submitlink?u=<%= encodeURIComponent(post.canonicalUrl) %>&t=<%= encodeURIComponent(post.title) %>" target="_blank" rel="noopener">🟧 HN</a>
       <a class="btn tiny" href="https://www.reddit.com/submit?url=<%= encodeURIComponent(post.canonicalUrl) %>&title=<%= encodeURIComponent(post.title) %>" target="_blank" rel="noopener">👽 REDDIT</a>
@@ -56,19 +56,20 @@
     <div class="flex" style="gap:10px;align-items:flex-start">
       <div style="font-size:30px" aria-hidden="true">🧑‍💻</div>
       <div>
-        <strong>Posted by <%= post.author || site.author %></strong><br>
+        <strong><%= t('post.posted_by') %> <%= post.author || site.author %></strong><br>
         <span class="mono" style="font-size:11px">
-          <%= postCount %> dispatches so far · <%= totalWords.toLocaleString('en-US') %> words written ·
-          last updated <%= lastUpdated %>
+          <%= postCount %> <%= t('posts.title').replace(/^[^ ]+ /, '') %> ·
+          <%= totalWords.toLocaleString('en-US') %> <%= t('post.words') %> ·
+          <%= t('side.last_updated') %> <%= lastUpdated %>
         </span><br>
-        <a href="/about">Read the colophon →</a>
+        <a href="/about"><%= t('post.colophon') %></a>
       </div>
     </div>
   </footer>
 
   <% if (related && related.length) { %>
   <section style="margin-top:18px">
-    <h2 class="widget-title" style="margin:0 0 8px">🔗 More like this</h2>
+    <h2 class="widget-title" style="margin:0 0 8px"><%= t('post.more_like') %></h2>
     <ul class="post-list">
       <% related.forEach(function (p) { %><%- include('../partials/post-card', { post: p }) %><% }) %>
     </ul>
@@ -78,62 +79,63 @@
   <nav class="post-nav" aria-label="Post navigation">
     <% if (neighbours.newer) { %>
       <a class="prev" href="<%= neighbours.newer.url %>">
-        <span class="dir">◀ NEWER</span><%= neighbours.newer.title %>
+        <span class="dir"><%= t('post.newer') %></span><%= neighbours.newer.title %>
       </a>
     <% } else { %><span></span><% } %>
     <% if (neighbours.older) { %>
       <a class="next" href="<%= neighbours.older.url %>">
-        <span class="dir">OLDER ▶</span><%= neighbours.older.title %>
+        <span class="dir"><%= t('post.older') %></span><%= neighbours.older.title %>
       </a>
     <% } %>
   </nav>
 
   <section id="comments" style="margin-top:22px">
-    <h2 class="widget-title" style="margin:0 0 8px">💬 Comments (<%= commentCount %>)</h2>
+    <h2 class="widget-title" style="margin:0 0 8px">💬 <%= t('post.comments') %> (<%= commentCount %>)</h2>
     <% if (comments.length) { %>
       <% comments.forEach(function (c) { %>
         <div class="gb-entry">
           <div class="gb-head">
             <span><%= c.name %></span>
-            <span class="stamp-time"><%= formatDate(c.date, { locale: site.locale, style: 'short' }) %> · <%= c.location || 'the WWW' %></span>
+            <span class="stamp-time"><%= formatDate(c.date, { locale: dateLocale, style: 'short' }) %> · <%= c.location || 'the WWW' %></span>
           </div>
           <div class="gb-body"><%= c.message %></div>
           <div class="gb-meta">
             <% if (c.url) { %><a href="<%= c.url %>" rel="nofollow noopener" target="_blank"><%= c.host %></a> · <% } %>
-            <% if (c.email) { %>📧 <a href="mailto:<%= c.email %>">email</a> · <% } %>
+            <% if (c.email) { %>📧 <a href="mailto:<%= c.email %>"><%= t('gb.reply') %></a> · <% } %>
             <span class="mono">#<%= c.id %></span>
           </div>
         </div>
       <% }) %>
     <% } else { %>
-      <div class="alert">No comments yet — be the first to leave a note on the <a href="/guestbook">guestbook page</a> or right here.</div>
+      <div class="alert"><%= t('post.comment_none') %></div>
     <% } %>
 
     <form class="bbs-form" method="post" action="/comments" style="margin-top:12px">
       <input type="hidden" name="_csrf" value="<%= csrf %>">
       <input type="hidden" name="post" value="<%= post.slug %>">
-      <h3 style="margin:0 0 8px;font-family:var(--font-ui);font-size:13px">✍️ Leave a comment</h3>
+      <input type="hidden" name="lang" value="<%= locale %>">
+      <h3 style="margin:0 0 8px;font-family:var(--font-ui);font-size:13px"><%= t('post.leave_comment') %></h3>
       <div class="row">
-        <label for="c-name">Name *</label>
+        <label for="c-name"><%= t('gb.name') %> *</label>
         <input id="c-name" name="name" required maxlength="40" value="<%= form.name || '' %>">
       </div>
       <div class="grid-2">
         <div class="row">
-          <label for="c-email">E-mail (never shown)</label>
+          <label for="c-email"><%= t('gb.email') %></label>
           <input id="c-email" name="email" type="email" maxlength="80" value="<%= form.email || '' %>">
         </div>
         <div class="row">
-          <label for="c-url">Homepage</label>
+          <label for="c-url"><%= t('gb.homepage') %></label>
           <input id="c-url" name="url" type="url" maxlength="120" placeholder="https://" value="<%= form.url || '' %>">
         </div>
       </div>
       <div class="row">
-        <label for="c-message">Message *</label>
+        <label for="c-message"><%= t('gb.message') %> *</label>
         <textarea id="c-message" name="message" rows="4" required maxlength="1200"><%= form.message || '' %></textarea>
       </div>
       <div class="btn-row">
-        <button class="btn primary" type="submit">📮 POST COMMENT</button>
-        <span class="form-note">Plain text only. Be excellent to each other.</span>
+        <button class="btn primary" type="submit"><%= t('post.comment_submit') %></button>
+        <span class="form-note"><%= t('post.comment_note') %></span>
       </div>
     </form>
   </section>

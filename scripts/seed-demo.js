@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * Reset the runtime stores so a fresh clone has something to look at:
- * a few guestbook entries, a couple of subscribers and a believable
- * hit-counter history. Safe to run any time — it only writes data/*.json.
+ * a few guestbook entries, some subscribers and a believable hit-counter
+ * history. Safe to run any time — it only writes data/*.json.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,23 +14,24 @@ const iso = (offsetDays, hour = 11) =>
   new Date(now - offsetDays * day + hour * 3600000).toISOString();
 
 const entries = [
-  ['Ada Lovelace', 'London, UK', 'First!! Found you through the Dial-Up Survivors ring. The blinking text is glorious.', 12],
-  ['zeldatron', 'Portland, OR', 'this site is a time machine and I am here for it. signed, linked back.', 9],
-  ['Grace H.', 'Arlington, VA', 'The chiptune player made me smile out loud at my desk. Respect.', 7],
-  ['webmaster@geocities.invalid', 'Tokyo, JP', '你好！写的文章很有意思。DOS终端太酷了。', 5],
-  ['Captain Pixel', 'Manchester, UK', 'Bookmarking this for my grandchildren.', 3],
-  ['anonymous ftp user', 'the World Wide Web', 'cool page! add me to your webring!!', 1],
-].map(([name, location, message, daysAgo], i) => ({
+  ['阿飞', '中国 上海', '路过你们环形网过来的！页面做得真讲究，访问计数器还在跳，爷青回。', 12, 'approved'],
+  ['Ada Lovelace', 'London, UK', 'Found you through the Dial-Up Survivors ring. The blinking text is glorious.', 9, 'approved'],
+  ['Grace H.', 'Arlington, VA', 'The chiptune player made me smile out loud at my desk. Respect.', 7, 'approved'],
+  [' webmaster@geocities.invalid', '日本 东京', '日本語も読めます。DOS ターミナル unstoppable！', 5, 'approved'],
+  ['zeldatron', 'Portland, OR', 'this site is a time machine and I am here for it. signed, linked back.', 4, 'approved'],
+  ['小张', '中国 成都', '朋友推荐的，说这站能下载 .TXT，收藏了！', 3, 'pending'],
+  ['anonymous ftp user', 'the World Wide Web', 'cool page! add me to your webring!!', 1, 'approved'],
+].map(([name, location, message, daysAgo, status], i) => ({
   id: i + 1,
   target: 'guestbook',
   name,
   email: '',
-  url: name.includes('.') || name.includes('@') ? 'https://example.com/' + i : '',
-  host: name.includes('.') || name.includes('@') ? 'example.com' : '',
+  url: '',
+  host: '',
   location,
   message,
   date: iso(daysAgo, 9 + i),
-  status: i === 4 ? 'pending' : 'approved',
+  status,
   ip: '',
   ua: 'seed',
 }));
@@ -62,7 +63,7 @@ days[new Date(now).toISOString().slice(0, 10)] = 3;
 const writes = {
   'guestbook.json': { entries: [...entries, ...comments], nextId: 101, updatedAt: new Date().toISOString() },
   'subscribers.json': {
-    emails: ['ada@example.com', 'zeldatron@example.com', 'grace@example.com'],
+    emails: ['fei@example.com', 'ada@example.com', 'zeldatron@example.com'],
     addedAt: {},
   },
   'stats.json': {

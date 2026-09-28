@@ -13,6 +13,7 @@ import { adminRoutes } from './routes/admin.js';
 import { pageMeta, breadcrumbLd } from './lib/seo.js';
 import { cookies, clientIp, visitorId, geoGuess, gzipMiddleware, countPageview } from './lib/http.js';
 import { ensureCsrf } from './lib/sessions.js';
+import { resolveLocale, makeTranslator, availableLocales, localeMeta, normaliseLocale, clientStrings } from './lib/i18n.js';
 import { slugify } from './lib/text.js';
 
 export function createApp(ctx = createContext()) {
@@ -54,6 +55,20 @@ export function createApp(ctx = createContext()) {
   });
   app.use(visitorId);
   app.use(geoGuess);
+  app.use((req, res, next) => {
+    const locale = resolveLocale(req, ctx.site.locale);
+    req.locale = locale;
+    res.locals.locale = locale;
+    res.locals.t = makeTranslator(locale);
+    res.locals.localeMeta = localeMeta(locale);
+    res.locals.langs = availableLocales();
+    res.locals.clientStrings = clientStrings(locale);
+    // remember an explicit ?lang= choice for a year
+    if (normaliseLocale(req.query && req.query.lang) && req.cookies.oldie_lang !== locale) {
+      res.cookie('oldie_lang', locale, { maxAge: 1000 * 60 * 60 * 24 * 365, sameSite: 'lax', path: '/' });
+    }
+    next();
+  });
   app.use((req, res, next) => {
     // one-shot flash message carried in a cookie so redirects can show it
     if (req.cookies.oldie_flash) {
@@ -112,17 +127,18 @@ export function createApp(ctx = createContext()) {
 
   // ---- 404 ---------------------------------------------------------------
   app.use((req, res) => {
+    const t = makeTranslator(req.locale || ctx.site.locale);
     const page = pageMeta(ctx.site, {
-      title: '404 — page not found',
-      description: 'That page does not exist. Here is the way home.',
+      title: '404',
+      description: t('404.detail'),
       url: req.originalUrl,
       noindex: true,
     });
     res.status(404).render('pages/error', enrichLocals(ctx, req, res, {
       page,
       status: 404,
-      title: '404: PAGE NOT FOUND',
-      detail: 'The file you requested is not on this server. It may have been moved, renamed, or it never existed — like most of the links from 1999.',
+      title: t('404.title'),
+      detail: t('404.detail'),
     }));
   });
 
@@ -133,17 +149,18 @@ export function createApp(ctx = createContext()) {
     if (req.path.startsWith('/api')) {
       return res.status(status).json({ error: err.message || 'server error' });
     }
+    const t = makeTranslator(req.locale || ctx.site.locale);
     const page = pageMeta(ctx.site, {
       title: status + ' — ' + (err.message || 'error'),
-      description: 'Something went wrong on this very small computer.',
+      description: t('error.detail'),
       url: req.originalUrl,
       noindex: true,
     });
     res.status(status).render('pages/error', enrichLocals(ctx, req, res, {
       page,
       status,
-      title: status + ': ' + (err.statusText || 'ERROR'),
-      detail: err.expose ? err.message : 'An unexpected error occurred. The webmaster has been notified.',
+      title: status + ': ' + (err.statusText || t('error.title')),
+      detail: err.expose ? err.message : t('error.detail'),
     }));
   });
 
