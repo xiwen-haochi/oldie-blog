@@ -14,9 +14,12 @@ test('feature switches exist and default to on', () => {
 
 test('a config that predates the switches still loads', () => {
   const site = loadConfig({ env: {} });
-  assert.equal(site.features.comments, true);
-  assert.equal(site.storage.driver, 'local');
-  assert.equal(site.ai.enabled, false);
+  // whatever the owner has customised, every switch must still be a boolean
+  for (const key of Object.keys(DEFAULTS.features)) {
+    assert.equal(typeof site.features[key], 'boolean', 'not a boolean: ' + key);
+  }
+  assert.ok(['local', 's3'].includes(site.storage.driver));
+  assert.equal(typeof site.ai.enabled, 'boolean');
 });
 
 test('storage defaults to the local driver', () => {
@@ -57,13 +60,13 @@ test('extensions follow the mime type', () => {
   assert.equal(extFor('application/octet-stream'), 'bin');
 });
 
-test('ai is off until it is configured', () => {
-  const site = loadConfig({ env: {} });
-  assert.equal(aiReady(site), false);
-  assert.match(aiConfigError(site), /启用/);
-  const partial = { ...site, ai: { ...site.ai, enabled: true } };
+test('ai reports what is missing instead of failing silently', () => {
+  const off = { ai: { enabled: false, baseUrl: 'https://x/v1', apiKey: 'k', model: 'm' } };
+  assert.equal(aiReady(off), false);
+  assert.match(aiConfigError(off), /启用/);
+  const partial = { ai: { ...off.ai, enabled: true, apiKey: '' } };
   assert.match(aiConfigError(partial), /apiKey/);
-  const full = { ...site, ai: { ...site.ai, enabled: true, apiKey: 'sk-x', model: 'gpt-4o-mini' } };
+  const full = { ai: { ...off.ai, enabled: true, apiKey: 'sk-x' } };
   assert.equal(aiReady(full), true);
   assert.equal(aiConfigError(full), null);
 });

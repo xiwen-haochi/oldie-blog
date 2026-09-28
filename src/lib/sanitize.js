@@ -7,6 +7,59 @@
  * attribute set, everything else is dropped or escaped.
  */
 
+/**
+ * CSS that ships *inside* an inline <svg>.
+ *
+ * Bare class/id selectors are rewritten to `svg .foo` so they can only ever
+ * match inside the drawing; anything naming a non-SVG element (or the page
+ * itself) is dropped. That keeps pasted diagrams looking like themselves
+ * without letting a stylesheet restyle the blog.
+ */
+export function sanitizeSvgStyle(css) {
+  const text = String(css || '').slice(0, 8000);
+  if (!text.trim()) return '';
+  if (/@import|expression\(|javascript:|-moz-binding|behaviou?r\s*:/i.test(text)) return '';
+
+  const SVG_TAGS = new Set([
+    'svg', 'g', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'text',
+    'tspan', 'defs', 'marker', 'use', 'symbol', 'clippath', 'lineargradient', 'radialgradient',
+    'stop', 'filter', 'pattern', 'mask', 'title', 'desc', 'foreignobject', 'image', 'style',
+  ]);
+
+  const safeSelector = (raw) => {
+    const selector = raw.trim();
+    if (!selector) return null;
+    if (/@|\*|:root|\bhtml\b|\bbody\b|\[\s*\^|\]\s*\[/i.test(selector)) return null;
+    const compounds = selector.split(/\s*[>+~]\s*|\s+/).filter(Boolean);
+    const out = [];
+    for (const part of compounds) {
+      if (!part) continue;
+      if (/^[.#[:]/.test(part)) { out.push(part); continue; }   // class / id / attribute
+      const tag = (part.match(/^[a-zA-Z][\w-]*/) || [])[0];
+      if (!tag || !SVG_TAGS.has(tag.toLowerCase())) return null;
+      out.push(part.replace(/^[a-zA-Z][\w-]*/, tag));
+    }
+    if (!out.length) return null;
+    // a bare .class could match a div elsewhere, so pin it to the drawing;
+    // an svg tag can only ever match svg elements, so it stays as written
+    return out.join(' ');
+  };
+
+  const out = [];
+  for (const m of text.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
+    const selectors = m[1].split(',').map(safeSelector).filter(Boolean);
+    if (!selectors.length) continue;
+    const decls = m[2]
+      .split(';')
+      .map((d) => d.trim())
+      .filter((d) => d && !/url\s*\(\s*['"]?\s*(?!#|data:image)/i.test(d))
+      .filter((d) => !/expression\(|javascript:/i.test(d))
+      .join('; ');
+    if (!decls) continue;
+    out.push(selectors.map((s) => (s.startsWith('svg ') ? s : 'svg ' + s)).join(', ') + ' { ' + decls + ' }');
+  }
+  return out.join('\n');
+}
 const ALLOWED_TAGS = new Set([
   'a', 'abbr', 'address', 'article', 'aside', 'audio', 'b', 'bdi', 'bdo', 'blockquote', 'br',
   'caption', 'cite', 'code', 'col', 'colgroup', 'data', 'dd', 'del', 'details', 'dfn', 'div',
@@ -134,7 +187,25 @@ function cleanAttrs(tag, attrString) {
  */
 export function sanitizeHtml(html, opts = {}) {
   if (!html) return '';
-  let out = String(html);
+  // --- inline <svg> keeps its own <style>; the rest of the page does not ---
+  const svgStyle = new Map();
+  let guarded = String(html);
+  if (/<svg[\s>]/i.test(guarded)) {
+    let n = 0;
+    guarded = guarded.replace(
+      /<svg\b[^>]*>[\s\S]*?<\/svg>/gi,
+      (block) => block.replace(/<style\b([^>]*)>([\s\S]*?)<\/style>/gi, (whole, attrs, css) => {
+        const clean = sanitizeSvgStyle(css);
+        if (!clean) return "";
+        const token = '\u0002SVGSTYLE' + n + '\u0003';
+        svgStyle.set(token, clean);
+        n++;
+        return token;
+      })
+    );
+  }
+
+  let out = guarded;
   out = out.replace(/<!--[\s\S]*?-->/g, '');
 
   // 1. drop dangerous elements *and their content* first
@@ -156,6 +227,8 @@ export function sanitizeHtml(html, opts = {}) {
 
   // 3. stray angle brackets that were not part of a tag
   out = out.replace(/<(?![a-zA-Z/!])/g, '&lt;');
+
+  for (const [token, css] of svgStyle) out = out.split(token).join('<style>' + css + '</style>');
 
   if (opts.stripDangerousTags !== false) {
     out = out.replace(/javascript:/gi, '');

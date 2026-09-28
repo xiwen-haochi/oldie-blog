@@ -96,6 +96,19 @@ export async function ask(config, input) {
   const messages = [{ role: 'system', content: '你是一个中文博客编辑助手，回答简洁、直接，不要客套话。' }];
   messages.push({ role: 'user', content: userMessage });
 
+  // maxTokens is optional: 0 (or empty) means we do not send the field at
+  // all, so the model answers as long as it wants to.
+  const cap = Number(ai.maxTokens || 0);
+  const payload = {
+    model: ai.model,
+    messages,
+    stream: false,
+  };
+  if (ai.temperature !== undefined && ai.temperature !== null && ai.temperature !== '') {
+    payload.temperature = Number(ai.temperature);
+  }
+  if (cap > 0) payload.max_tokens = cap;
+
   const started = Date.now();
   const res = await fetch(endpoint(ai.baseUrl), {
     method: 'POST',
@@ -103,14 +116,8 @@ export async function ask(config, input) {
       'content-type': 'application/json',
       authorization: 'Bearer ' + ai.apiKey,
     },
-    body: JSON.stringify({
-      model: ai.model,
-      messages,
-      temperature: Number(ai.temperature ?? 0.6),
-      max_tokens: Number(ai.maxTokens ?? 800),
-      stream: false,
-    }),
-    signal: AbortSignal.timeout(Number(ai.timeoutMs ?? 60000)),
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(Number(ai.timeoutMs || 180000)),
   });
 
   if (!res.ok) {

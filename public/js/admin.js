@@ -23,6 +23,8 @@
   var body = $('#body', form);
   var title = $('#title', form);
   var slug = $('#slug', form);
+  var originalSlug = $('input[name="originalSlug"]', form);
+  var originalSlugValue = (originalSlug && originalSlug.value) || '';
   var description = $('#description', form);
   var stats = $('#editor-stats');
   var autosave = $('#autosave-state');
@@ -240,7 +242,8 @@
     });
   });
   /* ------------------------------------------------------- autosave */
-  var KEY = 'oldie:draft:' + (slug ? slug.value : 'new') + ':' + (body ? body.value.length : 0);
+  // one stable key per post, so a saved post never leaves a ghost draft behind
+  var KEY = 'oldie:draft:' + (originalSlugValue || 'new');
   var dirty = false;
   var submitted = false;
 
@@ -254,7 +257,9 @@
 
   if (body) {
     var snapshot = localStorage.getItem(KEY);
-    if (snapshot && snapshot !== body.value && snapshot.length > 40) {
+    var justSaved = /[?&]saved=1/.test(location.search);
+    var stale = snapshot && snapshot !== body.value && snapshot.trim().length > 40;
+    if (stale && !justSaved) {
       var restore = window.confirm(say('unsaved', 'Found an unsaved local draft ({n} chars). Restore it?').replace('{n}', snapshot.length));
       if (restore) { body.value = snapshot; body.dispatchEvent(new Event('input')); }
     }
@@ -266,7 +271,11 @@
 
     // Only nag when there is genuinely unsaved work. Saving posts a form and
     // lands back here with ?saved=1, so a fresh load must stay quiet.
-    form.addEventListener('submit', function () { submitted = true; dirty = false; });
+    form.addEventListener('submit', function () {
+      submitted = true;
+      dirty = false;
+      try { localStorage.removeItem(KEY); } catch (err) { /* ignore */ }
+    });
     window.addEventListener('beforeunload', function (e) {
       if (!dirty || submitted) return;
       if (body && !body.value.trim() && !title.value.trim()) return;

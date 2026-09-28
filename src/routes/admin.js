@@ -471,7 +471,7 @@ export function adminRoutes(ctx) {
           apiKey: String(b.aiApiKey || ctx.site.ai?.apiKey || ''),
           model: String(b.aiModel || 'gpt-4o-mini'),
           temperature: Math.min(2, Math.max(0, Number(b.aiTemperature) || 0.6)),
-          maxTokens: Math.min(8000, Math.max(128, Number(b.aiMaxTokens) || 800)),
+          maxTokens: Math.max(0, Number(b.aiMaxTokens) || 0),   // 0 = no limit
         },
         theme: {
           accent: String(b.accent || '#008080'),

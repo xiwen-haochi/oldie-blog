@@ -4,12 +4,21 @@ node_modules/
 *.log
 coverage/
 
-# runtime state: hit counter, guestbook, sessions, subscribers, settings
+# runtime state: hit counter, guestbook, sessions, subscribers, settings.
+# *.tmp too: the JSON store writes <file>.json.<pid>.<ts>.tmp while saving and
+# those files contain the same (personal) data as the file they replace.
 data/*.json
+data/*.json.*
+data/*.tmp
+data/*.bak
 !data/.gitkeep
 
 # generated admin credentials — never commit these
 config/admin.json
+
+# secrets that can also live in a .env or a config override
+.env
+.env.*
 
 # uploads are yours, keep them out of the history unless you want them
 public/uploads/*
