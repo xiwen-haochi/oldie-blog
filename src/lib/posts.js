@@ -4,6 +4,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { POSTS_DIR, PAGES_DIR, CONTENT_DIR } from './paths.js';
 import { renderMarkdown, splitAtMore, excerpt, toPlainText, buildToc } from './markdown.js';
+import { sanitizeHtml } from './sanitize.js';
 import { slugify, readingTime, stripHtml, countWords } from './text.js';
 
 const DATE_PREFIX = /^(\d{4})-(\d{2})-(\d{2})-(.+)\.md$/i;
@@ -49,7 +50,9 @@ export function parseDoc(filePath, { kind = 'post', siteOrigin = '' } = {}) {
 
   const body = content.trim();
   const { teaser, rest } = splitAtMore(body);
-  const html = renderMarkdown(body, { siteOrigin });
+  // raw HTML is allowed (it is a 1990s blog) but it is filtered against an
+  // allowlist, so a pasted <style> or a fixed-position div cannot take over
+  const html = sanitizeHtml(renderMarkdown(body, { siteOrigin }));
   const teaserHtml = rest ? renderMarkdown(teaser + '\n\n<!-- more -->', { siteOrigin }) : html;
   const plain = toPlainText(body);
   const words = countWords(plain);
@@ -69,6 +72,7 @@ export function parseDoc(filePath, { kind = 'post', siteOrigin = '' } = {}) {
     tags,
     draft: toBool(data.draft),
     featured: toBool(data.featured),
+    featuredAt: coerceDate(data.featuredAt) || null,
     description,
     keywords: asArray(data.keywords),
     cover: data.cover || data.image || '',
@@ -163,7 +167,16 @@ export class ContentIndex {
     return this.pages.find((p) => p.slug === slugify(slug)) || null;
   }
 
-  featured(limit = 1) { return this.publishedPosts().filter((p) => p.featured).slice(0, limit); }
+  /**
+   * Pinned posts, most recently pinned first. Sorting by featuredAt (and not
+   * by publish date) is what makes pinning an *old* post visibly do something.
+   */
+  featured(limit = 1) {
+    return this.publishedPosts()
+      .filter((p) => p.featured)
+      .sort((a, b) => (b.featuredAt || b.date) - (a.featuredAt || a.date))
+      .slice(0, limit);
+  }
 
   related(post, limit = 4) {
     const tags = new Set(post.tags);

@@ -21,13 +21,13 @@
           <span class="key"><%= i + 1 %></span>
         </li>
         <% }) %>
-        <li><a href="/random" title="<%= t('side.random') %>">🎲 <%= t('side.random') %></a></li>
+        <% if (site.features.randomPost) { %><li><a href="/random" title="<%= t('side.random') %>">🎲 <%= t('side.random') %></a></li><% } %>
         <li><a href="/sitemap.xml" class="mono">🗺 <%= t('side.sitemap') %></a></li>
       </ul>
     </div>
   </div>
 
-  <% if (site.theme.showCounter) { %>
+  <% if (site.theme.showCounter && site.features.hitCounter) { %>
   <div class="widget">
     <h3 class="widget-title">📊 <%= t('side.visitor') %></h3>
     <div class="widget-body">
@@ -67,6 +67,7 @@
   <% } %>
 
 
+  <% if (site.features.guestbook) { %>
   <div class="widget">
     <h3 class="widget-title">📬 <%= t('side.guestbook') %></h3>
     <div class="widget-body">
@@ -81,6 +82,7 @@
       <a class="btn tiny" href="/guestbook#entries"><%= t('side.read_all') %> (<%= guestbookCount %>)</a>
     </div>
   </div>
+  <% } %>
 
 
   <div class="widget">

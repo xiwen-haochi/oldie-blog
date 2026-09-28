@@ -24,11 +24,11 @@
     <a class="btn" href="#" data-listen-post><%= t('post.listen') %></a>
     <a class="btn" href="<%= post.url %>.txt" download><%= t('post.download') %></a>
     <a class="btn" href="#" data-copy="<%= post.canonicalUrl %>"><%= t('post.copy') %></a>
-    <a class="btn" href="#comments">💬 <%= t('post.comments') %> (<%= commentCount %>)</a>
+    <% if (site.features.comments) { %><a class="btn" href="#comments">💬 <%= t('post.comments') %> (<%= commentCount %>)</a><% } %>
     <button class="btn" type="button" data-terminal-cat="<%= post.slug %>"><%= t('post.cat_terminal') %></button>
   </div>
 
-  <% if (post.toc && post.toc.length > 1) { %>
+  <% if (site.features.showToc && post.toc && post.toc.length > 1) { %>
   <details class="toc" open>
     <summary><%= t('post.toc') %></summary>
     <ol>
@@ -89,6 +89,7 @@
     <% } %>
   </nav>
 
+  <% if (site.features.comments) { %>
   <section id="comments" style="margin-top:22px">
     <h2 class="widget-title" style="margin:0 0 8px">💬 <%= t('post.comments') %> (<%= commentCount %>)</h2>
     <% if (comments.length) { %>
@@ -139,4 +140,5 @@
       </div>
     </form>
   </section>
+  <% } %>
 </article>

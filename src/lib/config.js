@@ -55,6 +55,44 @@ export const DEFAULTS = {
     { text: 'SIGN MY GUESTBOOK!!! It takes 10 seconds and makes my day.', href: '/guestbook' },
   ],
   footer: 'Hand-coded in Notepad. No frameworks were harmed in the making of this page.',
+  // feature switches — the questions every blog gets asked
+  features: {
+    comments: true,         // post comments
+    moderateComments: true,  // comments wait for approval
+    guestbook: true,        // the public guestbook
+    moderateGuestbook: true,
+    search: true,
+    hitCounter: true,
+    randomPost: true,
+    showToc: true,          // table of contents on posts
+    showReadingTime: true,
+  },
+  // where uploads live: 'local' (public/uploads) or 's3' (any S3-compatible store)
+  storage: {
+    driver: 'local',
+    directory: 'public/uploads',
+    maxSizeMb: 4,
+    publicPath: '/uploads',
+    s3: {
+      bucket: '',
+      region: 'auto',
+      endpoint: '',        // https://s3.ap-east-1.amazonaws.com, or an R2 / MinIO endpoint
+      accessKeyId: '',
+      secretAccessKey: '',
+      prefix: 'blog',
+      publicUrl: '',       // CDN base; falls back to endpoint + bucket
+      pathStyle: true,     // true for MinIO / R2, false for AWS
+    },
+  },
+  // optional AI writing helper (any OpenAI-compatible endpoint)
+  ai: {
+    enabled: false,
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: '',
+    model: 'gpt-4o-mini',
+    temperature: 0.6,
+    maxTokens: 800,
+  },
   analytics: '',
   icp: '',
   socials: [],

@@ -203,27 +203,75 @@
     });
   });
 
+  /* ---------------------------------------------------------- ai helper */
+  $$('[data-ai]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var task = btn.getAttribute('data-ai');
+      var state = $('#ai-state');
+      btn.disabled = true;
+      if (state) state.textContent = '… ' + btn.getAttribute('data-ai-label');
+      fetch('/admin/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-CSRF-Token': CSRF },
+        body: new URLSearchParams({ task: task, body: body ? body.value : '' }).toString(),
+      })
+        .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); })
+        .then(function (d) {
+          btn.disabled = false;
+          if (state) state.textContent = d.model + ' · ' + d.ms + 'ms';
+          var text = d.text || '';
+          if (task === 'summary' && description) description.value = text;
+          else if (task === 'tags' && tags) tags.value = text.split(/[,，]/).map(function (x) { return x.trim(); }).filter(Boolean).join(', ');
+          else if (task === 'title' && title) {
+            var options = text.split('\n').map(function (x) { return x.replace(/^[-*\d.\s]+/, '').trim(); }).filter(Boolean);
+            if (options.length > 1) { if (!window.confirm(options.join('\n') + '\n\n用第一个替换标题？')) return; title.value = options[0]; }
+            else if (options[0]) title.value = options[0];
+          }
+          else if (body) {
+            if (!window.confirm('把 AI 的结果插入正文末尾？')) return;
+            insertAtCursor('\n' + text);
+          }
+          body && body.dispatchEvent(new Event('input'));
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          if (state) state.textContent = '✘ ' + err.message;
+        });
+    });
+  });
   /* ------------------------------------------------------- autosave */
   var KEY = 'oldie:draft:' + (slug ? slug.value : 'new') + ':' + (body ? body.value.length : 0);
+  var dirty = false;
+  var submitted = false;
+
+  function markDirty() {
+    dirty = true;
+    submitted = false;
+    if (body && body.value.trim()) {
+      try { localStorage.setItem(KEY, body.value); } catch (err) { /* quota */ }
+    }
+  }
+
   if (body) {
     var snapshot = localStorage.getItem(KEY);
     if (snapshot && snapshot !== body.value && snapshot.length > 40) {
       var restore = window.confirm(say('unsaved', 'Found an unsaved local draft ({n} chars). Restore it?').replace('{n}', snapshot.length));
       if (restore) { body.value = snapshot; body.dispatchEvent(new Event('input')); }
     }
+    body.addEventListener('input', markDirty);
     setInterval(function () {
-      if (!body || !body.value.trim()) return;
-      try {
-        localStorage.setItem(KEY, body.value);
-        if (autosave) autosave.textContent = say('autosave', 'local autosave {time}').replace('{time}', new Date().toLocaleTimeString());
-      } catch (err) { /* quota */ }
+      if (!dirty || submitted || !body || !body.value.trim()) return;
+      if (autosave) autosave.textContent = say('autosave', 'local autosave {time}').replace('{time}', new Date().toLocaleTimeString());
     }, 8000);
+
+    // Only nag when there is genuinely unsaved work. Saving posts a form and
+    // lands back here with ?saved=1, so a fresh load must stay quiet.
+    form.addEventListener('submit', function () { submitted = true; dirty = false; });
     window.addEventListener('beforeunload', function (e) {
-      if (!form.classList.contains('clean')) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
+      if (!dirty || submitted) return;
+      if (body && !body.value.trim() && !title.value.trim()) return;
+      e.preventDefault();
+      e.returnValue = '';
     });
-    form.addEventListener('submit', function () { form.classList.add('clean'); });
   }
 })();

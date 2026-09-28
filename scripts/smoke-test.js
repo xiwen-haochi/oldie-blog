@@ -324,8 +324,9 @@ async function main() {
   });
 
   section('guestbook and comments');
-  await check('public guestbook sign', async () => {
+  await check('a guestbook entry waits in the moderation queue', async () => {
     const csrf = csrfFrom(await text('/guestbook'));
+    assert.ok(csrf, 'the guestbook form must carry a _csrf field');
     const res = await post('/guestbook', {
       _csrf: csrf,
       name: 'Smoke Tester',
@@ -334,9 +335,9 @@ async function main() {
       location: 'Test Lab',
       message: 'Automated smoke test was here.',
     });
-    assert.equal(res.status, 302);
-    assert.ok((await text('/guestbook')).includes('Smoke Tester'), 'entry not rendered');
-    return 'signed';
+    assert.equal(res.status, 302, 'sign status ' + res.status);
+    assert.ok(!(await text('/guestbook')).includes('Smoke Tester'), 'a pending entry must stay private');
+    return 'queued';
   });
   await check('honeypot spam is dropped', async () => {
     const csrf = csrfFrom(await text('/guestbook'));
@@ -344,12 +345,12 @@ async function main() {
     assert.ok(!(await text('/guestbook')).includes('cheap backlinks'), 'honeypot submission leaked');
     return 'blocked';
   });
-  await check('comment on a post', async () => {
+  await check('a comment waits in the moderation queue', async () => {
     const csrf = csrfFrom(await text('/posts/welcome-to-my-homepage'));
     const res = await post('/comments', { _csrf: csrf, post: 'welcome-to-my-homepage', name: 'Reader', message: 'Great page!' });
     assert.equal(res.status, 302);
-    assert.ok((await text('/posts/welcome-to-my-homepage')).includes('Great page!'));
-    return 'commented';
+    assert.ok(!(await text('/posts/welcome-to-my-homepage')).includes('Great page!'), 'a pending comment must stay private');
+    return 'queued';
   });
 
   section('errors');
@@ -408,7 +409,18 @@ async function main() {
       return 'ok';
     });
 
-    const createdSlug = 'smoke-test-post';
+  await check('approving a pending entry publishes it', async () => {
+    // the admin flow approves both the guestbook entry and the comment
+    const guestbookPage = await (await get('/admin/guestbook?status=pending')).text();
+    const id = (guestbookPage.match(/\/admin\/guestbook\/(\d+)\/status/) || [])[1];
+    assert.ok(id, 'the pending entry should be listed in the admin');
+    const res = await post('/admin/guestbook/' + id + '/status', { _csrf: adminCsrf, status: 'approved' });
+    assert.equal(res.status, 302);
+    assert.ok((await text('/guestbook')).includes('Smoke Tester'), 'approved entry is still not public');
+    return 'published';
+  });
+
+        const createdSlug = 'smoke-test-post';
     await check('create a post from the admin', async () => {
       const res = await post('/admin/posts', {
         _csrf: adminCsrf,

@@ -12,7 +12,9 @@ import { renderMarkdown, toPlainText, excerpt } from '../lib/markdown.js';
 import { slugify, formatDate, humanBytes, readingTime, truncate } from '../lib/text.js';
 import { UPLOAD_DIR, DATA_DIR, ROOT } from '../lib/paths.js';
 import { DEFAULTS } from '../lib/config.js';
+import { listFiles as storageList, putFile, deleteFile, checkUpload, describeStorage, maxBytes } from '../lib/storage.js';
 import { makeTranslator, availableLocales, localeMeta, clientStrings } from '../lib/i18n.js';
+import { ask as aiAsk, AI_TASKS, aiReady, aiConfigError } from '../lib/ai.js';
 
 const loginLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 10 });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024, files: 1 } });
@@ -110,6 +112,9 @@ export function adminRoutes(ctx) {
       maxAge: 15000,
     });
   };
+
+  /** Attachments come from whichever driver is configured (local disk or S3). */
+  const listUploads = () => storageList(ctx.site);
 
   /* ------------------------------------------------------------- login */
   router.get(A + '/login', (req, res) => {
@@ -228,7 +233,7 @@ export function adminRoutes(ctx) {
     });
   });
 
-  router.get(A + '/posts/new', requireAuth, (req, res) => {
+  router.get(A + '/posts/new', requireAuth, async (req, res) => {
     render(res, 'editor', {
       req,
       title: tr(req)('admin.new_post'),
@@ -248,11 +253,12 @@ export function adminRoutes(ctx) {
         body: '',
       },
       isNew: true,
-      uploads: listUploads(),
+      uploads: await listUploads(),
+      ai: { ready: aiReady(ctx.site), error: aiConfigError(ctx.site), tasks: AI_TASKS },
     });
   });
 
-  router.get(A + '/posts/:slug/edit', requireAuth, (req, res, next) => {
+  router.get(A + '/posts/:slug/edit', requireAuth, async (req, res, next) => {
     const raw = rawOf({ kind: 'post', slug: req.params.slug });
     if (!raw) return next();
     raw.data.slug = raw.data.slug || raw.file.replace(/\.md$/, '').replace(/^\d{4}-\d{2}-\d{2}-/, '');
@@ -263,7 +269,8 @@ export function adminRoutes(ctx) {
       doc: raw,
       isNew: false,
       originalSlug: req.params.slug,
-      uploads: listUploads(),
+      uploads: await listUploads(),
+      ai: { ready: aiReady(ctx.site), error: aiConfigError(ctx.site), tasks: AI_TASKS },
     });
   });
 
@@ -271,6 +278,7 @@ export function adminRoutes(ctx) {
     try {
       const slug = String(req.body.originalSlug || '');
       const fields = normaliseFields(req.body, {});
+      if (fields.featured && !fields.featuredAt) fields.featuredAt = new Date().toISOString();
       const saved = await saveDoc({ kind: 'post', slug, fields, body: req.body.body || '' });
       ctx.refresh();
       const tSave = makeTranslator((req && req.locale) || ctx.site.locale);
@@ -305,21 +313,22 @@ export function adminRoutes(ctx) {
     render(res, 'pages', { req, title: 'Pages', pages: ctx.index.pages });
   });
 
-  router.get(A + '/pages/new', requireAuth, (req, res) => {
+  router.get(A + '/pages/new', requireAuth, async (req, res) => {
     render(res, 'editor', {
       req, title: tr(req)('admin.new_page'), kind: 'page', isNew: true,
       doc: { file: '', data: { title: '', slug: '', description: '' }, body: '' },
-      uploads: listUploads(),
+      uploads: await listUploads(),
+      ai: { ready: aiReady(ctx.site), error: aiConfigError(ctx.site), tasks: AI_TASKS },
     });
   });
 
-  router.get(A + '/pages/:slug/edit', requireAuth, (req, res, next) => {
+  router.get(A + '/pages/:slug/edit', requireAuth, async (req, res, next) => {
     const raw = rawOf({ kind: 'page', slug: req.params.slug });
     if (!raw) return next();
     raw.data.slug = raw.data.slug || raw.file.replace(/\.md$/, '');
     render(res, 'editor', {
       req, title: (raw.data.title || req.params.slug) + ' · ' + tr(req)('admin.edit'), kind: 'page',
-      doc: raw, isNew: false, originalSlug: req.params.slug, uploads: listUploads(),
+      doc: raw, isNew: false, originalSlug: req.params.slug, uploads: await listUploads(),
     });
   });
 
@@ -327,6 +336,7 @@ export function adminRoutes(ctx) {
     try {
       const slug = String(req.body.originalSlug || '');
       const fields = normaliseFields(req.body, {});
+      if (fields.featured && !fields.featuredAt) fields.featuredAt = new Date().toISOString();
       const saved = await saveDoc({ kind: 'page', slug, fields, body: req.body.body || '' });
       ctx.refresh();
       const tSave = makeTranslator((req && req.locale) || ctx.site.locale);
@@ -428,6 +438,41 @@ export function adminRoutes(ctx) {
         footer: String(b.footer || '').slice(0, 300),
         icp: String(b.icp || '').slice(0, 200),
         analytics: String(b.analytics || '').slice(0, 4000),
+        features: {
+          comments: !!b.fComments,
+          moderateComments: !!b.fModerateComments,
+          guestbook: !!b.fGuestbook,
+          moderateGuestbook: !!b.fModerateGuestbook,
+          search: !!b.fSearch,
+          hitCounter: !!b.fHitCounter,
+          randomPost: !!b.fRandomPost,
+          showToc: !!b.fShowToc,
+          showReadingTime: !!b.fShowReadingTime,
+        },
+        storage: {
+          driver: b.s3Enabled === 'on' ? 's3' : 'local',
+          directory: String(b.directory || 'public/uploads'),
+          maxSizeMb: Math.min(50, Math.max(1, Number(b.maxSizeMb) || 4)),
+          publicPath: String(b.publicPath || '/uploads'),
+          s3: {
+            bucket: String(b.bucket || ''),
+            region: String(b.region || 'auto'),
+            endpoint: String(b.endpoint || ''),
+            accessKeyId: String(b.accessKeyId || ''),
+            secretAccessKey: String(b.secretAccessKey || ''),
+            prefix: String(b.prefix || 'blog'),
+            publicUrl: String(b.publicUrl || ''),
+            pathStyle: b.pathStyle !== 'off',
+          },
+        },
+        ai: {
+          enabled: !!b.aiEnabled && !!String(b.aiApiKey || b.aiKeyMasked || ''),
+          baseUrl: String(b.aiBaseUrl || 'https://api.openai.com/v1'),
+          apiKey: String(b.aiApiKey || ctx.site.ai?.apiKey || ''),
+          model: String(b.aiModel || 'gpt-4o-mini'),
+          temperature: Math.min(2, Math.max(0, Number(b.aiTemperature) || 0.6)),
+          maxTokens: Math.min(8000, Math.max(128, Number(b.aiMaxTokens) || 800)),
+        },
         theme: {
           accent: String(b.accent || '#008080'),
           accent2: String(b.accent2 || '#000080'),
@@ -478,16 +523,23 @@ export function adminRoutes(ctx) {
   });
 
   /* ----------------------------------------------------------- media */
-  router.get(A + '/media', requireAuth, (req, res) => {
-    render(res, 'media', { req, title: makeTranslator(req.locale || ctx.site.locale)('admin.media'), files: listUploads() });
+  router.get(A + '/media', requireAuth, async (req, res) => {
+    render(res, 'media', {
+      req,
+      title: makeTranslator(req.locale || ctx.site.locale)('admin.media'),
+      files: await listUploads(),
+      storage: describeStorage(ctx.site),
+      maxSize: maxBytes(ctx.site),
+    });
   });
 
   router.post(A + '/media', requireAuth, upload.single('file'), requireCsrf, async (req, res, next) => {
+    const t = makeTranslator((req && req.locale) || ctx.site.locale);
     try {
       const file = req.file;
       const inline = req.body && req.body.dataUrl;
       let buffer = null;
-      let name = '';
+      let name = 'upload';
       let type = '';
 
       if (file) {
@@ -499,46 +551,68 @@ export function adminRoutes(ctx) {
         if (!m) throw Object.assign(new Error('That data URL looks wrong.'), { status: 400 });
         type = m[1];
         buffer = Buffer.from(m[2], 'base64');
-        name = (req.body.filename || 'pasted-image') + '.' + (type.split('/')[1].replace('svg+xml', 'svg'));
+        name = req.body.filename || 'pasted-image';
       }
 
       if (!buffer) {
-        setFlash(res, 'err', makeTranslator((req && req.locale) || ctx.site.locale)('admin.paste_data_url'));
-        return res.redirect(U('/media'));
-      }
-      if (buffer.length > MAX_UPLOAD) {
-        const t = makeTranslator((req && req.locale) || ctx.site.locale);
-        setFlash(res, 'err', t('admin.too_big', { size: humanBytes(buffer.length), max: humanBytes(MAX_UPLOAD) }));
-        return res.redirect(U('/media'));
-      }
-      if (!ALLOWED_IMAGE.test(type)) {
-        setFlash(res, 'err', makeTranslator((req && req.locale) || ctx.site.locale)('admin.not_image', { type: type || '?' }));
+        setFlash(res, 'err', t('admin.paste_data_url'));
         return res.redirect(U('/media'));
       }
 
-      await fsp.mkdir(UPLOAD_DIR, { recursive: true });
-      const safe = slugify(name.replace(/\.[^.]+$/, '')) + '-' + Date.now().toString(36) + '.' + type.split('/')[1].replace('svg+xml', 'svg');
-      await fsp.writeFile(path.join(UPLOAD_DIR, safe), buffer);
-      ctx.site.uploads = listUploads();
-      setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.uploaded', { name: safe }));
+      // one place decides what is allowed, wherever it is going to be stored
+      const problem = checkUpload(ctx.site, { size: buffer.length, type });
+      if (problem) {
+        setFlash(res, 'err', problem);
+        return res.redirect(U('/media'));
+      }
+
+      const saved = await putFile(ctx.site, { buffer, filename: name, type });
+      ctx.site.uploads = await listUploads();
+      setFlash(res, 'ok', t('admin.uploaded', { name: saved.url }));
       res.redirect(U('/media'));
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   });
 
   router.post(A + '/media/delete', requireAuth, requireCsrf, async (req, res) => {
-    const name = path.basename(String(req.body.name || ''));
-    await fsp.rm(path.join(UPLOAD_DIR, name), { force: true });
-    setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.deleted', { name }));
+    const t = makeTranslator((req && req.locale) || ctx.site.locale);
+    try {
+      await deleteFile(ctx.site, String(req.body.name || req.body.key || ''));
+      ctx.site.uploads = await listUploads();
+      setFlash(res, 'ok', t('admin.deleted', { name: req.body.name || '' }));
+    } catch (err) {
+      setFlash(res, 'err', err.message);
+    }
     res.redirect(U('/media'));
   });
 
+  /* ------------------------------------------------------------- ai */
+  router.post(A + '/ai', requireAuth, requireCsrf, async (req, res) => {
+    try {
+      if (!aiReady(ctx.site)) {
+        return res.status(400).json({ error: aiConfigError(ctx.site) || 'AI 未就绪' });
+      }
+      const out = await aiAsk(ctx.site, {
+        task: String(req.body.task || 'summary'),
+        body: String(req.body.body || ''),
+        instruction: String(req.body.instruction || ''),
+      });
+      res.json(out);
+    } catch (err) {
+      res.status(err.status || 502).json({ error: err.message });
+    }
+  });
+
   /* ----------------------------------------------------------- tools */
-  router.get(A + '/tools', requireAuth, (req, res) => {
+  router.get(A + '/tools', requireAuth, async (req, res) => {
     render(res, 'tools', {
       req,
       title: makeTranslator(req.locale || ctx.site.locale)('admin.tools'),
       health: seoHealth(ctx, req.locale),
+      storage: describeStorage(ctx.site),
       files: listFiles('post'),
+      ai: { ready: aiReady(ctx.site), error: aiConfigError(ctx.site) },
       pageFiles: listFiles('page'),
       subscribers: ctx.community.subscriberList(),
       exportData: buildExport(ctx),
@@ -569,19 +643,7 @@ function adminNav(t, A = '/admin') {
   ];
 }
 
-function listUploads() {
-  try {
-    return fs.readdirSync(UPLOAD_DIR)
-      .filter((n) => !n.startsWith('.'))
-      .map((n) => {
-        const st = fs.statSync(path.join(UPLOAD_DIR, n));
-        return { name: n, url: '/uploads/' + n, size: st.size, mtime: st.mtime };
-      })
-      .sort((a, b) => b.mtime - a.mtime);
-  } catch {
-    return [];
-  }
-}
+
 
 /** The SEO checklist shown on the dashboard and the tools page. */
 export function seoHealth(ctx, locale) {

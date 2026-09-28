@@ -1,6 +1,9 @@
 <div class="admin-head">
   <h1>🖼 <%= t('admin.media_title') %></h1>
-  <span class="form-note"><%= t('admin.media_files', { n: files.length }) %></span>
+  <div class="flex" style="gap:10px">
+    <span class="form-note"><%= t('admin.media_files', { n: files.length }) %></span>
+    <span class="stamp"><%= storage.label %> · <%= storage.detail %></span>
+  </div>
 </div>
 
 <form method="post" action="<%= adminPath %>/media" enctype="multipart/form-data" class="upload-form">
@@ -31,6 +34,7 @@
         <form method="post" action="<%= adminPath %>/media/delete" data-confirm="<%= t('admin.delete_confirm', { slug: u.name }) %>">
           <input type="hidden" name="_csrf" value="<%= csrf %>">
           <input type="hidden" name="name" value="<%= u.name %>">
+          <input type="hidden" name="key" value="<%= u.key %>">
           <button class="btn tiny danger" type="submit">🗑</button>
         </form>
       </figcaption>

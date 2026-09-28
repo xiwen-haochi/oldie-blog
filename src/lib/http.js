@@ -102,8 +102,9 @@ export function geoGuess(req, res, next) {
 const BOT = /bot|crawler|spider|curl|wget|python-requests|headlesschrome|lighthouse|monitor|uptime|preview/i;
 
 export function countPageview(ctx) {
-  return async function (req, res, next) {
+  return function (req, res, next) {
     if (res.locals.counted) return next();
+    if (ctx.site && ctx.site.features && !ctx.site.features.hitCounter) { res.locals.counted = true; return next(); }
     res.locals.counted = true;
     const ua = req.get('user-agent') || '';
     if (!ua || BOT.test(ua)) {

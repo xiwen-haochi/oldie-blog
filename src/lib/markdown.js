@@ -1,6 +1,7 @@
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
 import { slugify, stripHtml, truncate, readingTime, escapeHtml } from './text.js';
+import { protectRawHtml, restoreRawHtml } from './protect.js';
 
 /**
  * Markdown-It tuned for a 1990s personal homepage:
@@ -149,7 +150,11 @@ export function md() {
 }
 
 export function renderMarkdown(source = '', options = {}) {
-  return md().render(String(source == null ? '' : source), options);
+  const text = String(source == null ? '' : source);
+  // pasted HTML with blank lines inside it would otherwise be chopped into
+  // markdown paragraphs (and indented bits turned into code blocks)
+  const guarded = protectRawHtml(text);
+  return restoreRawHtml(md().render(guarded.html, options), guarded.map);
 }
 
 /** <!-- more --> splits the teaser from the rest of the post. */

@@ -7,7 +7,7 @@ import { slugify } from './text.js';
 
 const FIELD_ORDER = [
   'title', 'slug', 'date', 'updated', 'description', 'tags', 'author', 'cover', 'coverAlt',
-  'keywords', 'canonical', 'draft', 'featured', 'noindex', 'lang', 'series', 'audio',
+  'keywords', 'canonical', 'draft', 'featured', 'featuredAt', 'noindex', 'lang', 'series', 'audio',
 ];
 
 const yamlString = (value) => {
@@ -62,6 +62,8 @@ export function normaliseFields(input = {}, existing = {}) {
     canonical: String(pick('canonical', existing.canonical || '') || ''),
     draft: on(pick('draft')),
     featured: on(pick('featured')),
+    // pin time: what the home page sorts by, so pinning an old post still works
+    featuredAt: String(pick('featuredAt', existing.featuredAt || '') || ''),
     noindex: on(pick('noindex')),
     lang: String(pick('lang', existing.lang || '') || ''),
     series: String(pick('series', existing.series || '') || ''),

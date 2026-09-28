@@ -165,7 +165,8 @@ export function siteRoutes(ctx) {
   });
 
   /* ---------------------------------------------------------- search */
-  router.get('/search', (req, res) => {
+  router.get('/search', (req, res, next) => {
+    if (!ctx.site.features.search) return next();
     const t = tr(req);
     const q = String(req.query.q || '').slice(0, 120);
     const results = q ? search(ctx.searchIndex, parseQuery(q), 40) : [];
@@ -203,6 +204,7 @@ export function siteRoutes(ctx) {
   });
 
   router.post('/guestbook', async (req, res, next) => {
+    if (!ctx.site.features.guestbook) return next();
     if (!checkCsrf(req, req.body._csrf)) return next(Object.assign(new Error('bad csrf'), { status: 403 }));
     const honeypot = String(req.body.website || '');
     const spam = spamScore(req.body);
@@ -219,7 +221,7 @@ export function siteRoutes(ctx) {
       message: req.body.message,
       ip: req.clientIp,
       ua: req.get('user-agent'),
-      autoApprove: (spam < 3) && ctx.site.autoApproveGuestbook !== false,
+      autoApprove: !ctx.site.features.moderateGuestbook && spam < 3,
     });
     res.locals.flash = { type: 'ok', text: tr(req)('gb.signed') };
     res.redirect('/guestbook#sign');
@@ -227,6 +229,7 @@ export function siteRoutes(ctx) {
 
   /* --------------------------------------------------------- comments */
   router.post('/comments', async (req, res, next) => {
+    if (!ctx.site.features.comments) return next();
     const post = ctx.index.getPost(String(req.body.post || ''));
     if (!post) return next();
     if (!checkCsrf(req, req.body._csrf)) return next(Object.assign(new Error('bad csrf'), { status: 403 }));
@@ -243,13 +246,14 @@ export function siteRoutes(ctx) {
       message: req.body.message,
       ip: req.clientIp,
       ua: req.get('user-agent'),
-      autoApprove: spam < 3,
+      autoApprove: !ctx.site.features.moderateComments && spam < 3,
     });
     res.redirect(post.url + '#comments');
   });
 
   /* ---------------------------------------------------------- random */
   router.get('/random', (req, res) => {
+    if (!ctx.site.features.randomPost) return res.redirect('/');
     const post = ctx.index.randomPost();
     if (!post) return res.redirect('/');
     res.redirect(post.url);

@@ -1,0 +1,77 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+import { DEFAULTS, loadConfig } from '../src/lib/config.js';
+import { checkUpload, driverName, isAllowedType, maxBytes, extFor, describeStorage } from '../src/lib/storage.js';
+import { aiReady, aiConfigError, AI_TASKS, TASKS } from '../src/lib/ai.js';
+
+test('feature switches exist and default to on', () => {
+  for (const key of ['comments', 'moderateComments', 'guestbook', 'moderateGuestbook', 'search', 'hitCounter', 'randomPost', 'showToc']) {
+    assert.equal(typeof DEFAULTS.features[key], 'boolean', 'missing switch: ' + key);
+    assert.equal(DEFAULTS.features[key], true, 'expected ' + key + ' to default on');
+  }
+});
+
+test('a config that predates the switches still loads', () => {
+  const site = loadConfig({ env: {} });
+  assert.equal(site.features.comments, true);
+  assert.equal(site.storage.driver, 'local');
+  assert.equal(site.ai.enabled, false);
+});
+
+test('storage defaults to the local driver', () => {
+  const site = loadConfig({ env: {} });
+  assert.equal(driverName(site), 'local');
+  assert.equal(maxBytes(site), 4 * 1024 * 1024);
+  assert.match(describeStorage(site).label, /本地/);
+});
+
+test('the s3 driver needs bucket, endpoint and keys', () => {
+  const base = loadConfig({ env: {} });
+  assert.equal(
+    checkUpload({ storage: { driver: 's3', s3: {} } }, { size: 10, type: 'image/png' }),
+    '对象存储未配置：缺少 bucket / endpoint / accessKeyId / secretAccessKey'
+  );
+  assert.equal(checkUpload({ storage: { driver: 's3', s3: { bucket: 'b' } } }, { size: 10, type: 'image/png' }), '对象存储未配置：缺少 endpoint / accessKeyId / secretAccessKey');
+  assert.equal(
+    checkUpload({ storage: { driver: 's3', s3: { bucket: 'b', endpoint: 'https://x' } } }, { size: 10, type: 'image/png' }),
+    '对象存储未配置：缺少 accessKeyId / secretAccessKey'
+  );
+  const ok = checkUpload({ storage: { driver: 's3', s3: { bucket: 'b', endpoint: 'https://x', accessKeyId: 'k', secretAccessKey: 's' } } }, { size: 10, type: 'image/png' });
+  assert.equal(ok, null, 'a complete config should accept: ' + ok);
+});
+
+test('uploads are size and type checked', () => {
+  const site = loadConfig({ env: {} });
+  assert.match(checkUpload(site, { size: 10 * 1024 * 1024, type: 'image/png' }), /太大/);
+  assert.match(checkUpload(site, { size: 10, type: 'application/pdf' }), /只接受图片/);
+  assert.equal(checkUpload(site, { size: 100, type: 'image/png' }), null);
+  assert.equal(isAllowedType('image/svg+xml'), true);
+  assert.equal(isAllowedType('text/html'), false);
+});
+
+test('extensions follow the mime type', () => {
+  assert.equal(extFor('image/png'), 'png');
+  assert.equal(extFor('image/jpeg'), 'jpg');
+  assert.equal(extFor('image/svg+xml'), 'svg');
+  assert.equal(extFor('application/octet-stream'), 'bin');
+});
+
+test('ai is off until it is configured', () => {
+  const site = loadConfig({ env: {} });
+  assert.equal(aiReady(site), false);
+  assert.match(aiConfigError(site), /启用/);
+  const partial = { ...site, ai: { ...site.ai, enabled: true } };
+  assert.match(aiConfigError(partial), /apiKey/);
+  const full = { ...site, ai: { ...site.ai, enabled: true, apiKey: 'sk-x', model: 'gpt-4o-mini' } };
+  assert.equal(aiReady(full), true);
+  assert.equal(aiConfigError(full), null);
+});
+
+test('ai tasks cover the writing jobs', () => {
+  const keys = AI_TASKS.map((t) => t.key);
+  for (const key of ['title', 'summary', 'tags', 'outline', 'polish']) {
+    assert.ok(keys.includes(key), 'missing ai task: ' + key);
+    assert.equal(typeof TASKS[key].prompt('正文'), 'string');
+  }
+});
