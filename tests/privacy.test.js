@@ -28,6 +28,10 @@ test('every sensitive file is ignored by git', () => {
   assert.ok(covered('data/guestbook.json.9.1.tmp'));
 });
 
+test('the sqlite database and its wal files are ignored too', () => {
+  assert.match(ignore, /data\/\*\.sqlite/);
+});
+
 test('runtime temp files are ignored too', () => {
   assert.match(ignore, /data\/\*\.json\.\*/);
   assert.match(ignore, /data\/\*\.tmp/);

@@ -10,6 +10,9 @@ coverage/
 data/*.json
 data/*.json.*
 data/*.tmp
+data/*.sqlite
+data/*.sqlite-wal
+data/*.sqlite-shm
 data/*.bak
 !data/.gitkeep
 

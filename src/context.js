@@ -9,12 +9,17 @@ import { Community } from './lib/community.js';
 import { Sessions } from './lib/sessions.js';
 import { ensureAdminCredentials, loadCredentials } from './lib/auth.js';
 import { DATA_DIR, ROOT, VIEWS_DIR } from './lib/paths.js';
+import { setDataDriver, getDataDriver } from './lib/store.js';
 
 /** Everything a request handler might need, created exactly once. */
 export function createContext() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 
   const site = loadConfig();
+  setDataDriver(site.dataDriver);
+  if (site.dataDriver === 'sqlite' && getDataDriver() !== 'sqlite') {
+    console.warn('  ⚠ 这个 Node 没有 node:sqlite，继续使用 JSON 存储');
+  }
   site.assetV = assetVersion();
   const index = new ContentIndex({ siteOrigin: site.url });
   const stats = new Stats();

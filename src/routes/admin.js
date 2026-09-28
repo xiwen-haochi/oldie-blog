@@ -430,6 +430,7 @@ export function adminRoutes(ctx) {
         email: String(b.email || '').slice(0, 120),
         since: String(b.since || '').slice(0, 20),
         url: String(b.url || ctx.site.url).replace(/\/+$/, ''),
+        dataDriver: b.dataDriver === 'sqlite' ? 'sqlite' : 'json',
         locale: String(b.locale || 'en').slice(0, 16),
         postsPerPage: Math.min(50, Math.max(1, Number(b.postsPerPage) || 8)),
         nav: parseNav(b.nav),
@@ -597,6 +598,7 @@ export function adminRoutes(ctx) {
         task: String(req.body.task || 'summary'),
         body: String(req.body.body || ''),
         instruction: String(req.body.instruction || ''),
+        image: String(req.body.image || ''),
       });
       res.json(out);
     } catch (err) {

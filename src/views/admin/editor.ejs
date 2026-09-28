@@ -36,8 +36,13 @@
     <div class="ai-bar">
       <span class="ai-label">🤖</span>
       <% ai.tasks.forEach(function (task) { %>
-        <button class="btn tiny" type="button" data-ai="<%= task.key %>" data-ai-label="<%= task.label %>"><%= task.label %></button>
+        <% if (!task.vision || ai.vision) { %>
+          <button class="btn tiny<%= task.vision ? ' ai-vision' : '' %>" type="button" data-ai="<%= task.key %>" data-ai-label="<%= task.label %>"<%= task.vision ? ' data-ai-needs-image' : '' %>><%= task.label %></button>
+        <% } %>
       <% }) %>
+      <label class="btn tiny ai-vision" for="ai-image" title="<%= t('admin.ai_vision_hint') %>">🖼 <%= t('admin.ai_pick_image') %></label>
+      <input type="file" id="ai-image" accept="image/*" hidden data-ai-image>
+      <span class="form-note" id="ai-image-name"></span>
       <span class="form-note" id="ai-state"></span>
     </div>
     <% } else if (ai && ai.error) { %>

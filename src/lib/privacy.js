@@ -15,6 +15,9 @@ export const SENSITIVE = [
   'data/guestbook.json',      // visitor names, e-mails, IPs
   'data/subscribers.json',    // e-mail addresses
   'data/session-secret.json', // session signing secret
+  'data/oldie.sqlite',        // hit counter + guestbook when the sqlite driver is on
+  'data/oldie.sqlite-wal',
+  'data/oldie.sqlite-shm',
   '.env',
 ];
 

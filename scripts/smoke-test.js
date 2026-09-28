@@ -25,8 +25,14 @@ let failures = 0;
 // the suite rotates the admin password; put the real one back afterwards so
 // running the tests never locks anyone out of their own blog.
 const CREDS = path.join(CONFIG_DIR, 'admin.json');
+// the suite saves and then RESETS settings; that must not touch the operator's file
+const DATA_DIR = path.join(path.dirname(path.dirname(new URL(import.meta.url).pathname)), 'data');
+const SETTINGS = path.join(DATA_DIR, 'settings.json');
+const settingsBackup = fs.existsSync(SETTINGS) ? fs.readFileSync(SETTINGS, 'utf8') : null;
 const credsBackup = fs.existsSync(CREDS) ? fs.readFileSync(CREDS, 'utf8') : null;
 function restoreCreds() {
+  if (settingsBackup === null) { try { fs.rmSync(SETTINGS, { force: true }); } catch { /* ignore */ } }
+  else { try { fs.writeFileSync(SETTINGS, settingsBackup, 'utf8'); } catch { /* ignore */ } }
   if (credsBackup === null) { try { fs.rmSync(CREDS, { force: true }); } catch { /* ignore */ } return; }
   try { fs.writeFileSync(CREDS, credsBackup, 'utf8'); } catch { /* ignore */ }
 }

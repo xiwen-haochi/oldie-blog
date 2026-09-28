@@ -29,13 +29,14 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node --test tests/*.test.js && node scripts/smoke-test.js",
+    "test": "node --test tests/*.test.js && pnpm test:e2e",
     "test:unit": "node --test tests/*.test.js",
-    "test:e2e": "node scripts/smoke-test.js",
+    "test:e2e": "OLDIE_DATA_DIR=$(mktemp -d) node scripts/smoke-test.js",
     "seed": "node scripts/seed-demo.js",
     "new:post": "node scripts/new-post.js",
     "check": "node --check src/server.js && node scripts/smoke-test.js",
-    "reset:admin": "node scripts/reset-admin.js"
+    "reset:admin": "node scripts/reset-admin.js",
+    "clean": "node scripts/clean-slate.js"
   },
   "dependencies": {
     "ejs": "^3.1.10",

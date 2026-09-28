@@ -53,9 +53,19 @@ const TASKS = {
       body.slice(0, 4000),
     ].join('\n'),
   },
+  describe: {
+    label: '看图说明',
+    vision: true,
+    prompt: () => ['用中文描述这张图，重点说清它表达的信息。如果是文档截图，请把文字转写出来。', '最多 200 字。'].join('\n'),
+  },
+  caption: {
+    label: '写图注 (alt)',
+    vision: true,
+    prompt: () => ['为这张图写一句 alt 文本，20 字以内，直接输出，不要解释。'].join('\n'),
+  },
 };
 
-export const AI_TASKS = Object.entries(TASKS).map(([key, def]) => ({ key, label: def.label }));
+export const AI_TASKS = Object.entries(TASKS).map(([key, def]) => ({ key, label: def.label, vision: !!def.vision }));
 
 export function aiReady(config) {
   const ai = config?.ai || {};
@@ -80,9 +90,13 @@ function endpoint(baseUrl) {
 
 /**
  * @param {object} config site config (ai block)
- * @param {{ task?: string, body: string, instruction?: string }} input
+ * @param {{ task?: string, body: string, instruction?: string, image?: string }} input
  * @returns {Promise<{ text: string, model: string }>}
  */
+export function visionEnabled(config) {
+  return Boolean(config?.ai?.enabled && config?.ai?.vision);
+}
+
 export async function ask(config, input) {
   const problem = aiConfigError(config);
   if (problem) throw Object.assign(new Error(problem), { status: 400 });
@@ -94,7 +108,19 @@ export async function ask(config, input) {
     : TASKS[task].prompt(String(input.body || ''));
 
   const messages = [{ role: 'system', content: '你是一个中文博客编辑助手，回答简洁、直接，不要客套话。' }];
-  messages.push({ role: 'user', content: userMessage });
+  const image = visionEnabled(config) ? String(input.image || '') : '';
+  if (image && /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(image)) {
+    // multimodal content part (OpenAI vision format)
+    messages.push({
+      role: 'user',
+      content: [
+        { type: 'text', text: userMessage },
+        { type: 'image_url', image_url: { url: image } },
+      ],
+    });
+  } else {
+    messages.push({ role: 'user', content: userMessage });
+  }
 
   // maxTokens is optional: 0 (or empty) means we do not send the field at
   // all, so the model answers as long as it wants to.

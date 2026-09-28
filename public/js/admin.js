@@ -206,16 +206,31 @@
   });
 
   /* ---------------------------------------------------------- ai helper */
+  var pendingImage = "";
+  var imageInput = $("[data-ai-image]");
+  if (imageInput) {
+    imageInput.addEventListener("change", function () {
+      var file = imageInput.files && imageInput.files[0];
+      var nameEl = $("#ai-image-name");
+      if (!file) { pendingImage = ""; if (nameEl) nameEl.textContent = ""; return; }
+      if (file.size > 5 * 1024 * 1024) { if (nameEl) nameEl.textContent = "too big"; imageInput.value = ""; return; }
+      var reader = new FileReader();
+      reader.onload = function () { pendingImage = String(reader.result || ""); if (nameEl) nameEl.textContent = file.name; };
+      reader.readAsDataURL(file);
+    });
+  }
+
   $$('[data-ai]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var task = btn.getAttribute('data-ai');
+      if (btn.getAttribute('data-ai-needs-image') && !pendingImage) { toast('pick an image first', 'warn'); return; }
       var state = $('#ai-state');
       btn.disabled = true;
       if (state) state.textContent = '… ' + btn.getAttribute('data-ai-label');
       fetch('/admin/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-CSRF-Token': CSRF },
-        body: new URLSearchParams({ task: task, body: body ? body.value : '' }).toString(),
+        body: new URLSearchParams({ task: task, body: body ? body.value : '', image: pendingImage || '' }).toString(),
       })
         .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); })
         .then(function (d) {
