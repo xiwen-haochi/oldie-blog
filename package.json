@@ -34,7 +34,8 @@
     "test:e2e": "node scripts/smoke-test.js",
     "seed": "node scripts/seed-demo.js",
     "new:post": "node scripts/new-post.js",
-    "check": "node --check src/server.js && node scripts/smoke-test.js"
+    "check": "node --check src/server.js && node scripts/smoke-test.js",
+    "reset:admin": "node scripts/reset-admin.js"
   },
   "dependencies": {
     "ejs": "^3.1.10",

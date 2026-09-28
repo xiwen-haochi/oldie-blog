@@ -13,6 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { startServer } from '../src/server.js';
+import { CONFIG_DIR } from '../src/lib/paths.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
@@ -20,6 +21,15 @@ process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'smoke-test-password'
 
 const results = [];
 let failures = 0;
+
+// the suite rotates the admin password; put the real one back afterwards so
+// running the tests never locks anyone out of their own blog.
+const CREDS = path.join(CONFIG_DIR, 'admin.json');
+const credsBackup = fs.existsSync(CREDS) ? fs.readFileSync(CREDS, 'utf8') : null;
+function restoreCreds() {
+  if (credsBackup === null) { try { fs.rmSync(CREDS, { force: true }); } catch { /* ignore */ } return; }
+  try { fs.writeFileSync(CREDS, credsBackup, 'utf8'); } catch { /* ignore */ }
+}
 
 async function check(name, fn) {
   try {
@@ -517,7 +527,7 @@ async function main() {
       });
       assert.equal(res.status, 302);
       assert.ok((await text('/admin/settings')).includes('密码已更新'), 'no confirmation');
-      return 'rotated';
+      return 'rotated (restored after the suite)';
     });
 
     await check('media upload and delete', async () => {
@@ -567,6 +577,7 @@ async function main() {
   }
 
   server.close();
+  restoreCreds();
 
   console.log('\n' + '─'.repeat(60));
   const passed = results.filter((r) => r.ok).length;
@@ -579,6 +590,7 @@ async function main() {
 }
 
 main().catch((err) => {
+  restoreCreds();
   console.error('\u001b[31msmoke test crashed:\u001b[0m', err);
   process.exit(1);
 });

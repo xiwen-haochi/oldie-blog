@@ -22,6 +22,20 @@ need a fresh one.
 
 ---
 
+---
+
+## Forgot the password?
+
+```bash
+pnpm reset:admin                 # generate a strong one and print it
+pnpm reset:admin "my password"   # or pick your own
+```
+
+It writes a scrypt hash into `config/admin.json` (gitignored, chmod 600) and takes
+effect on the next login — no restart needed.
+
+---
+
 ## What this is
 
 A blog that looks like it was last touched in 1998 and behaves like it was
