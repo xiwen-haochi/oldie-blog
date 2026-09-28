@@ -1,0 +1,86 @@
+{
+  "title": "Oldie Blog",
+  "tagline": "Best viewed with Netscape Navigator 4.0 at 800x600",
+  "description": "A hand-made 1990s personal homepage that survived the dot-com winter: Markdown in, fast HTML out, webrings, guestbooks and a DOS terminal in every corner.",
+  "author": "The Webmaster",
+  "email": "webmaster@example.com",
+  "since": "1998",
+  "url": "http://localhost:4173",
+  "locale": "en",
+  "postsPerPage": 8,
+  "nav": [
+    {
+      "label": "HOME",
+      "href": "/"
+    },
+    {
+      "label": "DISPATCHES",
+      "href": "/posts"
+    },
+    {
+      "label": "ARCHIVE",
+      "href": "/archive"
+    },
+    {
+      "label": "TAGS",
+      "href": "/tags"
+    },
+    {
+      "label": "GUESTBOOK",
+      "href": "/guestbook"
+    },
+    {
+      "label": "ABOUT",
+      "href": "/about"
+    }
+  ],
+  "webring": [
+    {
+      "title": "The Really Lame Webring",
+      "url": "https://example.com/ring/",
+      "note": "ringmaster: uncle gronk"
+    },
+    {
+      "title": "Dial-Up Survivors",
+      "url": "https://example.com/modem/",
+      "note": "56k and proud"
+    },
+    {
+      "title": "MIDI Heaven",
+      "url": "https://example.com/midi/",
+      "note": "please play quietly"
+    },
+    {
+      "title": "Under Construction Since 1997",
+      "url": "https://example.com/uc/",
+      "note": "still working on it"
+    },
+    {
+      "title": "The Guestbook Gallery",
+      "url": "https://example.com/gb/",
+      "note": "sign mine, i sign yours"
+    }
+  ],
+  "banners": [
+    {
+      "text": "★ NOW BROADCASTING: this page is hand-written Markdown served in under 100ms ★",
+      "href": "/about"
+    },
+    {
+      "text": "★ SIGN MY GUESTBOOK! It takes 10 seconds and makes my day ★",
+      "href": "/guestbook"
+    },
+    {
+      "text": "★ PRESS Ctrl+K FOR A DOS TERMINAL ON EVERY PAGE ★",
+      "href": "/about#colophon"
+    }
+  ],
+  "footer": "Hand-coded in a text editor. No frameworks were harmed in the making of this page.",
+  "theme": {
+    "accent": "#008080",
+    "accent2": "#000080",
+    "showMarquee": true,
+    "showTerminal": true,
+    "showCounter": true
+  }
+}

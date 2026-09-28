@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="<%= site.locale %>" dir="<%= site.langDir || 'ltr' %>" data-theme="classic">
+<head>
+<%- include('partials/head') %>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="tm-banner">⚠ You are viewing this page in <b>1998 MODE</b>. Some modern niceties have been switched off on purpose. <a href="#" data-toggle-theme>Return to the present ➜</a></div>
+
+<% if (site.theme.showMarquee && (site.banners || []).length) { %>
+<div class="marquee-bar" aria-hidden="true">
+  <div class="track">
+    <% site.banners.forEach(function (b) { %>
+      <span><% if (b.href && b.href !== '#') { %><a href="<%= b.href %>"><%= b.text %></a><% } else { %><%= b.text %><% } %></span>
+    <% }) %>
+  </div>
+</div>
+<% } %>
+
+<div class="desktop">
+  <div class="browser">
+    <%- include('partials/header') %>
+    <div class="win-body">
+      <%- include('partials/sidebar') %>
+      <main class="content" id="main">
+        <%- bodyHtml %>
+      </main>
+    </div>
+    <%- include('partials/statusbar') %>
+    <%- include('partials/footer') %>
+  </div>
+</div>
+
+<% if (site.theme.showTerminal) { %><%- include('partials/dock') %><% } %>
+<script src="/js/site.js?v=<%= site.assetV %>" defer></script>
+<% if (site.analytics) { %><%- site.analytics %><% } %>
+</body>
+</html>

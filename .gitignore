@@ -1,0 +1,17 @@
+node_modules/
+.env
+.DS_Store
+*.log
+coverage/
+
+# runtime state: hit counter, guestbook, sessions, subscribers, settings
+data/*.json
+!data/.gitkeep
+
+# generated admin credentials — never commit these
+config/admin.json
+
+# uploads are yours, keep them out of the history unless you want them
+public/uploads/*
+!public/uploads/.gitkeep
+.cache/

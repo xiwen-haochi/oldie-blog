@@ -1,0 +1,87 @@
+<div class="breadcrumbs"><a href="/">index.html</a><span class="sep">\</span> home</div>
+
+<section class="page-head">
+  <h1 class="ph-title">🏠 Welcome to my home page!</h1>
+  <div class="ph-body">
+    <p style="margin:0 0 6px"><strong><%= site.tagline %></strong></p>
+    <p style="margin:0" class="mono" style="font-size:11px">
+      You are visitor #<%= stats.total %> since <%= site.since || '1998' %>.
+      This corner of the web holds
+      <a href="/posts"><%= postCount %> dispatches</a> and
+      <a href="/guestbook"><%= guestbookCount %> notes</a> in the guestbook.
+    </p>
+  </div>
+</section>
+
+<% if (featured && featured.length) { %>
+<section style="margin-bottom:18px">
+  <h2 style="font-family:var(--font-ui);font-size:13px;margin:0 0 8px" class="widget-title">⭐ FEATURED DISPATCH</h2>
+  <ul class="post-list">
+    <% featured.forEach(function (post) { %><%- include('../partials/post-card', { post }) %><% }) %>
+  </ul>
+</section>
+<% } %>
+
+<h2 style="font-family:var(--font-ui);font-size:13px;margin:16px 0 8px" class="widget-title">📬 LATEST FROM THE WIRE</h2>
+
+<% if (pager.items.length) { %>
+<ul class="post-list">
+  <% pager.items.forEach(function (post) { %><%- include('../partials/post-card', { post }) %><% }) %>
+</ul>
+<%- include('../partials/pager', { pager, pagerUrl }) %>
+<% } else { %>
+<div class="alert warn">
+  <b>📭 Inbox empty.</b> No posts yet. If you are reading this on a fresh install, drop a
+  <code>.md</code> file into <code>content/posts/</code> — it shows up instantly.
+</div>
+<% } %>
+
+<div class="grid-2" style="margin-top:18px">
+  <div class="widget">
+    <h3 class="widget-title">📌 What's new</h3>
+    <div class="widget-body">
+      <ul>
+        <li>✔ <span class="blink">NEW</span> chiptune theme player — synthesized live in your browser, zero downloads</li>
+        <li>✔ DOS terminal on every page — press <kbd>Ctrl</kbd>+<kbd>K</kbd>, type <code>help</code></li>
+        <li>✔ every post can be downloaded as a plain <code>.TXT</code> file, like the old days demanded</li>
+        <li>✔ posts authored in Markdown, served as fast, semantic, crawlable HTML</li>
+      </ul>
+      <div class="linkbar">
+        <a class="btn tiny" href="/random">🎲 SURPRISE ME</a>
+        <a class="btn tiny" href="/archive">🗄 BROWSE EVERYTHING</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="widget">
+    <h3 class="widget-title">🖥 Live from my desk</h3>
+    <div class="widget-body">
+      <div class="ascii-art" style="font-size:9px;line-height:1.1" aria-label="ASCII art of a desk">
+<%= [
+'    ┌──────────────┐',
+'    │ ▓▓▓▓  ░░░░░  │',
+'    │ ▓▓▓▓▓▓▓▓░░░░ │  ← 1440x900 of pure',
+'    │ ░░░░░░░░░░░░ │    procrastination',
+'    └──────┬───────┘',
+'           │',
+'    ╔══════╧══════╗',
+'    ║  COFFEE ☕   ║',
+'    ╚══════╤══════╝',
+'           ▼',
+].join('\n') %>
+      </div>
+      <p class="mono" style="font-size:10px;margin:6px 0 0">
+        <% if (stats.online > 0) { %>
+          📡 <strong><%= stats.online %></strong> visitor<%= stats.online === 1 ? '' : 's' %> currently connected
+        <% } else { %>
+          📡 the wires are quiet… say hello in the <a href="/guestbook">guestbook</a>
+        <% } %>
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="alert" style="margin-top:16px;background:#fffbe6">
+  <b>⚡ PS:</b> this site renders entirely on the server in a few milliseconds.
+  No hydration, no client framework, no trackers. Just <code>&lt;table&gt;</code>-era honesty with a modern SEO layer.
+</div>

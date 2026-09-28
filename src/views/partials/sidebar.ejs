@@ -1,0 +1,120 @@
+<aside class="sidebar" aria-label="Sidebar">
+  <!-- webmaster card -->
+  <div class="widget">
+    <div class="widget-body center">
+      <div style="font-size:34px;line-height:1" aria-hidden="true">🖥️</div>
+      <div style="font-weight:700;font-family:var(--font-display);font-size:13px"><%- '&lt;' + String(site.author).split(' ')[0] + '&gt;' %></div>
+      <div class="mono" style="font-size:10px">webmaster since <%= site.since || '1998' %></div>
+      <div class="mono" style="font-size:10px">last updated: <%= lastUpdated %></div>
+      <div style="margin-top:5px">
+        <a class="btn tiny" href="mailto:<%= site.email %>">📧 EMAIL ME</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- navigation -->
+  <div class="widget">
+    <h3 class="widget-title">🧭 Navigation</h3>
+    <div class="widget-body">
+      <ul class="navlist">
+        <% (site.nav || []).forEach(function (item, i) { %>
+        <li>
+          <a href="<%= item.href %>" <%= currentPath === item.href ? 'aria-current="page"' : '' %>><%= item.label %></a>
+          <span class="key"><%= i + 1 %></span>
+        </li>
+        <% }) %>
+        <li><a href="/random" title="Surprise me">🎲 RANDOM</a></li>
+        <li><a href="/sitemap.xml" class="mono">🗺 SITEMAP.XML</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- hit counter -->
+  <% if (site.theme.showCounter) { %>
+  <div class="widget">
+    <h3 class="widget-title">📊 You are visitor #</h3>
+    <div class="widget-body">
+      <div class="counter-display" id="hit-counter" aria-label="Total visits: <%= stats.total %>">
+        <% String(stats.total).padStart(8, '0').split('').forEach(function (d) { %><span class="digit"><%= d %></span><% }) %>
+      </div>
+      <div class="counter-label">
+        <span id="hit-session">#<%= stats.sessionRank %></span> this visit ·
+        today <span id="hit-today"><%= stats.today %></span>
+      </div>
+      <div class="counter-label mono" style="font-size:9.5px">unique: <span id="hit-unique"><%= stats.unique %></span> · uptime <span id="hit-uptime">—</span></div>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- webring -->
+  <% if ((site.webring || []).length) { %>
+  <div class="widget">
+    <h3 class="widget-title">🌐 Webring</h3>
+    <div class="widget-body">
+      <ul>
+        <% site.webring.slice(0, 5).forEach(function (m) { %>
+        <li><a href="<%= m.url %>" target="_blank" rel="noopener"><%= m.title %></a></li>
+        <% }) %>
+      </ul>
+      <div class="webring-nav" style="margin-top:6px">
+        <a class="btn tiny" href="<%= webringHref(-1) %>" rel="prev">◀ PREV</a>
+        <span class="ring-label">RING</span>
+        <a class="btn tiny" href="<%= webringHref(1) %>" rel="next">NEXT ▶</a>
+        <a class="btn tiny" href="<%= webringHref(0) %>" rel="random">RANDOM</a>
+      </div>
+      <div class="counter-label mono" style="font-size:9.5px">members: <%= (site.webring || []).length %></div>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- awards -->
+  <div class="widget">
+    <h3 class="widget-title">🏆 Web awards</h3>
+    <div class="widget-body">
+      <div class="awards">
+        <span class="award" title="Hand-coded with love">💖</span>
+        <span class="award" title="No frameworks were harmed">🧱</span>
+        <span class="award" title="Y2K compliant">📼</span>
+        <span class="award" title="Table layout enthusiast">📊</span>
+        <span class="award" title="Loads in under a second on 56k">📶</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- guestbook teaser -->
+  <div class="widget">
+    <h3 class="widget-title">📬 Guestbook</h3>
+    <div class="widget-body">
+      <% if (latestGuestbook) { %>
+        <div style="border-bottom:1px dotted #808080;padding-bottom:5px;margin-bottom:5px">
+          <strong><%= latestGuestbook.name %></strong>
+          <span class="mono" style="font-size:10px">(<%= latestGuestbook.location || 'the World Wide Web' %>)</span>
+          <div style="font-size:11px">“<%= truncate(latestGuestbook.message, 90) %>”</div>
+        </div>
+      <% } %>
+      <a class="btn tiny" href="/guestbook">✍️ SIGN IT</a>
+      <a class="btn tiny" href="/guestbook#entries">READ ALL (<%= guestbookCount %>)</a>
+    </div>
+  </div>
+
+  <!-- zine -->
+  <div class="widget">
+    <h3 class="widget-title">📮 The Zine</h3>
+    <div class="widget-body">
+      <p style="margin:0 0 6px">One e-mail every other week. Plain text, zero tracking pixels.</p>
+      <form method="post" action="/subscribe" class="flex" style="gap:4px">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <input type="email" name="email" placeholder="you@earth.net" required aria-label="e-mail address" style="font-size:11px;padding:2px">
+        <button class="btn tiny" type="submit">JOIN</button>
+      </form>
+      <div class="mono" style="font-size:9.5px;margin-top:4px"><%= subscriberCount %> subscribers · <a href="/feed.xml">or just RSS</a></div>
+    </div>
+  </div>
+
+  <div class="widget">
+    <div class="widget-body center" style="font-size:10px">
+      <span class="blink">★</span> BEST VIEWED IN NETSCAPE 4.0 AT 800×600 <span class="blink">★</span><br>
+      <a href="#main" onclick="return false" class="mono" data-scroll-top>▲ RETURN TO TOP</a>
+    </div>
+  </div>
+</aside>

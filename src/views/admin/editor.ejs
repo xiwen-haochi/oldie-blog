@@ -1,0 +1,130 @@
+<%
+  const d = doc.data || {};
+  const val = (k, dflt) => (d[k] === undefined || d[k] === null ? (dflt === undefined ? '' : dflt) : d[k]);
+  const tagStr = Array.isArray(d.tags) ? d.tags.join(', ') : (d.tags || '');
+  const keyStr = Array.isArray(d.keywords) ? d.keywords.join(', ') : (d.keywords || '');
+  const action = kind === 'post' ? '/admin/posts' : '/admin/pages';
+%>
+<div class="admin-head">
+  <h1><%= isNew ? '✍️ New ' + kind : '✏️ Editing ' + kind %> <span class="mono muted" style="font-size:13px">content/<%= kind === 'post' ? 'posts' : 'pages' %>/<%= doc.file || '(unsaved)' %></span></h1>
+  <div class="btn-row">
+    <button class="btn primary" type="submit" form="editor-form">💾 SAVE (<%= isNew ? 'create' : 'update' %>)</button>
+    <% if (!isNew) { %>
+      <a class="btn" href="/<%= kind === 'post' ? 'posts/' + d.slug : (d.slug || '') %>" target="_blank" rel="noopener">👁 VIEW</a>
+    <% } %>
+    <a class="btn ghost" href="/<%= kind === 'post' ? 'admin/posts' : 'admin/pages' %>">← back</a>
+  </div>
+</div>
+
+<form id="editor-form" method="post" action="<%= action %>" class="editor-form">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <input type="hidden" name="originalSlug" value="<%= originalSlug || '' %>">
+
+  <div class="editor-main">
+    <div class="field">
+      <label for="title">📌 Title</label>
+      <input id="title" name="title" value="<%= val('title') %>" placeholder="Why the web was better when…" required data-slug-source>
+      <div class="form-note mono" id="slug-preview">/posts/<%= val('slug') || '…' %></div>
+    </div>
+
+    <div class="field">
+      <label for="body">📝 Body (Markdown + raw HTML)</label>
+      <textarea id="body" name="body" rows="26" spellcheck="true" data-editor><%= doc.body %></textarea>
+      <div class="editor-toolbar">
+        <span class="form-note" id="editor-stats">0 words · 0 min read</span>
+        <span class="spacer"></span>
+        <button class="btn tiny" type="button" data-wrap="**">B</button>
+        <button class="btn tiny" type="button" data-wrap="_">I</button>
+        <button class="btn tiny" type="button" data-wrap="`">code</button>
+        <button class="btn tiny" type="button" data-wrap="## ">H2</button>
+        <button class="btn tiny" type="button" data-wrap="- ">•</button>
+        <button class="btn tiny" type="button" data-wrap="> ">quote</button>
+        <button class="btn tiny" type="button" data-wrap="[text](url)">link</button>
+        <button class="btn tiny" type="button" data-wrap="![](url)">image</button>
+        <button class="btn tiny" type="button" data-wrap="<!-- more -->">more…</button>
+        <label class="btn tiny" for="upload-inline" title="insert an uploaded image">📎 image</label>
+        <input type="file" id="upload-inline" accept="image/*" hidden>
+        <span class="form-note" id="autosave-state"></span>
+      </div>
+    </div>
+  </div>
+
+  <aside class="editor-side">
+    <fieldset>
+      <legend>📋 Publishing</legend>
+      <div class="field">
+        <label for="slug">🔗 Slug</label>
+        <input id="slug" name="slug" value="<%= val('slug') %>" placeholder="auto from title" data-slug-target>
+      </div>
+      <div class="field">
+        <label for="date">📅 Date</label>
+        <input id="date" name="date" type="date" value="<%= toDateInput(val('date', new Date().toISOString().slice(0, 10))) %>">
+      </div>
+      <div class="field">
+        <label for="updated">🔁 Updated (optional)</label>
+        <input id="updated" name="updated" type="date" value="<%= toDateInput(val('updated')) %>">
+      </div>
+      <label class="checkline"><input type="checkbox" name="draft" <%= d.draft ? 'checked' : '' %>> 💤 Draft (hidden from visitors)</label>
+      <label class="checkline"><input type="checkbox" name="featured" <%= d.featured ? 'checked' : '' %>> ★ Featured on the home page</label>
+      <label class="checkline"><input type="checkbox" name="noindex" <%= d.noindex ? 'checked' : '' %>> 🚫 noindex (hide from search engines)</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>🔍 SEO</legend>
+      <div class="field">
+        <label for="description">Description (≤ 300 chars)</label>
+        <textarea id="description" name="description" rows="3" maxlength="400" data-desc-source><%= val('description') %></textarea>
+      </div>
+      <div class="field">
+        <label for="tags">Tags (comma separated)</label>
+        <input id="tags" name="tags" value="<%= tagStr %>" placeholder="markdown, web-design">
+      </div>
+      <div class="field">
+        <label for="keywords">Extra keywords</label>
+        <input id="keywords" name="keywords" value="<%= keyStr %>">
+      </div>
+      <div class="field">
+        <label for="cover">Cover image path</label>
+        <input id="cover" name="cover" value="<%= val('cover') %>" placeholder="/uploads/cover.png">
+      </div>
+      <div class="field">
+        <label for="coverAlt">Cover alt text (a11y + SEO)</label>
+        <input id="coverAlt" name="coverAlt" value="<%= val('coverAlt') %>">
+      </div>
+      <div class="field">
+        <label for="canonical">Canonical URL override</label>
+        <input id="canonical" name="canonical" value="<%= val('canonical') %>" placeholder="https://elsewhere.com/original">
+      </div>
+      <div class="field">
+        <label for="author">Author</label>
+        <input id="author" name="author" value="<%= val('author') %>" placeholder="<%= site.author %>">
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>🧪 Live preview</legend>
+      <div class="preview-tabs">
+        <button class="btn tiny on" type="button" data-preview-tab="preview">👁 HTML</button>
+        <button class="btn tiny" type="button" data-preview-tab="meta">🏷 Meta</button>
+        <button class="btn tiny" type="button" data-preview-tab="raw">📄 .md</button>
+      </div>
+      <div id="preview-pane" class="preview-pane">
+        <p class="form-note">Type in the body — the preview updates as you pause.</p>
+      </div>
+      <div id="meta-pane" class="preview-pane" hidden></div>
+      <div id="raw-pane" class="preview-pane" hidden><pre class="ascii-art" id="raw-preview" style="font-size:10px"></pre></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>🖼 Recent uploads</legend>
+      <div class="upload-grid">
+        <% uploads.slice(0, 8).forEach(function (u) { %>
+          <button class="upload-pick" type="button" data-insert-image="<%= u.url %>" title="<%= u.name %> · <%= humanBytes(u.size) %>">
+            <img src="<%= u.url %>" alt="<%= u.name %>" loading="lazy">
+          </button>
+        <% }) %>
+        <% if (!uploads.length) { %><p class="form-note">No uploads yet — use 📎 in the toolbar.</p><% } %>
+      </div>
+    </fieldset>
+  </aside>
+</form>

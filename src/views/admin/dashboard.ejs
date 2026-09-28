@@ -1,0 +1,109 @@
+<div class="admin-head">
+  <h1>📊 Control panel</h1>
+  <div class="btn-row">
+    <a class="btn primary" href="/admin/posts/new">✍️ NEW POST</a>
+    <a class="btn" href="/admin/pages/new">📄 NEW PAGE</a>
+    <a class="btn" href="/admin/tools">🛠 TOOLS</a>
+    <a class="btn" href="/">🌐 VIEW SITE</a>
+  </div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-value"><%= stats.total %></div><div class="stat-label">TOTAL HITS</div></div>
+  <div class="stat-card"><div class="stat-value"><%= stats.today %></div><div class="stat-label">TODAY</div></div>
+  <div class="stat-card"><div class="stat-value"><%= stats.unique %></div><div class="stat-label">UNIQUE TODAY</div></div>
+  <div class="stat-card"><div class="stat-value"><%= stats.online %></div><div class="stat-label">ONLINE NOW</div></div>
+  <div class="stat-card"><div class="stat-value"><%= ctx.index.publishedPosts().length %></div><div class="stat-label">PUBLISHED</div></div>
+  <div class="stat-card"><div class="stat-value"><%= drafts.length %></div><div class="stat-label">DRAFTS</div></div>
+  <div class="stat-card"><div class="stat-value"><%= ctx.index.totalWords().toLocaleString('en-US') %></div><div class="stat-label">WORDS</div></div>
+  <div class="stat-card"><div class="stat-value"><%= community.approved %></div><div class="stat-label">GUESTBOOK</div></div>
+</div>
+
+<div class="admin-cols">
+  <section class="admin-panel">
+    <h2 class="widget-title">📈 Last 30 days</h2>
+    <div class="spark" role="img" aria-label="Daily hits for the last 30 days">
+      <% const max = Math.max(1, ...series.map(function (d) { return d.count; })); %>
+      <% series.forEach(function (d) { %>
+        <span class="spark-bar" style="height:<%= Math.max(2, Math.round((d.count / max) * 100)) %>%" title="<%= d.date %>: <%= d.count %> hits"></span>
+      <% }) %>
+    </div>
+    <p class="form-note">peak <%= stats.best %> hits/day · <%= stats.paths %> distinct paths tracked</p>
+  </section>
+
+  <section class="admin-panel">
+    <h2 class="widget-title">🔎 SEO health — <%= seo.score %>%</h2>
+    <ul class="check-list">
+      <% seo.checks.forEach(function (c) { %>
+        <li class="<%= c.ok ? 'ok' : 'warn' %>"><span class="mark"><%= c.ok ? '✔' : '!' %></span> <strong><%= c.label %></strong><br><span class="muted mono" style="font-size:11px"><%= c.detail %></span></li>
+      <% }) %>
+    </ul>
+  </section>
+
+  <section class="admin-panel">
+    <h2 class="widget-title">📰 Latest posts</h2>
+    <table class="table">
+      <thead><tr><th>Title</th><th>Date</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <% recent.forEach(function (p) { %>
+          <tr>
+            <td><a href="/admin/posts/<%= p.slug %>/edit"><%= p.title %></a><div class="mono muted" style="font-size:11px">/posts/<%= p.slug %></div></td>
+            <td class="mono" style="font-size:11px"><%= formatDate(p.date, { style: 'short' }) %></td>
+            <td><%- p.draft ? '<span class="stamp draft">DRAFT</span>' : '<span class="stamp featured">LIVE</span>' %><%- p.featured ? ' <span class="stamp">★</span>' : '' %></td>
+            <td class="nowrap"><a class="btn tiny" href="/admin/posts/<%= p.slug %>/edit">EDIT</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="admin-panel">
+    <h2 class="widget-title">📬 Moderation queue <%= queue.length %></h2>
+    <% if (!queue.length) { %>
+      <p class="form-note">Nothing waiting. The guestbook is a peaceful place.</p>
+    <% } %>
+    <% queue.forEach(function (e) { %>
+      <div class="gb-entry pending">
+        <div class="gb-head"><span><%= e.name %></span><span class="stamp-time"><%= e.location || 'unknown' %></span></div>
+        <div class="gb-body"><%= truncate(e.message, 160) %></div>
+        <div class="gb-meta btn-row">
+          <form method="post" action="/admin/guestbook/<%= e.id %>/status" class="inline-form">
+            <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="status" value="approved">
+            <button class="btn tiny" type="submit">✅ APPROVE</button>
+          </form>
+          <form method="post" action="/admin/guestbook/<%= e.id %>/status" class="inline-form">
+            <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="status" value="spam">
+            <button class="btn tiny" type="submit">🗑 SPAM</button>
+          </form>
+        </div>
+      </div>
+    <% }) %>
+    <p><a class="btn tiny" href="/admin/guestbook">open guestbook admin →</a></p>
+  </section>
+
+  <section class="admin-panel">
+    <h2 class="widget-title">🔥 Top paths</h2>
+    <table class="table">
+      <thead><tr><th>Path</th><th>Hits</th></tr></thead>
+      <tbody>
+        <% top.forEach(function (row) { %>
+          <tr><td class="mono" style="font-size:11.5px"><a href="<%= row.path %>"><%= row.path %></a></td><td><%= row.count %></td></tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="admin-panel">
+    <h2 class="widget-title">⚡ System</h2>
+    <table class="table">
+      <tbody>
+        <tr><td>node</td><td class="mono"><%= node %></td></tr>
+        <tr><td>process uptime</td><td class="mono"><%= uptime %>s</td></tr>
+        <tr><td>memory</td><td class="mono"><%= Math.round(process.memoryUsage().rss / 1048576) %> MB</td></tr>
+        <tr><td>posts / pages</td><td class="mono"><%= ctx.index.allPosts().length %> / <%= ctx.index.pages.length %></td></tr>
+        <tr><td>subscribers</td><td class="mono"><%= ctx.community.subscriberCount() %></td></tr>
+        <tr><td>since</td><td class="mono"><%= site.since || '1998' %></td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>

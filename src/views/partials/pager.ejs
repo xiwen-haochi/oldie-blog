@@ -1,0 +1,11 @@
+<% if (pager.pages > 1) { %>
+<nav class="pager" aria-label="Pagination">
+  <% if (pager.hasPrev) { %>
+    <a class="btn tiny" href="<%= pagerUrl(pager.prev) %>" rel="prev">◀ PREV</a>
+  <% } %>
+  <span class="page-info">PAGE <%= pager.page %> / <%= pager.pages %> · <%= pager.total %> ITEMS</span>
+  <% if (pager.hasNext) { %>
+    <a class="btn tiny" href="<%= pagerUrl(pager.next) %>" rel="next">NEXT ▶</a>
+  <% } %>
+</nav>
+<% } %>

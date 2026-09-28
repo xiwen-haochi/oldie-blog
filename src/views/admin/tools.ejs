@@ -1,0 +1,61 @@
+<div class="admin-head">
+  <h1>🛠 Tools</h1>
+  <div class="btn-row">
+    <a class="btn" href="/admin/export.json" download>⬇️ EXPORT EVERYTHING (JSON)</a>
+    <a class="btn" href="/feed.xml" target="_blank" rel="noopener">📡 RSS</a>
+    <a class="btn" href="/sitemap.xml" target="_blank" rel="noopener">🗺 SITEMAP</a>
+    <a class="btn" href="/healthz" target="_blank" rel="noopener">💓 HEALTH</a>
+  </div>
+</div>
+
+<div class="admin-cols">
+  <section class="admin-panel">
+    <h2 class="widget-title">🔎 SEO checklist — <%= health.score %>%</h2>
+    <ul class="check-list">
+      <% health.checks.forEach(function (c) { %>
+        <li class="<%= c.ok ? 'ok' : 'warn' %>"><span class="mark"><%= c.ok ? '✔' : '!' %></span> <strong><%= c.label %></strong><br><span class="muted mono" style="font-size:11px"><%= c.detail %></span></li>
+      <% }) %>
+    </ul>
+  </section>
+
+  <section class="admin-panel">
+    <h2 class="widget-title">📁 content/posts</h2>
+    <ul class="file-list mono">
+      <% files.forEach(function (f) { %>
+        <li><a href="/admin/tools?file=<%= f %>"><%= f %></a></li>
+      <% }) %>
+      <% if (!files.length) { %><li class="muted">(empty)</li><% } %>
+    </ul>
+  </section>
+
+  <section class="admin-panel">
+    <h2 class="widget-title">📄 content/pages</h2>
+    <ul class="file-list mono">
+      <% pageFiles.forEach(function (f) { %>
+        <li><%= f %></li>
+      <% }) %>
+      <% if (!pageFiles.length) { %><li class="muted">(empty)</li><% } %>
+    </ul>
+  </section>
+
+  <section class="admin-panel">
+    <h2 class="widget-title">📮 Subscribers (<%= subscribers.length %>)</h2>
+    <p class="form-note">Plain e-mail addresses, no tracking. Export with the JSON button above.</p>
+    <ul class="file-list mono">
+      <% subscribers.slice(0, 40).forEach(function (e) { %><li><%= e %></li><% }) %>
+      <% if (!subscribers.length) { %><li class="muted">nobody yet</li><% } %>
+    </ul>
+  </section>
+
+  <% if (raw) { %>
+  <section class="admin-panel wide">
+    <h2 class="widget-title">📄 <%= raw.file %> — raw markdown</h2>
+    <pre class="ascii-art" style="font-size:11px;color:#e8e8e8"><%= raw.body %></pre>
+  </section>
+  <% } %>
+
+  <section class="admin-panel wide">
+    <h2 class="widget-title">🧾 Export preview</h2>
+    <pre class="ascii-art" style="font-size:11px;color:#e8e8e8"><%= JSON.stringify(exportData, null, 2).slice(0, 4000) %></pre>
+  </section>
+</div>

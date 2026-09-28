@@ -1,0 +1,55 @@
+<div class="admin-head">
+  <h1>📝 Posts</h1>
+  <div class="btn-row">
+    <a class="btn primary" href="/admin/posts/new">✍️ NEW POST</a>
+    <a class="btn" href="/admin/pages">📄 PAGES</a>
+  </div>
+</div>
+
+<form class="filter-bar" method="get" action="/admin/posts">
+  <input type="search" name="q" value="<%= q %>" placeholder="filter by title, slug or tag…">
+  <select name="filter">
+    <option value="all" <%= filter === 'all' ? 'selected' : '' %>>All (<%= counts.all %>)</option>
+    <option value="published" <%= filter === 'published' ? 'selected' : '' %>>Published (<%= counts.published %>)</option>
+    <option value="draft" <%= filter === 'draft' ? 'selected' : '' %>>Drafts (<%= counts.draft %>)</option>
+    <option value="featured" <%= filter === 'featured' ? 'selected' : '' %>>Featured (<%= counts.featured %>)</option>
+  </select>
+  <button class="btn" type="submit">🔎 FILTER</button>
+  <a class="btn ghost" href="/admin/posts">RESET</a>
+</form>
+
+<table class="table post-table">
+  <thead>
+    <tr><th>Post</th><th>Date</th><th>Tags</th><th>Status</th><th class="nowrap">Actions</th></tr>
+  </thead>
+  <tbody>
+    <% posts.forEach(function (p) { %>
+      <tr>
+        <td>
+          <a href="/admin/posts/<%= p.slug %>/edit"><strong><%= p.title %></strong></a>
+          <div class="mono muted" style="font-size:11px">content/posts/<%= p.file %> · <%= p.wordCount %> words · <%= p.readingTime %> min</div>
+        </td>
+        <td class="mono" style="font-size:11.5px"><%= formatDate(p.date, { style: 'short' }) %></td>
+        <td><% p.tags.forEach(function (t) { %><span class="stamp" style="background:#c0c0c0;color:#000"><%= t %></span> <% }) %></td>
+        <td class="nowrap">
+          <% if (p.draft) { %><span class="stamp draft">DRAFT</span><% } else { %><span class="stamp featured">LIVE</span><% } %>
+          <% if (p.featured) { %><span class="stamp">★</span><% } %>
+          <% if (p.noindex) { %><span class="stamp">NOINDEX</span><% } %>
+        </td>
+        <td class="nowrap">
+          <a class="btn tiny" href="/admin/posts/<%= p.slug %>/edit">✏️</a>
+          <a class="btn tiny" href="/posts/<%= p.slug %>" target="_blank" rel="noopener">👁</a>
+          <form method="post" action="/admin/posts/<%= p.slug %>/duplicate" class="inline-form">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button class="btn tiny" type="submit" title="Duplicate as draft">⧉</button>
+          </form>
+          <form method="post" action="/admin/posts/<%= p.slug %>/delete" class="inline-form" data-confirm="Delete <%= p.slug %>.md? This removes the file from disk.">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button class="btn tiny danger" type="submit">🗑</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+    <% if (!posts.length) { %><tr><td colspan="5" class="muted">No posts match that filter.</td></tr><% } %>
+  </tbody>
+</table>

@@ -1,0 +1,19 @@
+<div class="breadcrumbs"><a href="/">index.html</a><span class="sep">\</span> <%= doc.slug %>.html</div>
+<article class="article">
+  <header class="article-header">
+    <h1 class="article-title"><%= doc.title %></h1>
+    <div class="article-meta">
+      <span>📅 updated <%= formatDate(doc.updated || doc.date, { locale: site.locale }) %></span>
+      <span>⏱ <%= doc.readingTime %> min read</span>
+      <% doc.tags.forEach(function (t) { %><a class="tag" href="/tags/<%= slugify(t) %>">#<%= t %></a><% }) %>
+    </div>
+  </header>
+  <div class="prose" data-post-body><%- doc.html %></div>
+  <div class="post-footer">
+    <div class="linkbar">
+      <a class="btn tiny" href="#" data-listen-post>📻 LISTEN</a>
+      <a class="btn tiny" href="#" data-copy="<%= page.canonicalUrl %>">🔗 COPY LINK</a>
+      <a class="btn tiny" href="/" data-scroll-top>▲ BACK TO HOME</a>
+    </div>
+  </div>
+</article>

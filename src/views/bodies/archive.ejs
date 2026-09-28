@@ -1,0 +1,42 @@
+<div class="breadcrumbs"><a href="/">index.html</a><span class="sep">\</span> archive.html</div>
+<section class="page-head">
+  <h1 class="ph-title">🗄 The archives</h1>
+  <div class="ph-body">
+    <p style="margin:0">
+      <strong><%= totalCount %></strong> post<%= totalCount === 1 ? '' : 's' %> in
+      <strong><%= timeline.length %></strong> year<%= timeline.length === 1 ? '' : 's' %>,
+      <strong><%= totalWords.toLocaleString('en-US') %></strong> words, first published
+      <%= formatDate(oldest.date, { locale: site.locale }) %>.
+    </p>
+  </div>
+</section>
+
+<% if (tags.length) { %>
+<div class="widget">
+  <h3 class="widget-title">🏷 Jump to a topic</h3>
+  <div class="widget-body">
+    <div class="tagcloud">
+      <% tags.forEach(function (t) { %>
+        <a class="tag-pill" href="/tags/<%= t.slug %>"><%= t.name %> <span class="n">[<%= t.count %>]</span></a>
+      <% }) %>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<% timeline.forEach(function (y) { %>
+<section class="timeline-year">
+  <h3>📅 <%= y.year %> <span style="font-weight:400;font-size:11px">(<%= y.count %> posts)</span></h3>
+  <% y.months.forEach(function (m) { %>
+    <div class="tl-month">
+      <h4><%= monthName(m.month) %> <%= y.year %></h4>
+      <% m.posts.forEach(function (p) { %>
+        <div class="tl-item">
+          <span class="when"><%= pad(p.date.getUTCDate()) %></span>
+          <span><a href="<%= p.url %>"><%= p.title %></a> <span class="muted mono" style="font-size:11px">· <%= p.readingTime %> min</span></span>
+        </div>
+      <% }) %>
+    </div>
+  <% }) %>
+</section>
+<% }) %>

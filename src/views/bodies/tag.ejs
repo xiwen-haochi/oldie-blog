@@ -1,0 +1,10 @@
+<div class="breadcrumbs"><a href="/">index.html</a><span class="sep">\</span> <a href="/tags">tags</a><span class="sep">\</span> <%= tag.slug %></div>
+<section class="page-head">
+  <h1 class="ph-title">🏷 #<%= tag.name %></h1>
+  <div class="ph-body"><p style="margin:0"><%= pager.total %> post<%= pager.total === 1 ? '' : 's' %> tagged <strong><%= tag.name %></strong>.</p></div>
+</section>
+
+<ul class="post-list">
+  <% pager.items.forEach(function (post) { %><%- include('../partials/post-card', { post }) %><% }) %>
+</ul>
+<%- include('../partials/pager', { pager, pagerUrl }) %>

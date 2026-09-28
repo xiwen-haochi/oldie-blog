@@ -1,0 +1,47 @@
+{
+  "name": "oldie-blog",
+  "version": "0.1.0",
+  "description": "A 1990s personal-homepage blog (GeoCities energy) with a modern engine: Markdown authoring, a real admin, and proper SEO. Zero native dependencies.",
+  "keywords": [
+    "blog",
+    "markdown",
+    "retro",
+    "1990s",
+    "geocities",
+    "webring",
+    "hit-counter",
+    "guestbook",
+    "seo",
+    "ssr",
+    "express",
+    "chiptune"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0",
+    "pnpm": ">=10"
+  },
+  "packageManager": "pnpm@11.7.0",
+  "bin": {
+    "oldie-blog": "bin/oldie-blog.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test tests/*.test.js && node scripts/smoke-test.js",
+    "test:unit": "node --test tests/*.test.js",
+    "test:e2e": "node scripts/smoke-test.js",
+    "seed": "node scripts/seed-demo.js",
+    "new:post": "node scripts/new-post.js",
+    "check": "node --check src/server.js && node scripts/smoke-test.js"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "gray-matter": "^4.0.3",
+    "highlight.js": "^11.11.1",
+    "markdown-it": "^14.1.0",
+    "multer": "^2.4.0"
+  }
+}

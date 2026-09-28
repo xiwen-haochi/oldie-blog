@@ -1,0 +1,466 @@
+#!/usr/bin/env node
+/**
+ * End-to-end smoke test: boots the real server on a random port and drives
+ * every public surface plus the whole admin flow over HTTP.
+ *
+ *   node scripts/smoke-test.js
+ *
+ * Exits non-zero on the first failing group so CI can gate on it.
+ */
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { startServer } from '../src/server.js';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+process.env.NODE_ENV = process.env.NODE_ENV || 'test';
+process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'smoke-test-password';
+
+const results = [];
+let failures = 0;
+
+async function check(name, fn) {
+  try {
+    const detail = await fn();
+    results.push({ ok: true, name, detail });
+    console.log('  \u001b[32m✔\u001b[0m ' + name + (detail ? '  \u001b[90m' + detail + '\u001b[0m' : ''));
+  } catch (err) {
+    failures++;
+    results.push({ ok: false, name, detail: err.message });
+    console.log('  \u001b[31m✘\u001b[0m ' + name + '\n      \u001b[31m' + String(err.message).slice(0, 300).replace(/\n/g, ' | ') + '\u001b[0m');
+  }
+}
+
+function section(title) {
+  console.log('\n\u001b[1m' + title + '\u001b[0m');
+}
+
+function cookieJar() {
+  const jar = new Map();
+  return {
+    header() {
+      return [...jar.entries()].map((kv) => kv[0] + '=' + kv[1]).join('; ');
+    },
+    absorb(res) {
+      const raw = res.headers.getSetCookie ? res.headers.getSetCookie() : [];
+      for (const line of raw) {
+        const pair = String(line).split(';')[0];
+        const idx = pair.indexOf('=');
+        const name = pair.slice(0, idx).trim();
+        const value = pair.slice(idx + 1).trim();
+        if (value === '') jar.delete(name);
+        else jar.set(name, value);
+      }
+    },
+  };
+}
+
+async function main() {
+  console.log('\n\u001b[1moldie-blog smoke test\u001b[0m');
+  const { server } = startServer({ port: 0, host: '127.0.0.1' });
+  await new Promise((resolve) => server.once('listening', resolve));
+  const base = 'http://127.0.0.1:' + server.address().port;
+  const jar = cookieJar();
+
+  const get = async (p, init = {}) => {
+    const res = await fetch(base + p, {
+      redirect: 'manual',
+      ...init,
+      headers: { cookie: jar.header(), ...(init.headers || {}) },
+    });
+    jar.absorb(res);
+    return res;
+  };
+  const text = async (p) => (await get(p)).text();
+  const post = async (p, form) => {
+    const res = await fetch(base + p, {
+      method: 'POST',
+      redirect: 'manual',
+      headers: { cookie: jar.header(), 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(form).toString(),
+    });
+    jar.absorb(res);
+    return res;
+  };
+  const csrfFrom = (html) => {
+    const a = html.match(/name="csrf-token" content="([^"]+)"/);
+    const b = html.match(/name="_csrf" value="([^"]+)"/);
+    return (a && a[1]) || (b && b[1]) || '';
+  };
+
+  section('public pages');
+  const pages = [
+    ['/', 'Welcome to my home page'],
+    ['/posts', 'All dispatches'],
+    ['/archive', 'archives'],
+    ['/tags', 'Tag cloud'],
+    ['/guestbook', 'guestbook'],
+    ['/search?q=markdown', 'Search this site'],
+    ['/about', 'colophon'],
+  ];
+  for (const entry of pages) {
+    const p = entry[0];
+    const needle = entry[1];
+    await check('GET ' + p, async () => {
+      const res = await get(p);
+      assert.equal(res.status, 200, 'status was ' + res.status);
+      const html = await res.text();
+      assert.ok(html.toLowerCase().includes(needle.toLowerCase()), 'missing text: ' + needle);
+      return html.length + ' bytes';
+    });
+  }
+
+  section('SEO surface');
+  await check('home head: canonical, og, json-ld, feeds', async () => {
+    const html = await text('/');
+    assert.match(html, /<link rel="canonical"/);
+    assert.match(html, /property="og:image"/);
+    assert.match(html, /application\/ld\+json/);
+    assert.match(html, /application\/rss\+xml/);
+    return 'meta ok';
+  });
+  await check('post head: BlogPosting + article meta + TOC', async () => {
+    const html = await text('/posts/welcome-to-my-homepage');
+    assert.match(html, /"@type":"BlogPosting"/);
+    assert.match(html, /article:published_time/);
+    assert.match(html, /<details class="toc"/);
+    return 'structured data ok';
+  });
+  const feeds = [
+    ['/feed.xml', /<rss version="2.0"/],
+    ['/atom.xml', /<feed xmlns="http:\/\/www.w3.org\/2005\/Atom"/],
+    ['/feed.json', /jsonfeed.org/],
+    ['/sitemap.xml', /<urlset/],
+    ['/robots.txt', /Sitemap:/],
+    ['/site.webmanifest', /"display"/],
+    ['/llms.txt', /# Oldie Blog/],
+  ];
+  for (const entry of feeds) {
+    const p = entry[0];
+    const type = entry[1];
+    await check('GET ' + p, async () => {
+      const res = await get(p);
+      assert.equal(res.status, 200, 'status ' + res.status);
+      const body = await res.text();
+      assert.match(body, type);
+      return body.length + ' bytes';
+    });
+  }
+
+  section('signature features');
+  await check('.TXT download per post', async () => {
+    const res = await get('/posts/welcome-to-my-homepage.txt');
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-disposition') || '', /attachment/);
+    const body = await res.text();
+    assert.ok(body.includes('TITLE :'), 'missing header block');
+    assert.ok(!body.includes('<!--'), 'raw html comment leaked into the txt');
+    return body.split('\n').length + ' lines';
+  });
+  await check('.JSON representation of a post', async () => {
+    const res = await get('/posts/welcome-to-my-homepage.json');
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(data.markdown && data.html && data.plainUrl, 'missing fields');
+    return data.readingTime + ' min read';
+  });
+  await check('terminal API answers real commands', async () => {
+    const csrf = csrfFrom(await text('/'));
+    assert.ok(csrf, 'no csrf token on the page');
+    const res = await post('/api/terminal', { cmd: 'stats', _csrf: csrf });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    const joined = data.lines.map((l) => l.text).join('\n');
+    assert.match(joined, /total hits/);
+    return data.lines.length + ' lines';
+  });
+  await check('terminal API refuses a bad CSRF token', async () => {
+    const res = await post('/api/terminal', { cmd: 'stats', _csrf: 'nope' });
+    assert.equal(res.status, 403);
+    return 'blocked';
+  });
+  await check('search API honours tag: operator', async () => {
+    const res = await get('/api/search?q=' + encodeURIComponent('tag:markdown'));
+    const data = await res.json();
+    assert.ok(data.count >= 1, 'expected hits, got ' + data.count);
+    return data.count + ' hits';
+  });
+  await check('1998 mode hooks are present', async () => {
+    const html = await text('/');
+    assert.match(html, /data-theme="classic"/);
+    assert.match(html, /data-toggle-theme/);
+    assert.match(html, /tm-banner/);
+    return 'toggles wired';
+  });
+
+  section('guestbook and comments');
+  await check('public guestbook sign', async () => {
+    const csrf = csrfFrom(await text('/guestbook'));
+    const res = await post('/guestbook', {
+      _csrf: csrf,
+      name: 'Smoke Tester',
+      email: 'smoke@example.com',
+      url: 'https://example.com',
+      location: 'Test Lab',
+      message: 'Automated smoke test was here.',
+    });
+    assert.equal(res.status, 302);
+    assert.ok((await text('/guestbook')).includes('Smoke Tester'), 'entry not rendered');
+    return 'signed';
+  });
+  await check('honeypot spam is dropped', async () => {
+    const csrf = csrfFrom(await text('/guestbook'));
+    await post('/guestbook', { _csrf: csrf, name: 'Bot', message: 'cheap backlinks here', website: 'http://spam.example' });
+    assert.ok(!(await text('/guestbook')).includes('cheap backlinks'), 'honeypot submission leaked');
+    return 'blocked';
+  });
+  await check('comment on a post', async () => {
+    const csrf = csrfFrom(await text('/posts/welcome-to-my-homepage'));
+    const res = await post('/comments', { _csrf: csrf, post: 'welcome-to-my-homepage', name: 'Reader', message: 'Great page!' });
+    assert.equal(res.status, 302);
+    assert.ok((await text('/posts/welcome-to-my-homepage')).includes('Great page!'));
+    return 'commented';
+  });
+
+  section('errors');
+  await check('unknown URL renders the 404 page', async () => {
+    const res = await get('/definitely-not-here');
+    assert.equal(res.status, 404);
+    assert.match(await res.text(), /PAGE NOT FOUND/);
+    return 'rendered';
+  });
+  await check('missing post 404s', async () => {
+    const res = await get('/posts/no-such-post');
+    assert.equal(res.status, 404);
+    return 'handled';
+  });
+
+  section('admin');
+  await check('admin guards anonymous visitors', async () => {
+    const res = await get('/admin/dashboard');
+    assert.equal(res.status, 302);
+    assert.match(res.headers.get('location') || '', /\/admin\/login/);
+    return 'guarded';
+  });
+
+  await check('login with the wrong password fails', async () => {
+    const csrf = csrfFrom(await text('/admin/login'));
+    const res = await post('/admin/login', { _csrf: csrf, username: 'admin', password: 'definitely-wrong' });
+    assert.equal(res.status, 401, 'status ' + res.status);
+    return 'rejected';
+  });
+
+  let adminOk = false;
+  await check('login with CSRF token', async () => {
+    const csrf = csrfFrom(await text('/admin/login'));
+    const res = await post('/admin/login', {
+      _csrf: csrf,
+      username: 'admin',
+      password: process.env.ADMIN_PASSWORD,
+      next: '/admin/dashboard',
+    });
+    assert.equal(res.status, 302, 'login status ' + res.status);
+    const dash = await get('/admin/dashboard');
+    assert.equal(dash.status, 200, 'dashboard status ' + dash.status);
+    const body = await dash.text();
+    assert.match(body, /Control panel/);
+    assert.match(body, /SEO health/);
+    adminOk = true;
+    return 'signed in';
+  });
+
+
+  if (adminOk) {
+    let adminCsrf = '';
+    await check('dashboard exposes a csrf token', async () => {
+      adminCsrf = csrfFrom(await text('/admin/dashboard'));
+      assert.ok(adminCsrf, 'no csrf token found');
+      return 'ok';
+    });
+
+    const createdSlug = 'smoke-test-post';
+    await check('create a post from the admin', async () => {
+      const res = await post('/admin/posts', {
+        _csrf: adminCsrf,
+        title: 'Smoke Test Post',
+        slug: createdSlug,
+        date: '2025-06-01',
+        description: 'Written by the smoke test to prove the writer works.',
+        tags: 'smoke, testing',
+        body: '# Hello from the admin\n\nWritten by the smoke test.\n\n- one\n- two',
+      });
+      assert.equal(res.status, 302, 'save status ' + res.status);
+      const file = path.join(ROOT, 'content', 'posts', '2025-06-01-' + createdSlug + '.md');
+      assert.ok(fs.existsSync(file), 'markdown file was not written');
+      const body = fs.readFileSync(file, 'utf8');
+      assert.match(body, /^---\ntitle: Smoke Test Post/);
+      assert.match(body, /tags: \[smoke, testing\]/);
+      assert.equal((await get('/posts/' + createdSlug)).status, 200, 'post is not public');
+      return file.split('/').pop();
+    });
+
+    await check('drafts stay private', async () => {
+      const res = await post('/admin/posts', {
+        _csrf: adminCsrf,
+        title: 'Hidden Draft',
+        slug: 'hidden-draft',
+        date: '2025-06-02',
+        draft: 'on',
+        body: 'Not ready yet.',
+      });
+      assert.equal(res.status, 302);
+      assert.equal((await get('/posts/hidden-draft')).status, 404, 'draft leaked publicly');
+      assert.ok((await text('/admin/posts?filter=draft')).includes('hidden-draft'), 'missing in admin');
+      return 'hidden';
+    });
+
+    await check('markdown preview endpoint', async () => {
+      const res = await post('/admin/preview', { _csrf: adminCsrf, body: '## Preview **works**', title: 'T' });
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.match(data.html, /<h2 id="preview-works"/);
+      assert.ok(data.readingTime >= 1);
+      return 'rendered';
+    });
+
+    await check('update an existing post', async () => {
+      const res = await post('/admin/posts', {
+        _csrf: adminCsrf,
+        originalSlug: createdSlug,
+        title: 'Smoke Test Post',
+        slug: createdSlug,
+        date: '2025-06-01',
+        description: 'Updated description.',
+        tags: 'smoke',
+        featured: 'on',
+        body: 'Updated body.',
+      });
+      assert.equal(res.status, 302);
+      assert.match(await text('/posts/' + createdSlug), /Updated description/);
+      return 'updated';
+    });
+
+    await check('duplicate a post', async () => {
+      const res = await post('/admin/posts/' + createdSlug + '/duplicate', { _csrf: adminCsrf });
+      assert.equal(res.status, 302);
+      assert.ok((await text('/admin/posts')).includes(createdSlug + '-copy'), 'copy not listed');
+      return 'duplicated';
+    });
+
+    await check('moderate the guestbook', async () => {
+      const page = await text('/admin/guestbook');
+      const m = page.match(/\/admin\/guestbook\/(\d+)\/status/);
+      assert.ok(m, 'no moderation controls rendered');
+      const res = await post('/admin/guestbook/' + m[1] + '/status', { _csrf: adminCsrf, status: 'spam' });
+      assert.equal(res.status, 302);
+      assert.ok((await text('/admin/guestbook?status=spam')).includes('#' + m[1]), 'spam list is empty');
+      return 'entry #' + m[1];
+    });
+
+    await check('settings save applies live', async () => {
+      const res = await post('/admin/settings', {
+        _csrf: adminCsrf,
+        title: 'Oldie Blog',
+        tagline: 'Best viewed with Netscape Navigator 4.0 at 800x600',
+        description: 'A hand-made 1990s personal homepage.',
+        author: 'The Webmaster',
+        email: 'webmaster@example.com',
+        since: '1998',
+        url: base,
+        locale: 'en',
+        postsPerPage: 5,
+        nav: 'HOME | /\nPOSTS | /posts\nGUESTBOOK | /guestbook',
+        webring: 'Test Ring | https://example.com/ring # ringmaster',
+        banners: 'Smoke test banner | /',
+        showMarquee: 'on',
+        showTerminal: 'on',
+        showCounter: 'on',
+      });
+      assert.equal(res.status, 302);
+      assert.ok((await text('/')).includes('Smoke test banner'), 'banner not applied');
+      return 'applied';
+    });
+
+    await check('settings reset restores the config file', async () => {
+      const res = await post('/admin/settings/reset', { _csrf: adminCsrf });
+      assert.equal(res.status, 302);
+      assert.ok(!(await text('/')).includes('Smoke test banner'), 'override still active');
+      return 'reset';
+    });
+
+    await check('password rotation', async () => {
+      const res = await post('/admin/password', {
+        _csrf: adminCsrf,
+        current: process.env.ADMIN_PASSWORD,
+        next: 'a-brand-new-long-password',
+        confirm: 'a-brand-new-long-password',
+      });
+      assert.equal(res.status, 302);
+      assert.ok((await text('/admin/settings')).includes('Password updated'), 'no confirmation');
+      return 'rotated';
+    });
+
+    await check('media upload and delete', async () => {
+      const png = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        'base64'
+      );
+      const form = new FormData();
+      form.set('_csrf', adminCsrf);
+      form.set('file', new Blob([png], { type: 'image/png' }), 'smoke-pixel.png');
+      const res = await fetch(base + '/admin/media', { method: 'POST', redirect: 'manual', headers: { cookie: jar.header() }, body: form });
+      jar.absorb(res);
+      const preview = (await res.clone().text()).slice(0, 200).replace(/\n/g, ' ');
+      assert.equal(res.status, 302, 'upload status ' + res.status + ' loc=' + res.headers.get('location') + ' body=' + preview);
+      const m = (await text('/admin/media')).match(/name="name" value="([^"]+)"/);
+      assert.ok(m, 'upload not listed');
+      const file = path.join(ROOT, 'public', 'uploads', m[1]);
+      assert.ok(fs.existsSync(file), 'file missing on disk');
+      assert.equal((await post('/admin/media/delete', { _csrf: adminCsrf, name: m[1] })).status, 302);
+      assert.ok(!fs.existsSync(file), 'file not deleted');
+      return m[1];
+    });
+
+    await check('tools page and JSON export', async () => {
+      assert.match(await text('/admin/tools'), /SEO checklist/);
+      const res = await get('/admin/export.json');
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.ok(Array.isArray(data.posts) && data.posts.length >= 4, 'export missing posts');
+      return data.posts.length + ' posts exported';
+    });
+
+    await check('cleanup: delete the posts the test created', async () => {
+      for (const slug of ['hidden-draft', createdSlug + '-copy', createdSlug]) {
+        assert.equal((await post('/admin/posts/' + slug + '/delete', { _csrf: adminCsrf })).status, 302);
+      }
+      const left = fs.readdirSync(path.join(ROOT, 'content', 'posts')).filter((n) => n.includes('smoke') || n.includes('hidden'));
+      assert.equal(left.length, 0, 'leftover files: ' + left.join(', '));
+      return 'cleaned';
+    });
+
+    await check('logout ends the session', async () => {
+      assert.equal((await post('/admin/logout', { _csrf: adminCsrf })).status, 302);
+      assert.equal((await get('/admin/dashboard')).status, 302, 'still authenticated after logout');
+      return 'signed out';
+    });
+  }
+
+  server.close();
+
+  console.log('\n' + '─'.repeat(60));
+  const passed = results.filter((r) => r.ok).length;
+  console.log('\u001b[1m' + passed + '/' + results.length + ' checks passed\u001b[0m');
+  if (failures) {
+    console.log('\u001b[31m' + failures + ' failure(s)\u001b[0m');
+    process.exit(1);
+  }
+  console.log('\u001b[32mall green\u001b[0m');
+}
+
+main().catch((err) => {
+  console.error('\u001b[31msmoke test crashed:\u001b[0m', err);
+  process.exit(1);
+});

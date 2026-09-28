@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="<%= site.locale %>" data-theme="admin">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title><%= title %> · <%= site.title %> ADMIN</title>
+<meta name="csrf-token" content="<%= csrf %>">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/vendor/hljs.css">
+</head>
+<body class="admin-body">
+<div class="admin-window">
+  <div class="titlebar">
+    <span class="tb-icon" aria-hidden="true">🗄</span>
+    <span class="tb-title">CONTROL PANEL — <%= title.toUpperCase() %></span>
+    <span class="tb-buttons"><span class="tb-btn">_</span><span class="tb-btn">□</span><span class="tb-btn">✕</span></span>
+  </div>
+  <div class="admin-shell">
+    <nav class="admin-nav" aria-label="Admin sections">
+      <div class="admin-nav-head">📁 SITE CONTROL</div>
+      <ul>
+        <% nav.forEach(function (item) { %>
+          <li><a href="<%= item.href %>" <%= (req && req.path === item.href) ? 'aria-current="page"' : '' %>><%= item.label %></a></li>
+        <% }) %>
+      </ul>
+      <div class="admin-nav-foot">
+        <div class="mono">node <%= process.versions.node %></div>
+        <div class="mono">uptime <%= Math.floor(process.uptime() / 60) %>m</div>
+        <form method="post" action="/admin/logout">
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <button class="btn tiny" type="submit">⏻ LOG OUT</button>
+        </form>
+      </div>
+    </nav>
+    <main class="admin-main">
+      <div class="admin-breadcrumb">
+        <span class="mono">C:\OLDIESITE\ADMIN\<%= title.toUpperCase().replace(/\s+/g, '_') %>.EXE</span>
+      </div>
+      <% if (flash) { %>
+        <div class="alert <%= flash.type %>" role="status"><%= flash.text %></div>
+      <% } %>
+      <%- body %>
+    </main>
+  </div>
+  <div class="statusbar">
+    <span>● READY</span>
+    <span class="grow mono">oldie-blog admin · content lives in content/*.md</span>
+    <span class="mono">site: <%= site.url.replace(/^https?:\/\//, '') %></span>
+  </div>
+</div>
+<% if (site.theme.showTerminal) { %>
+<div class="dock" aria-label="Desktop shortcuts">
+  <button type="button" onclick="location.href='/'"><span class="ico" aria-hidden="true">🌐</span><span>SITE</span></button>
+</div>
+<% } %>
+<script src="/js/admin.js" defer></script>
+</body>
+</html>

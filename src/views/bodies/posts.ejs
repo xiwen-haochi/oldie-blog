@@ -1,0 +1,17 @@
+<div class="breadcrumbs"><a href="/">index.html</a><span class="sep">\</span> dispatches.md</div>
+<section class="page-head">
+  <h1 class="ph-title">📚 All dispatches</h1>
+  <div class="ph-body">
+    <p style="margin:0">Showing <%= pager.range[0] %>–<%= pager.range[1] %> of <strong><%= pager.total %></strong> post<%= pager.total === 1 ? '' : 's' %>, newest first.
+      Written in Markdown, served hot.</p>
+  </div>
+</section>
+
+<% if (pager.items.length) { %>
+<ul class="post-list">
+  <% pager.items.forEach(function (post) { %><%- include('../partials/post-card', { post }) %><% }) %>
+</ul>
+<%- include('../partials/pager', { pager, pagerUrl }) %>
+<% } else { %>
+<div class="alert warn">Nothing here yet. <a href="/">Go back home</a>.</div>
+<% } %>

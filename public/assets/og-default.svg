@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <rect width="1200" height="630" fill="#008080"/>
+  <g shape-rendering="crispEdges" opacity="0.25">
+    <rect x="0" y="0" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="16" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="32" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="48" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="64" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="80" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="96" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="112" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="128" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="144" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="160" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="176" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="192" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="208" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="224" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="240" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="256" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="272" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="288" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="304" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="320" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="336" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="352" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="368" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="384" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="400" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="416" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="432" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="448" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="464" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="480" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="496" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="512" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="528" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="544" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="560" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="576" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="592" width="1200" height="8" fill="#0a8f8f"/>
+    <rect x="0" y="608" width="1200" height="8" fill="#0a8f8f"/>
+  </g>
+  <rect x="60" y="90" width="1080" height="450" fill="#c0c0c0" stroke="#000" stroke-width="6"/>
+  <rect x="60" y="90" width="1080" height="52" fill="#000080"/>
+  <circle cx="82" cy="116" r="9" fill="#c0c0c0" stroke="#000" stroke-width="3"/>
+  <text x="120" y="128" fill="#fff" font-family="'Courier New', monospace" font-size="26" font-weight="bold">~/www/oldie.blog — home</text>
+  <rect x="90" y="170" width="420" height="340" fill="#008080"/>
+  <rect x="110" y="190" width="380" height="300" fill="#0a0a0a"/>
+  <text x="300" y="330" fill="#33ff33" font-family="'Courier New', monospace" font-size="64" font-weight="bold" text-anchor="middle">A:\\&gt;</text>
+  <text x="300" y="390" fill="#33ff33" font-family="'Courier New', monospace" font-size="22" text-anchor="middle">welcome to my</text>
+  <text x="300" y="420" fill="#33ff33" font-family="'Courier New', monospace" font-size="22" text-anchor="middle">home page</text>
+  <rect x="540" y="170" width="570" height="340" fill="#fff" stroke="#808080" stroke-width="4"/>
+  <rect x="540" y="170" width="570" height="36" fill="#000080"/>
+  <text x="560" y="196" fill="#fff" font-family="'Courier New', monospace" font-size="20" font-weight="bold">DISPATCHES.TXT</text>
+  <g fill="#3a3a3a" font-family="'Courier New', monospace" font-size="20">
+    <text x="565" y="240">- a personal homepage that</text>
+    <text x="565" y="272">  survived the dot-com winter</text>
+    <text x="565" y="304">- markdown in, fast HTML out</text>
+    <text x="565" y="336">- webring, guestbook, hit counter</text>
+    <text x="565" y="368">- a DOS terminal on every page</text>
+    <text x="565" y="400">- RSS, Atom, JSON Feed, sitemap</text>
+    <text x="565" y="432">- zero tracking, zero native deps</text>
+    <text x="565" y="470" fill="#0a0a0a">best viewed at 800x600</text>
+  </g>
+  <rect x="560" y="486" width="150" height="24" fill="#c0c0c0" stroke="#000" stroke-width="2"/>
+  <text x="635" y="504" fill="#000" font-family="'Courier New', monospace" font-size="15" text-anchor="middle">READ MORE</text>
+</svg>

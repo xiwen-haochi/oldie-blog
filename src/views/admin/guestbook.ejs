@@ -1,0 +1,54 @@
+<div class="admin-head">
+  <h1>📬 Guestbook &amp; comments</h1>
+  <div class="btn-row">
+    <span class="stamp"><%= stats.approved %> approved</span>
+    <span class="stamp draft"><%= stats.pending %> pending</span>
+    <span class="stamp"><%= stats.spam %> spam</span>
+    <span class="stamp"><%= stats.comments %> post comments</span>
+  </div>
+</div>
+
+<form class="filter-bar" method="get" action="/admin/guestbook">
+  <select name="status">
+    <option value="all" <%= status === 'all' ? 'selected' : '' %>>Everything</option>
+    <option value="approved" <%= status === 'approved' ? 'selected' : '' %>>Approved</option>
+    <option value="pending" <%= status === 'pending' ? 'selected' : '' %>>Pending</option>
+    <option value="spam" <%= status === 'spam' ? 'selected' : '' %>>Spam</option>
+  </select>
+  <button class="btn" type="submit">FILTER</button>
+  <a class="btn ghost" href="/guestbook" target="_blank" rel="noopener">👁 view public page</a>
+</form>
+
+<% if (!entries.length) { %><div class="alert">Nothing here. That is either very quiet or very well moderated.</div><% } %>
+
+<% entries.forEach(function (e) { %>
+  <div class="gb-entry <%= e.status === 'approved' ? '' : 'pending' %>">
+    <div class="gb-head">
+      <span class="who">📝 <%= e.name %></span>
+      <span class="stamp-time">#<%= e.id %> · <%= e.target %> · <%= e.location || 'unknown' %> · <%= formatDate(e.date, { style: 'short' }) %></span>
+    </div>
+    <div class="gb-body"><%= e.message %></div>
+    <div class="gb-meta">
+      <% if (e.email) { %>📧 <a href="mailto:<%= e.email %>"><%= e.email %></a> · <% } %>
+      <% if (e.url) { %>🌐 <a href="<%= e.url %>" rel="nofollow noopener" target="_blank"><%= e.host %></a> · <% } %>
+      <span class="mono"><%= e.ip || 'ip hidden' %></span>
+    </div>
+    <div class="gb-actions">
+      <% if ((e.status || 'approved') !== 'approved') { %>
+        <form method="post" action="/admin/guestbook/<%= e.id %>/status?status=<%= status %>" class="inline-form">
+          <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="status" value="approved">
+          <button class="btn tiny" type="submit">✅ APPROVE</button>
+        </form>
+      <% } %>
+      <form method="post" action="/admin/guestbook/<%= e.id %>/status?status=<%= status %>" class="inline-form">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <input type="hidden" name="status" value="<%= (e.status || 'approved') === 'spam' ? 'approved' : 'spam' %>">
+        <button class="btn tiny" type="submit"><%= (e.status || 'approved') === 'spam' ? '↩ UN-SPAM' : '🗑 SPAM' %></button>
+      </form>
+      <form method="post" action="/admin/guestbook/<%= e.id %>/delete" class="inline-form" data-confirm="Delete this entry permanently?">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <button class="btn tiny danger" type="submit">✖ DELETE</button>
+      </form>
+    </div>
+  </div>
+<% }) %>

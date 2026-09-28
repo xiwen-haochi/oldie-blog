@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" width="480" height="120" role="img" aria-label="oldie.blog logo">
+  <rect width="480" height="120" fill="#000080"/>
+  <rect x="6" y="6" width="468" height="108" fill="none" stroke="#33ff33" stroke-width="3"/>
+  <g fill="#33ff33" font-family="'Courier New', monospace" font-size="52" font-weight="bold">
+    <text x="24" y="78">OLDIE</text>
+  </g>
+  <text x="232" y="78" fill="#ffb000" font-family="'Courier New', monospace" font-size="40">[BLOG]</text>
+  <text x="26" y="100" fill="#7fd7ff" font-family="'Courier New', monospace" font-size="14">est. 1998 · rebuilt 2025 · powered by markdown</text>
+</svg>

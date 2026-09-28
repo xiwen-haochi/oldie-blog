@@ -1,0 +1,35 @@
+<div class="dock" aria-label="Desktop shortcuts">
+  <button type="button" data-toggle-terminal title="Open the DOS terminal (Ctrl+K)">
+    <span class="ico" aria-hidden="true">⌨️</span><span>MS-DOS</span>
+  </button>
+  <button type="button" data-toggle-music title="Play the chiptune background theme">
+    <span class="ico" aria-hidden="true">🎵</span><span data-music-label>BGM</span>
+  </button>
+  <button type="button" data-toggle-theme title="Time Machine: switch between 1998 and now">
+    <span class="ico" aria-hidden="true">⏳</span><span>1998</span>
+  </button>
+  <button type="button" data-toggle-radio title="Read this page out loud, radio style">
+    <span class="ico" aria-hidden="true">📻</span><span>RADIO</span>
+  </button>
+</div>
+
+<section class="terminal" id="terminal" aria-label="DOS terminal" aria-hidden="true">
+  <div class="term-title" id="term-drag">
+    <span aria-hidden="true">🖥️</span>
+    <span style="flex:1">MS-DOS Prompt — oldie-blog</span>
+    <button class="tb-btn" type="button" data-term-action="clear" title="Clear screen">✕</button>
+  </div>
+  <div class="term-body" id="term-body" tabindex="0" role="log" aria-live="polite"></div>
+  <form class="term-prompt" id="term-form" autocomplete="off">
+    <span class="ps1" id="term-ps1">C:\OLDIE&gt;</span>
+    <input class="term-input" id="term-input" name="cmd" aria-label="terminal command" spellcheck="false" autocapitalize="off">
+  </form>
+  <div class="term-foot">
+    <button class="btn tiny" type="button" data-term-action="help">HELP</button>
+    <button class="btn tiny" type="button" data-term-action="clear">CLEAR</button>
+    <button class="btn tiny" type="button" data-term-action="dir">DIR</button>
+    <button class="btn tiny" type="button" data-term-action="ver">VER</button>
+    <span class="spacer"></span>
+    <span class="mono" style="align-self:center;padding:0 4px">Press <b>Esc</b> to close</span>
+  </div>
+</section>

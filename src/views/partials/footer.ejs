@@ -1,0 +1,53 @@
+<footer class="site-footer">
+  <div class="footer-grid">
+    <div>
+      <h4>📡 Netscape</h4>
+      <ul style="list-style:none;padding:0;margin:0">
+        <li><a href="/feed.xml">📡 RSS 2.0 feed</a></li>
+        <li><a href="/atom.xml">📡 Atom 1.0 feed</a></li>
+        <li><a href="/feed.json">📡 JSON Feed</a></li>
+        <li><a href="/sitemap.xml">🗺 sitemap.xml</a></li>
+        <li><a href="/site.webmanifest">📱 web app manifest</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>📂 This page</h4>
+      <ul style="list-style:none;padding:0;margin:0">
+        <li><a href="/posts">📝 all posts</a></li>
+        <li><a href="/archive">🗄 archive by year</a></li>
+        <li><a href="/tags">🏷 tags</a></li>
+        <li><a href="/search">🔍 search</a></li>
+        <li><a href="/guestbook">📬 guestbook</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>⚙ Extras</h4>
+      <ul style="list-style:none;padding:0;margin:0">
+        <li><a href="#" data-toggle-terminal>⌨️ DOS terminal</a> <span class="mono">(Ctrl+K)</span></li>
+        <li><a href="#" data-toggle-music>🎵 chiptune BGM</a></li>
+        <li><a href="#" data-toggle-theme>⏳ Time Machine 1998</a></li>
+        <li><a href="/posts/<%= (latestPost && latestPost.slug) || 'hello-world' %>.txt" download>💾 download latest as .TXT</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>🌐 Webring</h4>
+      <div class="webring-nav" style="justify-content:flex-start">
+        <a class="btn tiny" href="<%= webringHref(-1) %>">◀ PREV</a>
+        <a class="btn tiny" href="<%= webringHref(1) %>">NEXT ▶</a>
+        <a class="btn tiny" href="<%= webringHref(0) %>">RANDOM</a>
+      </div>
+      <p class="mono" style="font-size:10px;margin:6px 0 0">You are visiting site #<%= webringIndex %> of <%= (site.webring || []).length %> in the ring.</p>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="legal">
+    <p style="margin:0">© 1998–<%= year %> <%= site.author %>. All rights reserved, except the parts everyone is welcome to remix.</p>
+    <p style="margin:3px 0 0"><%= site.footer %></p>
+    <p style="margin:3px 0 0" class="mono">
+      Hosted on <span class="blink">■</span> one small computer <span class="blink">■</span>
+      · page generated in <span id="gen-time">—</span> ms
+      · <a href="/about#colophon">colophon</a>
+    </p>
+    <% if (site.icp) { %><p style="margin:3px 0 0" class="mono"><%= site.icp %></p><% } %>
+  </div>
+</footer>

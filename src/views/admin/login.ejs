@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="<%= site.locale %>" data-theme="admin">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Sign in · <%= site.title %></title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body login-body">
+<div class="login-window">
+  <div class="titlebar">
+    <span class="tb-icon" aria-hidden="true">🔐</span>
+    <span class="tb-title">SECURITY WARNING — AUTHORISED PERSONNEL ONLY</span>
+  </div>
+  <div class="login-body-inner">
+    <pre class="ascii-art" style="font-size:10px" aria-hidden="true">
+┌──────────────────────────────┐
+│  ▓▓▓  OLDIE  ADMIN  v0.1  ▓▓▓ │
+│      <  authorised users    >  │
+└──────────────────────────────┘</pre>
+
+    <% if (mustChange) { %>
+      <div class="alert warn">This blog is still using the temporary password printed in the terminal. Change it in <b>Settings</b> after signing in.</div>
+    <% } %>
+    <% if (error) { %><div class="alert err"><%= error %></div><% } %>
+
+    <form method="post" action="/admin/login" class="login-form">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <input type="hidden" name="next" value="<%= next %>">
+      <div class="row">
+        <label for="username">👤 Username</label>
+        <input id="username" name="username" autocomplete="username" required autofocus value="<%= form.username || 'admin' %>">
+      </div>
+      <div class="row">
+        <label for="password">🔑 Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn primary" type="submit">🚪 SIGN IN</button>
+    </form>
+
+    <p class="mono" style="font-size:11px;text-align:center;margin-top:14px">
+      No account? The first boot prints a temporary password in the terminal.<br>
+      Lost it? Delete <code>config/admin.json</code> and restart, or set <code>ADMIN_PASSWORD</code>.
+    </p>
+    <p class="center"><a href="/" class="mono">◀ back to the site</a></p>
+  </div>
+  <div class="statusbar"><span>● WAITING FOR INPUT</span><span class="grow mono">POST /admin/login</span></div>
+</div>
+</body>
+</html>

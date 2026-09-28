@@ -1,0 +1,84 @@
+<div class="breadcrumbs"><a href="/">index.html</a><span class="sep">\</span> guestbook.html</div>
+<section class="page-head">
+  <h1 class="ph-title">📬 The guestbook</h1>
+  <div class="ph-body">
+    <p style="margin:0">
+      <strong><%= entries.length %></strong> entr<%= entries.length === 1 ? 'y' : 'ies' %> ·
+      signed since <%= site.since || '1998' %> ·
+      <span class="blink">please sign, it is basically the whole point</span>
+    </p>
+  </div>
+</section>
+
+<div class="grid-2" style="align-items:start;margin-bottom:16px">
+  <form class="bbs-form" method="post" action="/guestbook" id="sign">
+    <h3 style="margin:0 0 8px;font-family:var(--font-ui);font-size:13px">✍️ Sign my guestbook</h3>
+    <% if (flash) { %><div class="alert <%= flash.type %>"><%= flash.text %></div><% } %>
+    <div class="row">
+      <label for="g-name">Name *</label>
+      <input id="g-name" name="name" required maxlength="40" value="<%= form.name || '' %>">
+    </div>
+    <div class="grid-2">
+      <div class="row">
+        <label for="g-email">E-mail (never published)</label>
+        <input id="g-email" name="email" type="email" maxlength="80" value="<%= form.email || '' %>">
+      </div>
+      <div class="row">
+        <label for="g-url">Homepage</label>
+        <input id="g-url" name="url" type="url" maxlength="120" placeholder="https://" value="<%= form.url || '' %>">
+      </div>
+    </div>
+    <div class="row">
+      <label for="g-location">Where are you dialing from?</label>
+      <input id="g-location" name="location" maxlength="60" placeholder="e.g. Shanghai, CN" value="<%= form.location || '' %>">
+    </div>
+    <div class="row">
+      <label for="g-message">Message *</label>
+      <textarea id="g-message" name="message" rows="5" required maxlength="1500" placeholder="Tell me what you think of the page. Any time."><%= form.message || '' %></textarea>
+    </div>
+    <input type="text" name="website" tabindex="-1" autocomplete="off" style="display:none" aria-hidden="true">
+    <div class="btn-row">
+      <button class="btn primary" type="submit">📮 SIGN IT</button>
+      <span class="form-note">Entries appear after a quick human check. Spam goes to the bin.</span>
+    </div>
+  </form>
+
+  <div class="widget">
+    <h3 class="widget-title">📜 Guestbook rules</h3>
+    <div class="widget-body">
+      <ol style="margin:0;padding-left:18px">
+        <li>Introduce yourself — a handle is fine.</li>
+        <li>Say something nice about at least one thing.</li>
+        <li>No 10kb walls of ASCII art (I love ASCII art, but not that much).</li>
+        <li>Link back if you sign mine. Circular favour chains encouraged.</li>
+      </ol>
+      <div class="divider"></div>
+      <p class="mono" style="font-size:10.5px;margin:0">
+        <span class="blink">●</span> moderation queue: <%= pendingCount %> waiting<br>
+        <span class="blink">●</span> spam caught: <%= spamCount %> deleted
+      </p>
+    </div>
+  </div>
+</div>
+
+<h2 class="widget-title" style="margin:0 0 8px" id="entries">📖 Entries</h2>
+<% if (!entries.length) { %>
+  <div class="alert">The guestbook is brand new. Be the first name in the book! ✍️</div>
+<% } %>
+<% entries.forEach(function (e) { %>
+  <div class="gb-entry<%= e.status === 'pending' ? ' pending' : '' %>" id="gb-<%= e.id %>">
+    <div class="gb-head">
+      <span class="who">📝 <%= e.name %></span>
+      <span class="stamp-time"><%= formatDate(e.date, { locale: site.locale }) %> · <%= e.location || 'location unknown' %></span>
+    </div>
+    <div class="gb-body"><%= e.message %></div>
+    <div class="gb-meta">
+      <% if (e.url) { %><a href="<%= e.url %>" rel="nofollow noopener" target="_blank">🌐 <%= e.host %></a> · <% } %>
+      <% if (e.email) { %>📧 <a href="mailto:<%= e.email %>">reply</a> · <% } %>
+      <span class="mono">entry #<%= e.id %></span>
+      <% if (e.status === 'pending') { %> · <span class="stamp draft">AWAITING MODERATION</span><% } %>
+    </div>
+  </div>
+<% }) %>
+
+<%- include('../partials/pager', { pager, pagerUrl }) %>
