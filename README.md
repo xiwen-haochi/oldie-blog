@@ -154,6 +154,70 @@ Saving in the admin writes a normal `.md` file to `content/` — check
 
 ---
 
+---
+
+## Common settings (admin → Settings)
+
+**Feature switches**
+
+| Switch | Effect when off |
+| --- | --- |
+| Allow comments | the comment form and thread disappear from posts |
+| Comments need approval | new comments wait in the moderation queue |
+| Enable the guestbook | `/guestbook` 404s and the sidebar link hides |
+| Guestbook entries need approval | same, for the guestbook |
+| Enable site search | `/search` 404s |
+| Show the hit counter | nothing is counted and the widget hides |
+| Offer a random post | `/random` redirects home |
+| Show the table of contents | hides the TOC box on posts that have one |
+| Show reading time | hides the estimated minutes per post |
+
+**Attachment storage**
+
+Local disk (`public/uploads/`) by default, or any **S3-compatible** object store:
+Aliyun OSS, Tencent COS, Qiniu, Cloudflare R2, MinIO — they all speak the S3 API, and
+this repo ships a tiny SigV4 signer so the dependency count stays at zero.
+
+```json
+{ "storage": { "driver": "s3", "s3": {
+    "bucket": "my-blog-assets",
+    "region": "auto",
+    "endpoint": "https://<accountid>.r2.cloudflarestorage.com",
+    "accessKeyId": "…",
+    "secretAccessKey": "…",
+    "prefix": "blog",
+    "publicUrl": "https://cdn.example.com",
+    "pathStyle": true
+} } }
+```
+
+Tick path-style addressing for MinIO / R2; AWS uses virtual-hosted style. Secrets
+live in `data/settings.json`, which is gitignored.
+
+**Large language model**
+
+Any OpenAI-compatible endpoint: OpenAI, DeepSeek, Qwen, Zhipu, Ollama, LM Studio, vLLM.
+Once configured, a small AI toolbar appears above the editor body:
+suggest a title / write the summary / suggest tags / outline / polish.
+
+```json
+{ "ai": { "enabled": true, "baseUrl": "https://api.deepseek.com/v1",
+    "apiKey": "sk-…", "model": "deepseek-chat" } }
+```
+
+## Pasting HTML
+
+Posts accept raw HTML, so you can paste tables, diagrams, inline SVG or video tags
+straight from another document. Two things happen on the way out:
+
+1. **Guarded** — balanced HTML blocks (including `<div>`s that contain blank lines)
+   are lifted out of the Markdown parse, so they no longer collapse into
+   paragraphs or a `<pre>` block. That is what used to happen to pasted content.
+2. **Sanitised** — the output is filtered against an allowlist: `<style>`,
+   `background`, `on*` handlers and `javascript:` URLs are dropped, while tables,
+   figures, `video` and inline `svg` survive.
+
+So you can paste freely without taking the blog's styling down with it.
 ## Where the admin lives
 
 Public pages are public. The admin is a door you choose:

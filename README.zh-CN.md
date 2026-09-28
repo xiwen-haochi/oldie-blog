@@ -153,6 +153,68 @@ pnpm new:post "文章标题" --tags=retro,web --draft
 
 ---
 
+---
+
+## 常见配置（后台 → 设置）
+
+**功能开关**
+
+| 开关 | 说明 |
+| --- | --- |
+| 允许文章评论 | 关掉后文章页不再显示评论区和评论表单 |
+| 评论需要审核 | 打开后新评论先进队列，审核通过才公开 |
+| 开启留言板 | 关掉后 `/guestbook` 直接 404，侧栏入口也隐藏 |
+| 留言需要审核 | 同上，作用于留言板 |
+| 开启站内搜索 | 关掉后 `/search` 404 |
+| 显示访问计数器 | 关掉后不再计数，侧栏计数器隐藏 |
+| 提供随机文章 | 关掉后 `/random` 跳回首页 |
+| 文章显示目录 | 只影响有二级标题的文章 |
+| 显示阅读时间 | 隐藏每篇文章的预计阅读时长 |
+
+**附件存储**
+
+默认存本地 `public/uploads/`。也可以改用任何 **S3 兼容**的对象存储：
+阿里云 OSS、腾讯云 COS、七牛、Cloudflare R2、MinIO 都可以（它们都提供 S3 兼容接口，
+本项目内置了一个极小的 SigV4 签名实现，**没有引入任何新依赖**）。
+
+```json
+{ "storage": { "driver": "s3", "s3": {
+    "bucket": "my-blog-assets",
+    "region": "auto",
+    "endpoint": "https://<accountid>.r2.cloudflarestorage.com",
+    "accessKeyId": "…",
+    "secretAccessKey": "…",
+    "prefix": "blog",
+    "publicUrl": "https://cdn.example.com",
+    "pathStyle": true
+} } }
+```
+
+勾选「使用 path-style 寻址」是 MinIO / R2 需要的；AWS 用虚拟主机式，通常不勾。
+密钥存在 `data/settings.json`（不进 git）。
+
+**大模型**
+
+任何 OpenAI 兼容接口都能用：OpenAI、DeepSeek、通义千问、智谱、Ollama、LM Studio、vLLM。
+填好之后，编辑器正文框上方会出现一条 AI 工具条：
+生成标题 / 写摘要 / 推荐标签 / 列提纲 / 润色。
+
+```json
+{ "ai": { "enabled": true, "baseUrl": "https://api.deepseek.com/v1",
+    "apiKey": "sk-…", "model": "deepseek-chat" } }
+```
+
+## 粘贴 HTML
+
+文章支持直接粘贴 HTML（包括从别的文档里复制的表格、图示、内联 SVG、视频标签）。
+渲染时有两道处理：
+
+1. **保护**：HTML 块（含空行的 `<div>`）会先从 Markdown 解析里提出来，
+   不会被当成段落或代码块 —— 这就是之前「内容直接显示成 code」的原因；
+2. **消毒**：按白名单过滤 —— `<style>`、`background`、`on*` 事件、
+   `javascript:` 一律去掉；表格、图片、`video`、内联 `svg` 保留。
+
+所以你可以放心粘贴，页面样式不会被带崩。
 ## 后台放在哪里
 
 公开页面人人都能看，后台则是你自己选的一扇门：
