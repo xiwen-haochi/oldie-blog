@@ -187,16 +187,39 @@ export function startServer({ port = process.env.PORT || 4173, host = process.en
   const app = createApp(ctx);
   const server = app.listen(port, host, () => {
     const addr = server.address();
-    const shown = typeof addr === 'object' ? addr.port : port;
+    const shown = addr && typeof addr === 'object' ? addr.port : port;
+    const base = 'http://' + host + ':' + shown;
     console.log('');
-    console.log('  \u001b[1m\u001b[36m╔══════════════════════════════════════════════════╗\u001b[0m');
-    console.log('  \u001b[1m\u001b[36m║  ' + ctx.site.title.padEnd(46) + '║\u001b[0m');
-    console.log('  \u001b[1m\u001b[36m╚══════════════════════════════════════════════════╝\u001b[0m');
-    console.log('  \u001b[32m▸\u001b[0m site    \u001b[4mhttp://' + host + ':' + shown + '/\u001b[0m');
-    console.log('  \u001b[32m▸\u001b[0m admin   \u001b[4mhttp://' + host + ':' + shown + '/admin\u001b[0m');
-    console.log('  \u001b[32m▸\u001b[0m posts   ' + ctx.index.publishedPosts().length + ' published, ' + ctx.index.allPosts().filter((p) => p.draft).length + ' drafts');
+    console.log('  [1m[36m╔══════════════════════════════════════════════════╗[0m');
+    console.log('  [1m[36m║  ' + ctx.site.title.padEnd(46) + '║[0m');
+    console.log('  [1m[36m╚══════════════════════════════════════════════════╝[0m');
+    console.log('  [32m▸[0m site    [4m' + base + '/[0m');
+    console.log('  [32m▸[0m admin   [4m' + base + ctx.site.adminPath + '[0m');
+    console.log('  [32m▸[0m posts   ' + ctx.index.publishedPosts().length + ' published, ' + ctx.index.allPosts().filter((p) => p.draft).length + ' drafts');
     console.log('');
   });
+
+  // a friendly message beats a stack trace when the port is taken
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error('');
+      console.error('  [31m✘ 端口 ' + port + ' 已经被占用了。[0m');
+      console.error('');
+      console.error('     换个端口：      PORT=4174 pnpm start');
+      console.error('     或者停掉占用它的进程：');
+      console.error('       lsof -nP -iTCP:' + port + ' -sTCP:LISTEN');
+      console.error('');
+    } else if (err.code === 'EACCES') {
+      console.error('');
+      console.error('  [31m✘ 没有权限监听 ' + port + ' 端口，1024 以下需要管理员权限。[0m');
+      console.error('     换个高端口：      PORT=4174 pnpm start');
+      console.error('');
+    } else {
+      console.error('  [31m✘ 无法启动服务器：' + err.message + '[0m');
+    }
+    process.exit(1);
+  });
+
   return { app, server, ctx };
 }
 
