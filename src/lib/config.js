@@ -16,6 +16,9 @@ export const DEFAULTS = {
   author: 'Anonymous Webmaster',
   i18n: {},
   email: 'webmaster@example.com',
+  // 'since' is the year the persona claims to have gone online;
+  // default it to the real one so nobody has to edit a year by hand.
+  since: String(new Date().getFullYear()),
   url: 'http://localhost:4173',
   locale: 'zh-CN',
   // where the admin lives. 'admin' and '/admin' and '/my-secret-door' all work.

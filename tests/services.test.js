@@ -35,10 +35,11 @@ const fakeCtx = {
 
 test('hit counter increments totals, days and paths', async () => {
   const stats = new Stats({ file: path.join(tmp, 'stats.json') });
+  const thisYear = new Date().getFullYear();
   const first = await stats.hit({ path: '/', ip: '1.1.1.1', ua: 'x', visitorId: 'abc123', count: false });
-  assert.equal(first.total, 1998, 'starts from the seed year');
+  assert.equal(first.total, thisYear, 'the counter starts at the current year, not a hardcoded one');
   const counted = await stats.hit({ path: '/posts/hello', ip: '1.1.1.1', ua: 'x', visitorId: 'abc123' });
-  assert.equal(counted.total, 1999);
+  assert.equal(counted.total, thisYear + 1);
   assert.equal(counted.today, 1);
   assert.deepEqual(stats.topPaths(), [{ path: '/posts/hello', count: 1 }]);
   assert.equal(stats.summary().unique, 1);

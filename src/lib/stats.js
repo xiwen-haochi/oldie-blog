@@ -11,7 +11,7 @@ const ONLINE_WINDOW_MS = 5 * 60 * 1000;
  * visitors (salted hash, prunable) and a live "online now" gauge.
  */
 export class Stats {
-  constructor({ file = path.join(DATA_DIR, 'stats.json'), seed = 1998 } = {}) {
+  constructor({ file = path.join(DATA_DIR, 'stats.json'), seed = new Date().getFullYear() } = {}) {
     this.store = new JsonStore(file, { total: seed, firstSeen: new Date().toISOString(), days: {}, paths: {}, uniques: {} });
     this.online = new Map(); // visitorId -> last seen ms
     this.seed = seed;

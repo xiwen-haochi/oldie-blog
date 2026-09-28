@@ -57,6 +57,8 @@ export function enrichLocals(ctx, req, res, extra = {}) {
   const langs = availableLocales();
   const posts = ctx.index.publishedPosts();
   const latest = posts[0] || null;
+  const year = new Date().getFullYear();
+  const since = site.since ? String(site.since) : String(year);
   const lastUpdated = latest
     ? formatDate(latest.updated || latest.date, { locale: site.locale, style: 'short' })
     : formatDate(new Date(), { locale: site.locale, style: 'short' });
@@ -85,7 +87,11 @@ export function enrichLocals(ctx, req, res, extra = {}) {
     alternates,
     dateLocale: localeMeta(locale).dateLocale,
     currentPath: req.path,
-    year: new Date().getFullYear(),
+    year,
+    since,
+    copyright: String(since) === String(year)
+      ? t('footer.copyright_one', { year, author: site.author })
+      : t('footer.copyright', { since, year, author: site.author }),
     stats: ctx.stats.summary(),
     postCount: posts.length,
     totalWords: ctx.index.totalWords(),

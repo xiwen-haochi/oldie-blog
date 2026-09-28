@@ -80,7 +80,9 @@ export function runCommand(ctx, raw, req = {}) {
     case 'ver':
     case 'version':
       push('oldie-blog [Version 0.1.0]', 'hi');
-      push('(c) 1998-2025. Markdown in, HTML out, built on one small computer.');
+      const y = new Date().getFullYear();
+      const since = String(ctx.site.since || y);
+      push('(c) ' + (since === String(y) ? y : since + '-' + y) + '. Markdown in, HTML out, built on one small computer.');
       break;
 
     case 'neofetch': {
@@ -129,7 +131,7 @@ export function runCommand(ctx, raw, req = {}) {
       push('Webmaster : ' + ctx.site.author);
       push('Email     : ' + ctx.site.email);
       push('Home      : ' + ctx.site.url);
-      push('Since     : ' + (ctx.site.since || '1998'));
+      push('Since     : ' + (ctx.site.since || new Date().getFullYear()));
       break;
 
     case 'colophon':

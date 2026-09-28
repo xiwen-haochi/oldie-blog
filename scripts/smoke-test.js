@@ -163,14 +163,26 @@ async function main() {
     return 'clean';
   });
 
-  await check('1998 mode is gone', async () => {
+  await check('1998 Time Machine mode works and is shareable', async () => {
     const html = await text('/');
-    assert.ok(!html.includes('tm-banner'), 'time machine banner still rendered');
-    assert.ok(!html.includes('data-toggle-theme'), 'theme toggle still wired up');
-    assert.ok(!html.includes('data-theme='), 'theme attribute still on <html>');
+    assert.match(html, /data-theme="classic"/);
+    assert.ok(html.includes('data-toggle-theme'), 'no toggle in the markup');
+    // the switch itself happens in the browser (?theme=1998 is read by site.js)
+    const js = await text('/js/site.js');
+    assert.match(js, /theme=\(1998\|classic\)/, 'site.js should honour ?theme=');
     const css = await text('/css/site.css');
-    assert.ok(!css.includes('1998'), '1998 stylesheet still shipped');
-    return 'removed';
+    assert.match(css, /\[data-theme="1998"\]/);
+    assert.match(html, /class="tm-banner"/, 'the 1998 banner element should exist (hidden in classic mode)');
+    return 'toggle + shareable';
+  });
+
+  await check('dates use the real current year, not a hardcoded one', async () => {
+    const thisYear = String(new Date().getFullYear());
+    const html = await text('/');
+    assert.match(html, new RegExp('© (?:' + thisYear + '|' + '[0-9]{4}[–-]' + thisYear + ')'), 'footer copyright should show ' + thisYear);
+    assert.ok(!html.includes('© 1998–'), 'footer still pins 1998');
+    assert.match(html, new RegExp('(建站于|webmaster since) ([0-9]{4})'), 'sidebar should state the founding year');
+    return thisYear;
   });
 
   await check('zine and awards widgets are gone', async () => {

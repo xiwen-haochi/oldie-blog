@@ -587,6 +587,101 @@ form.bbs-form label { font-weight: 700; }
 }
 .radio-meter .btn { font-size: 10.5px; padding: 1px 8px; }
 
+/* ------------------------------------------------- "Time Machine" 1998 */
+[data-theme="1998"] {
+  --desktop: #000080; --face: #c0c0c0; --paper: #ffffff; --accent: #000080;
+  --link: #0000ee; --font-body: "Times New Roman", Times, serif;
+  --font-ui: "Times New Roman", Times, serif;
+  font-size: 16px;
+}
+[data-theme="1998"] body {
+  background: #000080;
+  color: #000;
+  text-align: center;
+}
+[data-theme="1998"] .browser {
+  max-width: 720px;
+  background: #fff;
+  border: 3px ridge #c0c0c0;
+  box-shadow: none;
+}
+[data-theme="1998"] .titlebar,
+[data-theme="1998"] .utility-bar,
+[data-theme="1998"] .statusbar,
+[data-theme="1998"] .sidebar,
+[data-theme="1998"] .widget-body,
+[data-theme="1998"] .site-footer {
+  background: #fff;
+  color: #000;
+  border-color: #000;
+}
+[data-theme="1998"] .titlebar { background-image: none; }
+[data-theme="1998"] .tb-title { font-weight: 400; }
+[data-theme="1998"] .win-body { display: block; }
+[data-theme="1998"] .sidebar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+  border-right: 0;
+  border-bottom: 2px solid #000;
+  text-align: left;
+}
+[data-theme="1998"] .widget { margin-bottom: 0; }
+[data-theme="1998"] .content { padding: 12px; }
+[data-theme="1998"] .btn {
+  background: #c0c0c0;
+  border: 2px outset #fff;
+  box-shadow: none;
+  border-radius: 0;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 13px;
+}
+[data-theme="1998"] .btn:active { border-style: inset; }
+[data-theme="1998"] .article-title {
+  font-family: "Times New Roman", Times, serif;
+  color: #000080;
+  text-shadow: none;
+}
+[data-theme="1998"] .prose { font-family: "Times New Roman", Times, serif; font-size: 16px; max-width: none; }
+[data-theme="1998"] .prose pre,
+[data-theme="1998"] .ascii-art {
+  background: #fff;
+  color: #000;
+  border: 1px solid #000;
+  text-shadow: none;
+  white-space: pre-wrap;
+}
+[data-theme="1998"] .marquee-bar {
+  background: #fff;
+  color: #000080;
+  border: 2px solid #000;
+}
+[data-theme="1998"] .marquee-bar .track { animation-duration: 60s; }
+[data-theme="1998"] .dock, [data-theme="1998"] .terminal { display: none !important; }
+[data-theme="1998"] .counter-display { background: #fff; border: 2px inset #c0c0c0; }
+[data-theme="1998"] .digit {
+  background: #000;
+  color: #33ff33;
+  border: 1px solid #666;
+}
+[data-theme="1998"] .widget-title { background: #c0c0c0; color: #000; border: 1px solid #000; }
+[data-theme="1998"] .post-list > li,
+[data-theme="1998"] .gb-entry,
+[data-theme="1998"] .toc,
+[data-theme="1998"] .page-head { box-shadow: none; background: #fff; }
+[data-theme="1998"] a { color: #0000ee; }
+[data-theme="1998"] a:visited { color: #551a8b; }
+.tm-banner {
+  display: none;
+  margin: 0 0 10px;
+  padding: 6px;
+  border: 2px dashed #000080;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: #000080;
+  background: #ffffcc;
+}
+[data-theme="1998"] .tm-banner { display: block; }
 /* ------------------------------------------------------- reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .marquee-bar .track, .blink, .scrolling-text { animation: none !important; }

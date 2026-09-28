@@ -27,6 +27,7 @@ export const DEFAULT_LOCALE = 'zh-CN';
 const zh = {
   // ---- chrome -------------------------------------------------------------
   'site.tagline_fallback': '建议用 800x600 分辨率观看',
+  'bar.theme': '1998 模式',
   'bar.find': '搜索',
   'bar.rss': 'RSS',
 
@@ -145,6 +146,8 @@ const zh = {
   'gb.signed': '📮 收到！已经出现在页面上了（或者正在等人工点头）。',
 
   // ---- post page ----------------------------------------------------------
+  'time_machine.banner': '⚠ 你正在以 1998 模式浏览本页，一些现代功能被特意关掉了。',
+  'time_machine.back': '回到现在 ➜',
   'post.listen': '📻 朗读这篇文章',
   'post.download': '💾 下载 .TXT',
   'post.copy': '🔗 复制链接',
@@ -193,11 +196,13 @@ const zh = {
   'footer.this_page': '📂 本页',
   'footer.extras': '⚙ 彩蛋',
   'footer.dos_terminal': '⌨️ DOS 终端',
+  'footer.time_machine': '⏳ 时间机器 1998',
   'footer.chiptune': '🎵 芯片音乐',
 
   'footer.download_latest': '💾 下载最新一篇 .TXT',
   'footer.you_are_visiting': '你是这个环里的第 {n}/{total} 号站点。',
-  'footer.copyright': '© 1998–{year} {author}。版权所有，但欢迎拿去改造。',
+  'footer.copyright': '© {since}–{year} {author}。版权所有，但欢迎拿去改造。',
+  'footer.copyright_one': '© {year} {author}。版权所有，但欢迎拿去改造。',
   'footer.hosted_on': '跑在一台小电脑上',
   'footer.generated_in': '页面生成耗时',
   'footer.ms': '毫秒',
@@ -205,6 +210,8 @@ const zh = {
   // ---- client toasts ------------------------------------------------------
 
 
+  'toast.theme_on': '⏳ 时间机器：1998 模式',
+  'toast.theme_off': '↩ 回到现在',
   'toast.music_on': '♫ 芯片音乐：开（下载量 0 字节）',
   'toast.music_off': '♪ 音乐已关闭',
   'toast.no_audio': '⚠ 这个浏览器不支持 Web Audio',
@@ -393,6 +400,7 @@ const zh = {
 
 const en = {
   'site.tagline_fallback': 'Best viewed at 800x600',
+  'bar.theme': '1998 MODE',
   'bar.find': 'FIND',
   'bar.rss': 'RSS',
 
@@ -504,6 +512,8 @@ const en = {
   'gb.entry': 'entry',
   'gb.signed': '📮 Signed! It is live on the page (or waiting for a human nod).',
 
+  'time_machine.banner': '⚠ You are viewing this page in 1998 MODE. Some modern niceties have been switched off on purpose.',
+  'time_machine.back': 'Return to the present ➜',
   'post.listen': '📻 LISTEN TO THIS POST',
   'post.download': '💾 DOWNLOAD .TXT',
   'post.copy': '🔗 COPY LINK',
@@ -547,17 +557,21 @@ const en = {
   'footer.this_page': '📂 This page',
   'footer.extras': '⚙ Extras',
   'footer.dos_terminal': '⌨️ DOS terminal',
+  'footer.time_machine': '⏳ Time Machine 1998',
   'footer.chiptune': '🎵 chiptune BGM',
 
   'footer.download_latest': '💾 download latest as .TXT',
   'footer.you_are_visiting': 'You are visiting site #{n} of {total} in the ring.',
-  'footer.copyright': '© 1998–{year} {author}. All rights reserved, except the parts everyone is welcome to remix.',
+  'footer.copyright': '© {since}–{year} {author}. All rights reserved, except the parts everyone is welcome to remix.',
+  'footer.copyright_one': '© {year} {author}. All rights reserved, except the parts everyone is welcome to remix.',
   'footer.hosted_on': 'hosted on one small computer',
   'footer.generated_in': 'page generated in',
   'footer.ms': 'ms',
 
 
 
+  'toast.theme_on': '⏳ TIME MACHINE: 1998 MODE',
+  'toast.theme_off': '↩ back to the present',
   'toast.music_on': '♫ chiptune theme: ON (0 bytes downloaded)',
   'toast.music_off': '♪ music off',
   'toast.no_audio': '⚠ This browser has no Web Audio API',
@@ -806,6 +820,9 @@ export function clientStrings(code) {
   const t = makeTranslator(code);
   return {
     locale: code,
+    year: String(new Date().getFullYear()),
+    themeOn: t('toast.theme_on'),
+    themeOff: t('toast.theme_off'),
     musicOn: t('toast.music_on'),
     musicOff: t('toast.music_off'),
     noAudio: t('toast.no_audio'),

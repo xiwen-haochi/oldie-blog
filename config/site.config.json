@@ -4,7 +4,6 @@
   "description": "一个活过 dot-com 寒冬的 1990 年代个人主页：Markdown 写内容，服务端渲染出 HTML，还有 webring、留言板和角落里的 DOS 终端。",
   "author": "站长",
   "email": "webmaster@example.com",
-  "since": "1998",
   "url": "http://localhost:4173",
   "locale": "zh-CN",
   "postsPerPage": 8,

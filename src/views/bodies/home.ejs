@@ -5,7 +5,7 @@
   <div class="ph-body">
     <p style="margin:0 0 6px"><strong><%= site.tagline %></strong></p>
     <p style="margin:0" class="mono" style="font-size:11px">
-      <%= t('home.visitor_line', { total: stats.total, since: site.since || '1998', posts: postCount, guestbook: guestbookCount }) %>
+      <%= t('home.visitor_line', { total: stats.total, since, posts: postCount, guestbook: guestbookCount }) %>
     </p>
   </div>
 </section>

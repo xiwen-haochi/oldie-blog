@@ -102,7 +102,7 @@
         <tr><td><%= t('admin.memory') %></td><td class="mono"><%= Math.round(process.memoryUsage().rss / 1048576) %> MB</td></tr>
         <tr><td><%= t('admin.posts_pages') %></td><td class="mono"><%= ctx.index.allPosts().length %> / <%= ctx.index.pages.length %></td></tr>
         <tr><td><%= t('admin.subscribers') %></td><td class="mono"><%= ctx.community.subscriberCount() %></td></tr>
-        <tr><td><%= t('admin.since') %></td><td class="mono"><%= site.since || '1998' %></td></tr>
+        <tr><td><%= t('admin.since') %></td><td class="mono"><%= site.since || year %></td></tr>
       </tbody>
     </table>
   </section>

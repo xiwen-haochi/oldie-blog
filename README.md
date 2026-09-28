@@ -54,6 +54,7 @@ deployed yesterday:
 | 🌐 | **Webring** | Prev / next / random navigation through a configurable list of neighbour sites. |
 | 📼 | **.TXT downloads** | Every post has a `POST-XXXX.TXT` button — plain text, exactly how people shared writing in 1998. |
 | 📬 | **Guestbook + comments** | Moderation queue, honeypot, link/keyword spam scoring, per-post comments. |
+| ⏳ | **Time Machine** | One click flips the site into 1998 mode: Times New Roman, centred layout, navy desktop, no JavaScript chrome. Shareable with `?theme=1998`. |
 | 🎲 | **Random post** | Deterministic per day, so "random" stays reproducible. |
 | 🗺 | **`.json` per post** | Machine-readable Markdown/HTML/text for every article. |
 | 🌐 | **Language switch** | Chinese by default, English in one click. `?lang=en` is shareable, `hreflang` tells search engines, and the choice is remembered in one cookie. |

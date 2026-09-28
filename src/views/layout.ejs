@@ -1,10 +1,14 @@
 <!DOCTYPE html>
-<html lang="<%= localeMeta.htmlLang %>" dir="<%= localeMeta.dir || 'ltr' %>">
+<html lang="<%= localeMeta.htmlLang %>" dir="<%= localeMeta.dir || 'ltr' %>" data-theme="classic">
 <head>
 <%- include('partials/head') %>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
+<div class="tm-banner">
+  ⚠ <%= t('time_machine.banner') %>
+  <a href="#" data-toggle-theme><%= t('time_machine.back') %></a>
+</div>
 
 <% if (site.theme.showMarquee && (site.banners || []).length) { %>
 <div class="marquee-bar" aria-hidden="true">
