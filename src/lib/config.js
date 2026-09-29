@@ -18,8 +18,11 @@ export const SETTINGS_KEY = 'settings';
  * An empty string means leave the pictures alone. The names are tokens, not
  * css: they end up in a data- attribute, and anything not on this list is
  * thrown away rather than pasted into a page.
+ *
+ * One for now. Six were tried and they all looked like a different site
+ * rather than a different photograph, so the menu stays and the shelf does not.
  */
-export const PHOTO_FILTERS = ['sepia', 'mono', 'faded', 'duotone', 'washed', 'xerox'];
+export const PHOTO_FILTERS = ['sepia'];
 export const DEFAULTS = {
   title: 'My Home Page',
   tagline: 'Best viewed with Netscape Navigator 4.0 at 800x600',

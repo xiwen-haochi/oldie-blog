@@ -122,11 +122,6 @@
       <select id="photoFilter" name="photoFilter">
         <option value="" <%= !settings.theme.photoFilter ? 'selected' : '' %>><%= t('admin.filter_none') %></option>
         <option value="sepia" <%= settings.theme.photoFilter === 'sepia' ? 'selected' : '' %>><%= t('admin.filter_sepia') %></option>
-        <option value="mono" <%= settings.theme.photoFilter === 'mono' ? 'selected' : '' %>><%= t('admin.filter_mono') %></option>
-        <option value="faded" <%= settings.theme.photoFilter === 'faded' ? 'selected' : '' %>><%= t('admin.filter_faded') %></option>
-        <option value="duotone" <%= settings.theme.photoFilter === 'duotone' ? 'selected' : '' %>><%= t('admin.filter_duotone') %></option>
-        <option value="washed" <%= settings.theme.photoFilter === 'washed' ? 'selected' : '' %>><%= t('admin.filter_washed') %></option>
-        <option value="xerox" <%= settings.theme.photoFilter === 'xerox' ? 'selected' : '' %>><%= t('admin.filter_xerox') %></option>
       </select>
       <div class="form-note"><%= t('admin.photo_filter_hint') %></div>
     </div>

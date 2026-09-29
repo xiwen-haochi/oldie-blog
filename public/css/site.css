@@ -437,13 +437,8 @@ html[data-age]:not([data-age=""]) .post-list .has-cover img {
   filter: var(--photo-filter, none);
 }
 
-/* one line each: the token in the data- attribute picks the recipe */
-html[data-age="sepia"]   { --photo-filter: sepia(0.36) contrast(0.92) saturate(0.78) brightness(1.04); }
-html[data-age="mono"]    { --photo-filter: grayscale(1) contrast(1.16) brightness(1.02); }
-html[data-age="faded"]   { --photo-filter: grayscale(1) contrast(0.72) brightness(1.14); }
-html[data-age="duotone"] { --photo-filter: sepia(0.55) saturate(1.35) contrast(1.06) hue-rotate(-8deg); }
-html[data-age="washed"]  { --photo-filter: saturate(0.52) brightness(1.1) contrast(0.84) hue-rotate(-6deg); }
-html[data-age="xerox"]   { --photo-filter: grayscale(1) contrast(1.55) brightness(1.06); }
+/* the token in the data- attribute picks the recipe; adding another is one line */
+html[data-age="sepia"] { --photo-filter: sepia(0.36) contrast(0.92) saturate(0.78) brightness(1.04); }
 
 /* a worn edge, which is what a print actually looks like */
 html[data-age]:not([data-age=""]) .article-cover img {
