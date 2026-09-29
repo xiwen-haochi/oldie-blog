@@ -923,23 +923,46 @@ async function main() {
       return 'on, off, and the shape a browser sends';
     });
 
-    await check('photo ageing is a setting, and it starts off', async () => {
-      const on = async () => /data-age="1"/.test(await (await get('/')).text());
-
-      assert.equal(await on(), false, 'a fresh site must not age its photos');
-
-      // posted the way a browser does: the hidden "off" and the ticked "on"
-      await post('/admin/settings', wire([['_csrf', adminCsrf], ['agePhotos', 'off'], ['agePhotos', 'on']]));
-      assert.equal(await on(), true, 'the switch did not reach the page');
-
+    await check('photo ageing is a choice of filters, and it starts off', async () => {
+      const aged = async () => {
+        const m = /data-age="([a-z]*)"/.exec(await (await get('/')).text());
+        return m ? m[1] : null;
+      };
       const css = await (await get('/css/site.css')).text();
-      assert.match(css, /data-age="1"[^{]*\{[^}]*filter/,
-        'the switch is on but there is no filter behind it');
-      assert.match(css, /\.prose img/, 'it has to reach the images inside a post');
 
-      await post('/admin/settings', wire([['_csrf', adminCsrf], ['agePhotos', 'off']]));
-      assert.equal(await on(), false, 'it did not switch back off');
-      return 'off by default, one line of CSS when on';
+      assert.equal(await aged(), '', 'a fresh site must not touch its photos');
+
+      const form = await text('/admin/settings');
+      // only this menu: the page has a locale <select> too, and its options
+      // look exactly like a filter's to anything scraping for <option>
+      const menu = /<select id="photoFilter"[\s\S]*?<\/select>/.exec(form);
+      assert.ok(menu, 'there is no photo filter menu in the settings form');
+      const presets = [...menu[0].matchAll(/<option value="([a-z]+)"/g)].map((m) => m[1]);
+      assert.ok(presets.length >= 4, 'expected several filters, saw ' + presets.length);
+      assert.match(menu[0], /<option value=""/, 'there has to be a way to turn it off');
+
+      // every one of them has to be a different filter, and each one has to be
+      // written into the stylesheet -- a preset that does nothing is a lie
+      const seen = new Set();
+      for (const name of presets) {
+        await post('/admin/settings', { _csrf: adminCsrf, photoFilter: name });
+        assert.equal(await aged(), name, name + ' did not reach the page');
+        const rule = new RegExp('data-age="' + name + '"[^{]*\\{([^}]*)\\}').exec(css);
+        assert.ok(rule, 'no stylesheet rule for the ' + name + ' filter');
+        const body = rule[1];
+        assert.match(body, /filter|grayscale|sepia|saturate/,
+          'the ' + name + ' rule declares no filter');
+        assert.doesNotMatch(body, /seen[\s-]*:0/,
+          'the ' + name + ' filter is a no-op');
+        seen.add(body.replace(/\s+/g, ' ').trim());
+      }
+      assert.equal(seen.size, presets.length,
+        presets.length + ' presets collapse into ' + seen.size + ' different filters');
+
+      // and off again
+      await post('/admin/settings', { _csrf: adminCsrf, photoFilter: '' });
+      assert.equal(await aged(), '', 'it did not switch back off');
+      return presets.length + ' presets, off by default';
     });
 
     await check('a partial settings save does not switch anything off', async () => {

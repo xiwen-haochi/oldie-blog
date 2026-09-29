@@ -11,7 +11,7 @@ import { saveDoc, deleteDoc, rawOf, normaliseFields, listFiles } from '../lib/wr
 import { renderMarkdown, toPlainText, excerpt } from '../lib/markdown.js';
 import { slugify, formatDate, humanBytes, readingTime, truncate } from '../lib/text.js';
 import { UPLOAD_DIR, DATA_DIR, ROOT } from '../lib/paths.js';
-import { DEFAULTS, saveConfig, resetConfig } from '../lib/config.js';
+import { DEFAULTS, saveConfig, resetConfig, PHOTO_FILTERS } from '../lib/config.js';
 import { listFiles as storageList, putFile, deleteFile, checkUpload, describeStorage, maxBytes } from '../lib/storage.js';
 import { createBackup, restoreBackup, backupPreview } from '../lib/backup.js';
 import { enrichLocals } from '../lib/present.js';
@@ -540,7 +540,10 @@ export function adminRoutes(ctx) {
           showMarquee: flag('showMarquee', theme.showMarquee),
           showTerminal: flag('showTerminal', theme.showTerminal),
           showCounter: flag('showCounter', theme.showCounter),
-          agePhotos: flag('agePhotos', theme.agePhotos),
+          // a token from the list, never whatever the request said
+          photoFilter: PHOTO_FILTERS.includes(String(keep('photoFilter', theme.photoFilter) || ''))
+            ? String(keep('photoFilter', theme.photoFilter)).trim()
+            : '',
         },
       };
 

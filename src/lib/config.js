@@ -12,6 +12,14 @@ import { sqliteGet, sqlitePut } from './db.js';
  *   4. environment      - PORT / SITE_URL / ADMIN_USER / ADMIN_PASSWORD / SESSION_SECRET
  */
 export const SETTINGS_KEY = 'settings';
+
+/**
+ * The photo filters the site can apply, in the order the admin sees them.
+ * An empty string means leave the pictures alone. The names are tokens, not
+ * css: they end up in a data- attribute, and anything not on this list is
+ * thrown away rather than pasted into a page.
+ */
+export const PHOTO_FILTERS = ['sepia', 'mono', 'faded', 'duotone', 'washed', 'xerox'];
 export const DEFAULTS = {
   title: 'My Home Page',
   tagline: 'Best viewed with Netscape Navigator 4.0 at 800x600',
@@ -39,8 +47,9 @@ export const DEFAULTS = {
     showTerminal: true,
     showMusic: true,
     showCounter: true,
-    // off until someone asks for it: a filter over every photo is a taste call
-    agePhotos: false,
+    // no filter until someone asks for one: ageing every photograph on the
+    // site is a taste call, and there is more than one way to do it
+    photoFilter: '',
   },
   nav: [
     { label: 'HOME', href: '/' },

@@ -114,8 +114,22 @@
     <label class="checkline"><input type="checkbox" name="showTerminal" value="on" <%= settings.theme.showTerminal ? 'checked' : '' %>> <%= t('admin.show_terminal') %></label>
     <input type="hidden" name="showCounter" value="off">
     <label class="checkline"><input type="checkbox" name="showCounter" value="on" <%= settings.theme.showCounter ? 'checked' : '' %>> <%= t('admin.show_counter') %></label>
-    <input type="hidden" name="agePhotos" value="off">
-    <label class="checkline"><input type="checkbox" name="agePhotos" value="on" <%= settings.theme.agePhotos ? 'checked' : '' %>> <%= t('admin.age_photos') %></label>
+    <%# The options are written out rather than looped over PHOTO_FILTERS so
+        that every label is a literal t() key. A unit test checks the two
+        lists still agree, so this cannot quietly drift from the whitelist. %>
+    <div class="field">
+      <label for="photoFilter">🖼 <%= t('admin.photo_filter') %></label>
+      <select id="photoFilter" name="photoFilter">
+        <option value="" <%= !settings.theme.photoFilter ? 'selected' : '' %>><%= t('admin.filter_none') %></option>
+        <option value="sepia" <%= settings.theme.photoFilter === 'sepia' ? 'selected' : '' %>><%= t('admin.filter_sepia') %></option>
+        <option value="mono" <%= settings.theme.photoFilter === 'mono' ? 'selected' : '' %>><%= t('admin.filter_mono') %></option>
+        <option value="faded" <%= settings.theme.photoFilter === 'faded' ? 'selected' : '' %>><%= t('admin.filter_faded') %></option>
+        <option value="duotone" <%= settings.theme.photoFilter === 'duotone' ? 'selected' : '' %>><%= t('admin.filter_duotone') %></option>
+        <option value="washed" <%= settings.theme.photoFilter === 'washed' ? 'selected' : '' %>><%= t('admin.filter_washed') %></option>
+        <option value="xerox" <%= settings.theme.photoFilter === 'xerox' ? 'selected' : '' %>><%= t('admin.filter_xerox') %></option>
+      </select>
+      <div class="form-note"><%= t('admin.photo_filter_hint') %></div>
+    </div>
     <div class="field"><label for="footer"><%= t('admin.footer_text') %></label><input id="footer" name="footer" value="<%= settings.footer %>"></div>
     <div class="field"><label for="icp"><%= t('admin.icp') %></label><input id="icp" name="icp" value="<%= settings.icp || '' %>"></div>
     <div class="field">

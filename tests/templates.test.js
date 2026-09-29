@@ -79,3 +79,20 @@ test('no template references an identifier the routes may not send', () => {
   assert.match(editor, /typeof originalSlug === 'undefined'/, 'editor must guard originalSlug');
   assert.match(editor, /typeof isNew === 'undefined'/, 'editor must guard isNew');
 });
+
+test('the photo filter menu and the whitelist cannot drift apart', async () => {
+  // The options are spelled out in the template so every label is a literal
+  // t() key, which means the list exists twice on purpose. This is the pin.
+  const { PHOTO_FILTERS } = await import('../src/lib/config.js');
+  const form = fs.readFileSync(path.join(VIEWS, 'admin', 'settings.ejs'), 'utf8');
+  const inForm = [...form.matchAll(/<option value="([a-z]*)"/g)].map((m) => m[1]).filter(Boolean);
+  assert.deepEqual(inForm, PHOTO_FILTERS,
+    'the menu offers ' + JSON.stringify(inForm) + ' but the server accepts ' + JSON.stringify(PHOTO_FILTERS));
+
+  const css = fs.readFileSync(path.resolve(VIEWS, '..', '..', 'public', 'css', 'site.css'), 'utf8');
+  for (const name of PHOTO_FILTERS) {
+    // the token is followed by ] and a brace, not by whitespace
+    assert.match(css, new RegExp('data-age="' + name + '"[^{]*\\{[^}]*--photo-filter:'),
+      'the ' + name + ' filter has no recipe in the stylesheet');
+  }
+});
