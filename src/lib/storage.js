@@ -125,24 +125,32 @@ function s3Config(config) {
   return { ...s3, endpoint: endpointUrl(s3.endpoint), prefix: cleanPrefix(s3.prefix) };
 }
 
-function s3ObjectUrl(s3, key) {
-  const base = (s3.publicUrl ? endpointUrl(s3.publicUrl) : s3.endpoint + '/' + s3.bucket).replace(/\/+$/, '');
-  return base + '/' + key.split('/').map(encodeURIComponent).join('/');
+/**
+ * Where a request for a key actually goes, as a complete URL.
+ *
+ * The host is part of the answer, not a side note: under virtual-hosted
+ * addressing the bucket lives in the hostname and the signature covers that
+ * hostname, so returning a path and letting the caller prepend the endpoint
+ * (which is what used to happen) quietly threw the addressing style away.
+ *
+ * Aliyun OSS answers SecondLevelDomainForbidden for a path-style request, so
+ * this is a requirement, not a preference.
+ */
+export function s3Url(s3, key) {
+  const base = new URL(s3.endpoint); // absolute: s3Config() normalises it
+  const head = base.pathname.replace(/\/+$/, '');
+  if (s3.pathStyle === false) {
+    const port = base.port ? ':' + base.port : '';
+    return base.protocol + '//' + s3.bucket + '.' + base.hostname + port + head + (key ? '/' + key : '');
+  }
+  return base.origin + head + '/' + s3.bucket + (key ? '/' + key : '');
 }
 
-/**
- * The key is the whole object key, prefix included: s3Put builds it that way
- * and S3 hands it back that way when listing. Adding the prefix here a second
- * time is what put every upload under blog/blog/.
- */
-function s3Target(s3, key) {
-  const host = String(s3.endpoint).replace(/^https?:\/\//, '').replace(/\/+$/, '');
-  if (s3.pathStyle === false && !s3.endpoint.includes('.')) {
-    // virtual-hosted style: bucket.endpoint
-    const [first, ...rest] = host.split('.');
-    return { host: [first + '-' + s3.bucket, ...rest].join('.'), pathname: '/' + [key].filter(Boolean).join('/') };
-  }
-  return { host, pathname: '/' + [s3.bucket, key].filter(Boolean).join('/') };
+export function s3ObjectUrl(s3, key) {
+  const base = (s3.publicUrl
+    ? endpointUrl(s3.publicUrl)
+    : s3Url(s3, '')).replace(/\/+$/, '');
+  return base + '/' + key.split('/').map(encodeURIComponent).join('/');
 }
 
 /** Minimal AWS Signature Version 4 for a single-shot PUT/DELETE/GET. */
@@ -183,13 +191,31 @@ function signRequest({ method, url, headers, payloadHash, s3 }) {
   };
 }
 
+/**
+ * S3 and OSS both refuse with an XML body, and the <Code> is the only part
+ * worth reading: "S3 PUT 403" tells an operator nothing, while
+ * "SecondLevelDomainForbidden: Please use virtual hosted style" tells them
+ * exactly which checkbox to change.
+ */
+async function describeFailure(res, what) {
+  let detail = '';
+  try {
+    const xml = await res.text();
+    const code = (xml.match(/<Code>([^<]*)<\/Code>/) || [])[1];
+    const message = (xml.match(/<Message>([^<]*)<\/Message>/) || [])[1];
+    detail = code ? code + (message ? ': ' + message : '') : xml.replace(/\s+/g, ' ').slice(0, 200);
+  } catch {
+    /* a missing body is not worth a second error */
+  }
+  return what + ' ' + res.status + (detail ? ' — ' + detail : '');
+}
+
 export async function s3Put(config, { buffer, filename, type }) {
   const s3 = s3Config(config);
   const ext = extFor(type, path.extname(filename).slice(1) || 'bin');
   const key = (s3.prefix ? s3.prefix + '/' : '') +
     new Date().toISOString().slice(0, 10) + '/' + safeName(filename) + '-' + Date.now().toString(36) + '.' + ext;
-  const { pathname } = s3Target(s3, key);
-  const url = s3.endpoint + pathname;
+  const url = s3Url(s3, key);
   const payloadHash = sha256(buffer);
   const headers = signRequest({
     method: 'PUT',
@@ -199,31 +225,28 @@ export async function s3Put(config, { buffer, filename, type }) {
     s3,
   });
   const res = await fetch(url, { method: 'PUT', headers, body: buffer });
-  if (!res.ok) throw new Error('S3 PUT ' + res.status + ' ' + (await res.text()).slice(0, 200));
+  if (!res.ok) throw new Error(await describeFailure(res, 'S3 PUT'));
   return { name: key.split('/').pop(), key, url: s3ObjectUrl(s3, key), size: buffer.length, driver: 's3' };
 }
 
 export async function s3Delete(config, key) {
   const s3 = s3Config(config);
-  const { pathname } = s3Target(s3, key);
-  const url = s3.endpoint + pathname;
+  const url = s3Url(s3, key);
   const headers = signRequest({ method: 'DELETE', url, headers: {}, payloadHash: sha256(''), s3 });
   const res = await fetch(url, { method: 'DELETE', headers });
-  if (!res.ok && res.status !== 404) throw new Error('S3 DELETE ' + res.status);
+  if (!res.ok && res.status !== 404) throw new Error(await describeFailure(res, 'S3 DELETE'));
   return true;
 }
 
 export async function s3List(config) {
   const s3 = s3Config(config);
   const prefix = s3.prefix ? s3.prefix + '/' : '';
-  const target = s3Target(s3, '');
   // S3 signs the path verbatim, so list the bucket with the canonical trailing
   // slash rather than whatever the key shape happens to produce
-  const bucketRoot = target.pathname.endsWith('/') ? target.pathname : target.pathname + '/';
-  const url = s3.endpoint + bucketRoot + '?list-type=2&prefix=' + encodeURIComponent(prefix);
+  const url = s3Url(s3, '') + '/?list-type=2&prefix=' + encodeURIComponent(prefix);
   const headers = signRequest({ method: 'GET', url, headers: {}, payloadHash: sha256(''), s3 });
   const res = await fetch(url, { headers });
-  if (!res.ok) throw new Error('S3 LIST ' + res.status);
+  if (!res.ok) throw new Error(await describeFailure(res, 'S3 LIST'));
   const xml = await res.text();
   const items = [];
   for (const m of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)) {
