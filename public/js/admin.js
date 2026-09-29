@@ -205,57 +205,6 @@
     });
   });
 
-  /* ---------------------------------------------------------- ai helper */
-  var pendingImage = "";
-  var imageInput = $("[data-ai-image]");
-  if (imageInput) {
-    imageInput.addEventListener("change", function () {
-      var file = imageInput.files && imageInput.files[0];
-      var nameEl = $("#ai-image-name");
-      if (!file) { pendingImage = ""; if (nameEl) nameEl.textContent = ""; return; }
-      if (file.size > 5 * 1024 * 1024) { if (nameEl) nameEl.textContent = "too big"; imageInput.value = ""; return; }
-      var reader = new FileReader();
-      reader.onload = function () { pendingImage = String(reader.result || ""); if (nameEl) nameEl.textContent = file.name; };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  $$('[data-ai]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var task = btn.getAttribute('data-ai');
-      if (btn.getAttribute('data-ai-needs-image') && !pendingImage) { toast('pick an image first', 'warn'); return; }
-      var state = $('#ai-state');
-      btn.disabled = true;
-      if (state) state.textContent = '… ' + btn.getAttribute('data-ai-label');
-      fetch('/admin/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-CSRF-Token': CSRF },
-        body: new URLSearchParams({ task: task, body: body ? body.value : '', image: pendingImage || '' }).toString(),
-      })
-        .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); })
-        .then(function (d) {
-          btn.disabled = false;
-          if (state) state.textContent = d.model + ' · ' + d.ms + 'ms';
-          var text = d.text || '';
-          if (task === 'summary' && description) description.value = text;
-          else if (task === 'tags' && tags) tags.value = text.split(/[,，]/).map(function (x) { return x.trim(); }).filter(Boolean).join(', ');
-          else if (task === 'title' && title) {
-            var options = text.split('\n').map(function (x) { return x.replace(/^[-*\d.\s]+/, '').trim(); }).filter(Boolean);
-            if (options.length > 1) { if (!window.confirm(options.join('\n') + '\n\n用第一个替换标题？')) return; title.value = options[0]; }
-            else if (options[0]) title.value = options[0];
-          }
-          else if (body) {
-            if (!window.confirm('把 AI 的结果插入正文末尾？')) return;
-            insertAtCursor('\n' + text);
-          }
-          body && body.dispatchEvent(new Event('input'));
-        })
-        .catch(function (err) {
-          btn.disabled = false;
-          if (state) state.textContent = '✘ ' + err.message;
-        });
-    });
-  });
   /* ------------------------------------------------------- autosave */
   // one stable key per post, so a saved post never leaves a ghost draft behind
   var KEY = 'oldie:draft:' + (originalSlugValue || 'new');

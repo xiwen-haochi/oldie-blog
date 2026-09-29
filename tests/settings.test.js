@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 
 import { DEFAULTS, loadConfig } from '../src/lib/config.js';
 import { checkUpload, driverName, isAllowedType, maxBytes, extFor, describeStorage } from '../src/lib/storage.js';
-import { aiReady, aiConfigError, AI_TASKS, TASKS } from '../src/lib/ai.js';
 
 test('feature switches exist and default to on', () => {
   for (const key of ['comments', 'moderateComments', 'guestbook', 'moderateGuestbook', 'search', 'hitCounter', 'randomPost', 'showToc']) {
@@ -19,7 +18,6 @@ test('a config that predates the switches still loads', () => {
     assert.equal(typeof site.features[key], 'boolean', 'not a boolean: ' + key);
   }
   assert.ok(['local', 's3'].includes(site.storage.driver));
-  assert.equal(typeof site.ai.enabled, 'boolean');
 });
 
 test('storage defaults to the local driver', () => {
@@ -58,23 +56,4 @@ test('extensions follow the mime type', () => {
   assert.equal(extFor('image/jpeg'), 'jpg');
   assert.equal(extFor('image/svg+xml'), 'svg');
   assert.equal(extFor('application/octet-stream'), 'bin');
-});
-
-test('ai reports what is missing instead of failing silently', () => {
-  const off = { ai: { enabled: false, baseUrl: 'https://x/v1', apiKey: 'k', model: 'm' } };
-  assert.equal(aiReady(off), false);
-  assert.match(aiConfigError(off), /启用/);
-  const partial = { ai: { ...off.ai, enabled: true, apiKey: '' } };
-  assert.match(aiConfigError(partial), /apiKey/);
-  const full = { ai: { ...off.ai, enabled: true, apiKey: 'sk-x' } };
-  assert.equal(aiReady(full), true);
-  assert.equal(aiConfigError(full), null);
-});
-
-test('ai tasks cover the writing jobs', () => {
-  const keys = AI_TASKS.map((t) => t.key);
-  for (const key of ['title', 'summary', 'tags', 'outline', 'polish']) {
-    assert.ok(keys.includes(key), 'missing ai task: ' + key);
-    assert.equal(typeof TASKS[key].prompt('正文'), 'string');
-  }
 });

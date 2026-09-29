@@ -194,17 +194,6 @@ this repo ships a tiny SigV4 signer so the dependency count stays at zero.
 Tick path-style addressing for MinIO / R2; AWS uses virtual-hosted style. Secrets
 live in `data/settings.json`, which is gitignored.
 
-**Large language model**
-
-Any OpenAI-compatible endpoint: OpenAI, DeepSeek, Qwen, Zhipu, Ollama, LM Studio, vLLM.
-Once configured, a small AI toolbar appears above the editor body:
-suggest a title / write the summary / suggest tags / outline / polish.
-
-```json
-{ "ai": { "enabled": true, "baseUrl": "https://api.deepseek.com/v1",
-    "apiKey": "sk-…", "model": "deepseek-chat" } }
-```
-
 ## Pasting HTML
 
 Posts accept raw HTML, so you can paste tables, diagrams, inline SVG or video tags
@@ -228,7 +217,7 @@ Admin → 💾 Backup & restore.
 - `content/posts/*.md`, `content/pages/*.md` — your writing
 - `public/uploads/` — uploaded images
 - `config/` — site configuration and the admin password
-- `data/` — hits, guestbook, subscribers, admin settings (S3 keys, AI key)
+- `data/` — hits, guestbook, subscribers, admin settings (S3 keys)
 
 **Restore**: pick the archive, type the site title to confirm, done.
 
@@ -254,7 +243,7 @@ Then edit the two files that carry your identity by hand:
 - `content/pages/about.md` — the about page
 
 Everything else is local runtime data: hits, guestbook, subscribers, sessions,
-admin settings (S3 keys, AI key) and the admin password. `.gitignore` keeps them
+admin settings (S3 keys) and the admin password. `.gitignore` keeps them
 out of the repository, and the app re-checks on boot and shouts if one slips in.
 
 ### Runtime data can live in SQLite
@@ -269,7 +258,7 @@ Switch back to JSON files in **Settings → Runtime data storage** and restart:
 | Where | Holds | Committed? |
 | --- | --- | --- |
 | `data/*.json` or `data/oldie.sqlite` | hits, guestbook, subscribers, sessions | no, ignored |
-| `data/settings.json` | admin settings (S3 keys, AI key) | no, ignored |
+| `data/settings.json` | admin settings (S3 keys) | no, ignored |
 | `config/admin.json` | admin password (scrypt) | no, ignored |
 | `config/site.config.json` | title, nav, other public bits | yes, on purpose |
 | `content/*.md` | posts and pages | your call |

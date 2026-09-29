@@ -193,17 +193,6 @@ pnpm new:post "文章标题" --tags=retro,web --draft
 勾选「使用 path-style 寻址」是 MinIO / R2 需要的；AWS 用虚拟主机式，通常不勾。
 密钥存在 `data/settings.json`（不进 git）。
 
-**大模型**
-
-任何 OpenAI 兼容接口都能用：OpenAI、DeepSeek、通义千问、智谱、Ollama、LM Studio、vLLM。
-填好之后，编辑器正文框上方会出现一条 AI 工具条：
-生成标题 / 写摘要 / 推荐标签 / 列提纲 / 润色。
-
-```json
-{ "ai": { "enabled": true, "baseUrl": "https://api.deepseek.com/v1",
-    "apiKey": "sk-…", "model": "deepseek-chat" } }
-```
-
 ## 粘贴 HTML
 
 文章支持直接粘贴 HTML（包括从别的文档里复制的表格、图示、内联 SVG、视频标签）。
@@ -225,7 +214,7 @@ pnpm new:post "文章标题" --tags=retro,web --draft
 - `content/posts/*.md`、`content/pages/*.md` —— 文章和页面
 - `public/uploads/` —— 上传的图片
 - `config/` —— 站点配置和管理员密码
-- `data/` —— 访问量、留言板、订阅者、后台设置（含 S3 密钥和 AI key）
+- `data/` —— 访问量、留言板、订阅者、后台设置（含 S3 密钥）
 
 **恢复**：选压缩包 → 输入站点标题确认 → 恢复。
 
@@ -251,7 +240,7 @@ pnpm clean --force    # 直接删掉，不留备份
 - `content/pages/about.md` —— 关于页
 
 其余全是本地数据，`pnpm clean` 会清空，而且 `.gitignore` 已经保证它们不会进仓库：
-访问量、留言板、订阅者、会话、后台设置（含 S3 密钥和 AI key）、管理员密码。
+访问量、留言板、订阅者、会话、后台设置（含 S3 密钥）、管理员密码。
 启动时程序会自己检查一遍：发现敏感文件被 git 跟踪就直接报警。
 
 ### 运行时数据可以换 SQLite
@@ -266,7 +255,7 @@ pnpm clean --force    # 直接删掉，不留备份
 | 存哪 | 内容 | 会进 git 吗 |
 | --- | --- | --- |
 | `data/*.json` 或 `data/oldie.sqlite` | 访问量、留言、订阅、会话 | ❌ 已忽略 |
-| `data/settings.json` | 后台设置（含 S3 密钥、AI key） | ❌ 已忽略 |
+| `data/settings.json` | 后台设置（含 S3 密钥） | ❌ 已忽略 |
 | `config/admin.json` | 管理员密码（scrypt） | ❌ 已忽略 |
 | `config/site.config.json` | 站名、导航等公开信息 | ✅ 应该进 |
 | `content/*.md` | 文章和页面 | ✅ 你决定 |

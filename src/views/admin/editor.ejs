@@ -32,22 +32,6 @@
       <div class="form-note mono" id="slug-preview">/<%= kind === 'post' ? 'posts/' : '' %><%= val('slug') || '…' %></div>
     </div>
 
-    <% if (ai && ai.ready) { %>
-    <div class="ai-bar">
-      <span class="ai-label">🤖</span>
-      <% ai.tasks.forEach(function (task) { %>
-        <% if (!task.vision || ai.vision) { %>
-          <button class="btn tiny<%= task.vision ? ' ai-vision' : '' %>" type="button" data-ai="<%= task.key %>" data-ai-label="<%= task.label %>"<%= task.vision ? ' data-ai-needs-image' : '' %>><%= task.label %></button>
-        <% } %>
-      <% }) %>
-      <label class="btn tiny ai-vision" for="ai-image" title="<%= t('admin.ai_vision_hint') %>">🖼 <%= t('admin.ai_pick_image') %></label>
-      <input type="file" id="ai-image" accept="image/*" hidden data-ai-image>
-      <span class="form-note" id="ai-image-name"></span>
-      <span class="form-note" id="ai-state"></span>
-    </div>
-    <% } else if (ai && ai.error) { %>
-    <div class="ai-bar off"><span class="ai-label">🤖</span><span class="form-note"><%= ai.error %> · <a href="<%= adminPath %>/settings"><%= t('admin.ai') %></a></span></div>
-    <% } %>
     <div class="field">
       <label for="body"><%= t('admin.field_body') %></label>
       <textarea id="body" name="body" rows="26" spellcheck="true" data-editor><%= doc.body %></textarea>

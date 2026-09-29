@@ -87,15 +87,6 @@ export const DEFAULTS = {
       pathStyle: true,     // true for MinIO / R2, false for AWS
     },
   },
-  // optional AI writing helper (any OpenAI-compatible endpoint)
-  ai: {
-    enabled: false,
-    baseUrl: 'https://api.openai.com/v1',
-    apiKey: '',
-    model: 'gpt-4o-mini',
-    temperature: 0.6,
-    maxTokens: 800,
-  },
   analytics: '',
   icp: '',
   socials: [],

@@ -16,7 +16,6 @@ import { listFiles as storageList, putFile, deleteFile, checkUpload, describeSto
 import { createBackup, restoreBackup, backupPreview } from '../lib/backup.js';
 import { enrichLocals } from '../lib/present.js';
 import { makeTranslator, availableLocales, localeMeta, clientStrings } from '../lib/i18n.js';
-import { ask as aiAsk, AI_TASKS, aiReady, aiConfigError } from '../lib/ai.js';
 
 const loginLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 10 });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024, files: 1 } });
@@ -265,7 +264,6 @@ export function adminRoutes(ctx) {
       },
       isNew: true,
       uploads: await listUploads(),
-      ai: { ready: aiReady(ctx.site), error: aiConfigError(ctx.site), tasks: AI_TASKS },
     });
   });
 
@@ -281,7 +279,6 @@ export function adminRoutes(ctx) {
       isNew: false,
       originalSlug: req.params.slug,
       uploads: await listUploads(),
-      ai: { ready: aiReady(ctx.site), error: aiConfigError(ctx.site), tasks: AI_TASKS },
     });
   });
 
@@ -329,7 +326,6 @@ export function adminRoutes(ctx) {
       req, title: tr(req)('admin.new_page'), kind: 'page', isNew: true,
       doc: { file: '', data: { title: '', slug: '', description: '' }, body: '' },
       uploads: await listUploads(),
-      ai: { ready: aiReady(ctx.site), error: aiConfigError(ctx.site), tasks: AI_TASKS },
     });
   });
 
@@ -477,14 +473,6 @@ export function adminRoutes(ctx) {
             pathStyle: b.pathStyle !== 'off',
           },
         },
-        ai: {
-          enabled: !!b.aiEnabled && !!String(b.aiApiKey || b.aiKeyMasked || ''),
-          baseUrl: String(b.aiBaseUrl || 'https://api.openai.com/v1'),
-          apiKey: String(b.aiApiKey || ctx.site.ai?.apiKey || ''),
-          model: String(b.aiModel || 'gpt-4o-mini'),
-          temperature: Math.min(2, Math.max(0, Number(b.aiTemperature) || 0.6)),
-          maxTokens: Math.max(0, Number(b.aiMaxTokens) || 0),   // 0 = no limit
-        },
         theme: {
           accent: String(b.accent || '#008080'),
           accent2: String(b.accent2 || '#000080'),
@@ -599,29 +587,11 @@ export function adminRoutes(ctx) {
     res.redirect(U('/media'));
   });
 
-  /* ------------------------------------------------------------- ai */
-  router.post(A + '/ai', requireAuth, requireCsrf, async (req, res) => {
-    try {
-      if (!aiReady(ctx.site)) {
-        return res.status(400).json({ error: aiConfigError(ctx.site) || 'AI 未就绪' });
-      }
-      const out = await aiAsk(ctx.site, {
-        task: String(req.body.task || 'summary'),
-        body: String(req.body.body || ''),
-        instruction: String(req.body.instruction || ''),
-        image: String(req.body.image || ''),
-      });
-      res.json(out);
-    } catch (err) {
-      res.status(err.status || 502).json({ error: err.message });
-    }
-  });
-
   /* ------------------------------------------------------ backup/restore */
   router.get(A + '/backup', requireAuth, async (req, res) => {
     render(res, 'backup', {
-      query: req.query,
       req,
+      query: req.query,
       title: makeTranslator(req.locale || ctx.site.locale)('admin.backup'),
       preview: backupPreview(),
     });
@@ -633,7 +603,7 @@ export function adminRoutes(ctx) {
       const stamp = manifest.createdAt.slice(0, 19).replace(/[-:T]/g, '');
       const name = (ctx.site.title || 'oldie-blog').replace(/[^\w\-\u4e00-\u9fff]+/g, '-') + '-backup-' + stamp + '.zip';
       res.set('Content-Type', 'application/zip');
-      res.set('Content-Disposition', 'attachment; filename*=UTF-8\'\'' + encodeURIComponent(name));
+      res.set('Content-Disposition', "attachment; filename*=UTF-8''" + encodeURIComponent(name));
       res.set('Cache-Control', 'no-store');
       res.send(buffer);
     } catch (err) {
@@ -670,7 +640,6 @@ export function adminRoutes(ctx) {
       health: seoHealth(ctx, req.locale),
       storage: describeStorage(ctx.site),
       files: listFiles('post'),
-      ai: { ready: aiReady(ctx.site), error: aiConfigError(ctx.site) },
       pageFiles: listFiles('page'),
       subscribers: ctx.community.subscriberList(),
       exportData: buildExport(ctx),
