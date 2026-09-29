@@ -9,22 +9,20 @@ import { Community } from './lib/community.js';
 import { Sessions } from './lib/sessions.js';
 import { ensureAdminCredentials, loadCredentials } from './lib/auth.js';
 import { DATA_DIR, ROOT, VIEWS_DIR } from './lib/paths.js';
-import { setDataDriver, getDataDriver } from './lib/store.js';
-import { migrateJsonToSqlite } from './lib/migrate.js';
+import { requireSqlite } from './lib/db.js';
+import { importExistingData } from './lib/migrate.js';
 
 /** Everything a request handler might need, created exactly once. */
 export function createContext() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 
+  requireSqlite();
+  // An install that still has JSON lying around gets it taken in once, so
+  // moving to a single database never costs anyone their writing.
+  const migration = importExistingData({ dataDir: DATA_DIR, root: ROOT });
   const site = loadConfig();
-  setDataDriver(site.dataDriver);
-  // a switch to sqlite should never cost anyone their guestbook or hit count
-  const migration = migrateJsonToSqlite({ dataDir: DATA_DIR });
   if (migration.migrated.length) {
-    console.log('  已把 ' + migration.migrated.map((m) => m.name).join(', ') + ' 从 JSON 迁移到 SQLite（原文件保留为 .migrated-*.json）');
-  }
-  if (site.dataDriver === 'sqlite' && getDataDriver() !== 'sqlite') {
-    console.warn('  ⚠ 这个 Node 没有 node:sqlite，继续使用 JSON 存储');
+    console.log('  已把 ' + migration.migrated.map((m) => m.name).join(', ') + ' 导入数据库（原文件保留）');
   }
   site.assetV = assetVersion();
   const index = new ContentIndex({ siteOrigin: site.url });

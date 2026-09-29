@@ -1,7 +1,5 @@
 import crypto from 'node:crypto';
-import { JsonStore } from './store.js';
-import { DATA_DIR } from './paths.js';
-import path from 'node:path';
+import { Store } from './store.js';
 
 const dayKey = (d = new Date()) => d.toISOString().slice(0, 10);
 const ONLINE_WINDOW_MS = 5 * 60 * 1000;
@@ -11,8 +9,8 @@ const ONLINE_WINDOW_MS = 5 * 60 * 1000;
  * visitors (salted hash, prunable) and a live "online now" gauge.
  */
 export class Stats {
-  constructor({ file = path.join(DATA_DIR, 'stats.json'), seed = new Date().getFullYear() } = {}) {
-    this.store = new JsonStore(file, { total: seed, firstSeen: new Date().toISOString(), days: {}, paths: {}, uniques: {} });
+  constructor({ name = 'stats', seed = new Date().getFullYear() } = {}) {
+    this.store = new Store(name, { total: seed, firstSeen: new Date().toISOString(), days: {}, paths: {}, uniques: {} });
     this.online = new Map(); // visitorId -> last seen ms
     this.seed = seed;
   }

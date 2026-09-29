@@ -1,14 +1,7 @@
-import fs from 'node:fs';
-import fsp from 'node:fs/promises';
-import path from 'node:path';
-import matter from 'gray-matter';
-import { POSTS_DIR, PAGES_DIR, CONTENT_DIR } from './paths.js';
+import { listDocs } from './writer.js';
 import { renderMarkdown, splitAtMore, excerpt, toPlainText, buildToc } from './markdown.js';
 import { sanitizeHtml } from './sanitize.js';
 import { slugify, readingTime, stripHtml, countWords } from './text.js';
-
-const DATE_PREFIX = /^(\d{4})-(\d{2})-(\d{2})-(.+)\.md$/i;
-const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})\.md$/i;
 
 const asArray = (v) => (v == null ? [] : Array.isArray(v) ? v : String(v).split(',').map((s) => s.trim()).filter(Boolean));
 const toBool = (v) => (typeof v === 'boolean' ? v : String(v ?? '').toLowerCase() === 'true');
@@ -28,25 +21,16 @@ export function normaliseTags(input) {
  * Turn one markdown file into the shape templates consume.
  * Filenames may carry the date (2025-03-14-hello.md) or not (hello.md).
  */
-export function parseDoc(filePath, { kind = 'post', siteOrigin = '' } = {}) {
-  const raw = fs.readFileSync(filePath, 'utf8');
-  const { data, content } = matter(raw);
-  const base = path.basename(filePath);
-  const rel = path.relative(CONTENT_DIR, filePath).split(path.sep).join('/');
+export function parseDoc(stored, { kind = 'post', siteOrigin = '' } = {}) {
+  const data = (stored && stored.frontMatter) || {};
+  const content = String((stored && stored.body) || '');
+  const base = String((stored && stored.slug) || 'untitled');
+  const rel = (kind === 'page' ? 'pages/' : 'posts/') + base;
 
-  let date = coerceDate(data.date);
-  let slug = data.slug ? slugify(data.slug) : null;
-  const withDate = DATE_PREFIX.exec(base);
-  const dateOnly = DATE_ONLY.exec(base);
-  if (withDate) {
-    date = date || coerceDate(`${withDate[1]}-${withDate[2]}-${withDate[3]}T00:00:00Z`);
-    slug = slug || slugify(withDate[4]);
-  } else if (dateOnly) {
-    date = date || coerceDate(`${dateOnly[1]}-${dateOnly[2]}-${dateOnly[3]}T00:00:00Z`);
-    slug = slug || slugify(base.replace(/\.md$/, '') || data.title);
-  }
-  if (!date) date = coerceDate(fs.statSync(filePath).mtime) || new Date();
-  slug = slug || slugify(base.replace(/\.md$/, '') || data.title);
+  // A standalone page often carries no date. There is no file mtime to fall
+  // back on any more, so it becomes "now" — which only ever feeds the meta tags.
+  let date = coerceDate(data.date) || new Date();
+  const slug = slugify(data.slug || base);
 
   const body = content.trim();
   const { teaser, rest } = splitAtMore(body);
@@ -66,7 +50,8 @@ export function parseDoc(filePath, { kind = 'post', siteOrigin = '' } = {}) {
     slug,
     title,
     file: rel,
-    absFile: filePath,
+    // there is no file any more; the key it lives under is the honest answer
+    key: kind + ':' + slug,
     date,
     updated: coerceDate(data.updated) || null,
     tags,
@@ -97,43 +82,38 @@ export function parseDoc(filePath, { kind = 'post', siteOrigin = '' } = {}) {
   };
 }
 
-/** In-memory content index. Markdown files on disk stay the source of truth. */
+/** The content index, rebuilt from the database on every load. */
 export class ContentIndex {
   #watchers = [];
   #timer = null;
   #all = [];
   #version = 0;
 
-  constructor({ postsDir = POSTS_DIR, pagesDir = PAGES_DIR, siteOrigin = '' } = {}) {
-    this.postsDir = postsDir;
-    this.pagesDir = pagesDir;
+  constructor({ siteOrigin = '' } = {}) {
     this.siteOrigin = siteOrigin;
     this.load();
   }
 
   get version() { return this.#version; }
 
+  /** Everything comes out of the one database; there is no directory to read. */
   load() {
-    const readDir = (dir, kind) => {
-      let names = [];
-      try { names = fs.readdirSync(dir); } catch { return []; }
-      return names
-        .filter((n) => n.endsWith('.md') && !n.startsWith('_') && !n.startsWith('.'))
-        .map((n) => {
+    const read = (kind) =>
+      listDocs(kind)
+        .filter((doc) => !String(doc.slug || '').startsWith('_') && !String(doc.slug || '').startsWith('.'))
+        .map((doc) => {
           try {
-            return parseDoc(path.join(dir, n), { kind, siteOrigin: this.siteOrigin });
+            return parseDoc(doc, { kind, siteOrigin: this.siteOrigin });
           } catch (err) {
-            console.error('[content] failed to parse', n, err.message);
+            console.error('[content] failed to parse', doc.slug, err.message);
             return null;
           }
         })
         .filter(Boolean);
-    };
 
-    const posts = readDir(this.postsDir, 'post');
-    const pages = readDir(this.pagesDir, 'page');
+    const posts = read('post');
+    const pages = read('page');
 
-    // Later duplicates of the same slug (e.g. 2025-01-01-x.md and x.md) win.
     const bySlug = new Map();
     for (const p of posts) bySlug.set(p.slug, p);
 
@@ -144,6 +124,7 @@ export class ContentIndex {
     this.tags = buildTagMap(this.#all);
     return this;
   }
+
 
   reload() { return this.load(); }
 
@@ -244,28 +225,13 @@ export class ContentIndex {
     return this.publishedPosts().reduce((n, p) => n + p.wordCount, 0);
   }
 
-  /** Dev convenience: hot-reload when a file changes on disk. */
+  /** There is nothing on disk to watch any more; reloads happen on save. */
   watch(onChange = () => {}) {
-    if (process.env.NODE_ENV === 'production' || !this.#watchers.length) {
-      for (const dir of [this.postsDir, this.pagesDir]) {
-        try {
-          const w = fs.watch(dir, { persistent: false }, (_evt, filename) => {
-            if (filename && !filename.endsWith('.md')) return;
-            clearTimeout(this.#timer);
-            this.#timer = setTimeout(() => {
-              this.reload();
-              onChange(filename);
-            }, 80);
-          });
-          this.#watchers.push(w);
-        } catch { /* directory may not exist yet */ }
-      }
-    }
+    void onChange;
     return this;
   }
 
   close() {
-    for (const w of this.#watchers) w.close();
     this.#watchers = [];
   }
 }

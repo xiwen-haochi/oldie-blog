@@ -1,38 +1,108 @@
 /**
- * One-time migration: on a fresh install, if the JSON files are still lying
- * around and the database is empty, move them in so switching the default
- * driver to sqlite never costs anybody their guestbook or hit count.
+ * One-time import. An install that predates the single database still has its
+ * old files on disk: data/*.json for the runtime stores, and Markdown files in
+ * content/. On the first boot they are taken into data/oldie.sqlite and the
+ * originals are left exactly where they were, so nothing is ever lost.
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { backendName, sqlitePut, sqliteNames, sqliteGet } from './db.js';
+import { sqliteNames, sqlitePut, sqliteGet, sqliteKeysWith } from './db.js';
+import { SETTINGS_KEY } from './config.js';
 
-export function migrateJsonToSqlite({ dataDir, stores = ['stats', 'guestbook', 'subscribers', 'sessions'], force = false } = {}) {
-  if (backendName({ dataDriver: 'sqlite' }) !== 'sqlite') return { migrated: [], skipped: true };
-  const existing = new Set(sqliteNames());
-  const migrated = [];
-  for (const name of stores) {
-    const file = path.join(dataDir, name + '.json');
-    if (!fs.existsSync(file)) continue;
-    if (existing.has(name) && !force) continue;
-    try {
-      const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
-      sqlitePut(name, doc);
-      const stamp = new Date().toISOString();
-      const backup = file + '.migrated-' + stamp.slice(0, 10);
-      fs.renameSync(file, backup);
-      migrated.push({ name, backup });
-    } catch {
-      /* leave a broken file alone rather than losing it */
-    }
+const RUNTIME_STORES = ['stats', 'guestbook', 'subscribers', 'sessions'];
+
+/** Parse a Markdown file into the same shape the database rows use. */
+function readMarkdown(file, kind) {
+  const raw = fs.readFileSync(file, 'utf8');
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(raw);
+  if (!match) {
+    return { kind, slug: path.basename(file).replace(/\.md$/, ''), frontMatter: {}, body: raw };
   }
-  return { migrated, skipped: false };
+  const frontMatter = {};
+  for (const line of match[1].split(/\r?\n/)) {
+    const kv = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(line);
+    if (!kv) continue;
+    let value = kv[2].trim();
+    if (/^".*"$/.test(value) || /^'.*'$/.test(value)) value = value.slice(1, -1);
+    else if (value === 'true') value = true;
+    else if (value === 'false') value = false;
+    else if (/^\[.*\]$/.test(value)) {
+      value = value.slice(1, -1).split(',').map((x) => x.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+    }
+    frontMatter[kv[1]] = value;
+  }
+  return {
+    kind,
+    slug: path.basename(file).replace(/^\d{4}-\d{2}-\d{2}-/, '').replace(/\.md$/, ''),
+    frontMatter,
+    body: raw.slice(match[0].length),
+  };
 }
 
-/** Move a store back out to a JSON file (escape hatch for debugging). */
-export function exportStoreToJson(dataDir, name) {
-  if (backendName({ dataDriver: 'sqlite' }) !== 'sqlite') return null;
-  const file = path.join(dataDir, name + '.json');
-  fs.writeFileSync(file, JSON.stringify(sqliteGet(name, {}), null, 2) + '\n');
-  return file;
+export function importExistingData({ dataDir, root }) {
+  const migrated = [];
+  const existing = new Set(sqliteNames());
+
+  for (const name of RUNTIME_STORES) {
+    const file = path.join(dataDir, name + '.json');
+    if (!fs.existsSync(file) || existing.has(name)) continue;
+    try {
+      sqlitePut(name, JSON.parse(fs.readFileSync(file, 'utf8')));
+      migrated.push({ name });
+    } catch {
+      /* a broken file is left alone rather than lost */
+    }
+  }
+
+  // settings.json is what the admin used to write; the bootstrap file stays
+  const settingsFile = path.join(dataDir, 'settings.json');
+  if (fs.existsSync(settingsFile) && !existing.has(SETTINGS_KEY)) {
+    try {
+      sqlitePut(SETTINGS_KEY, JSON.parse(fs.readFileSync(settingsFile, 'utf8')));
+      migrated.push({ name: 'settings.json' });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (root) {
+    for (const [kind, dir] of [['post', path.join(root, 'content', 'posts')], ['page', path.join(root, 'content', 'pages')]]) {
+      const prefix = kind + ':';
+      if (sqliteKeysWith(prefix).length) continue;
+      let names = [];
+      try {
+        names = fs.readdirSync(dir).filter((n) => n.endsWith('.md'));
+      } catch {
+        continue;
+      }
+      let count = 0;
+      for (const name of names) {
+        try {
+          const doc = readMarkdown(path.join(dir, name), kind);
+          sqlitePut(prefix + doc.slug, doc);
+          count++;
+        } catch {
+          /* skip an unreadable file rather than abort the import */
+        }
+      }
+      if (count) migrated.push({ name: count + ' ' + kind + (count === 1 ? '' : 's') });
+    }
+  }
+
+  return { migrated };
+}
+
+/** Everything in the database, as plain objects. Used by the backup export. */
+export function exportDatabase() {
+  const out = {};
+  for (const name of sqliteNames()) {
+    if (name.includes(':')) {
+      // articles are stored one key per document, with a namespace
+      const [namespace, ...rest] = name.split(':');
+      (out[namespace] = out[namespace] || {})[rest.join(':')] = sqliteGet(name, null);
+    } else {
+      out[name] = sqliteGet(name, null);
+    }
+  }
+  return out;
 }

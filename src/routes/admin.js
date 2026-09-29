@@ -11,7 +11,7 @@ import { saveDoc, deleteDoc, rawOf, normaliseFields, listFiles } from '../lib/wr
 import { renderMarkdown, toPlainText, excerpt } from '../lib/markdown.js';
 import { slugify, formatDate, humanBytes, readingTime, truncate } from '../lib/text.js';
 import { UPLOAD_DIR, DATA_DIR, ROOT } from '../lib/paths.js';
-import { DEFAULTS } from '../lib/config.js';
+import { DEFAULTS, saveConfig, resetConfig } from '../lib/config.js';
 import { listFiles as storageList, putFile, deleteFile, checkUpload, describeStorage, maxBytes } from '../lib/storage.js';
 import { createBackup, restoreBackup, backupPreview } from '../lib/backup.js';
 import { enrichLocals } from '../lib/present.js';
@@ -475,7 +475,6 @@ export function adminRoutes(ctx) {
         email: text('email', cur.email, 120),
         since: text('since', cur.since, 20),
         url: text('url', cur.url, 300).replace(/\/+$/, ''),
-        dataDriver: keep('dataDriver', cur.dataDriver) === 'sqlite' ? 'sqlite' : 'json',
         locale: text('locale', cur.locale || 'zh-CN', 16),
         postsPerPage: Math.min(50, Math.max(1, Number(keep('postsPerPage', cur.postsPerPage || 8)) || 8)),
         nav: b.nav === undefined ? (cur.nav || []) : parseNav(b.nav),
@@ -525,7 +524,7 @@ export function adminRoutes(ctx) {
       };
 
       await fsp.mkdir(DATA_DIR, { recursive: true });
-      await fsp.writeFile(path.join(DATA_DIR, 'settings.json'), JSON.stringify(settings, null, 2) + '\n', 'utf8');
+      saveConfig(settings);
       ctx.refresh({ config: true });
       setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.settings_saved'));
       res.redirect(U('/settings'));
@@ -533,7 +532,7 @@ export function adminRoutes(ctx) {
   });
 
   router.post(A + '/settings/reset', requireAuth, requireCsrf, async (req, res) => {
-    await fsp.rm(path.join(DATA_DIR, 'settings.json'), { force: true });
+    resetConfig();
     ctx.refresh({ config: true });
     setFlash(res, 'ok', makeTranslator((req && req.locale) || ctx.site.locale)('admin.settings_reset'));
     res.redirect(U('/settings'));

@@ -1,14 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { CONFIG_DIR, DATA_DIR } from './paths.js';
+import { CONFIG_DIR } from './paths.js';
+import { sqliteGet, sqlitePut } from './db.js';
 
 /**
  * Layered configuration, lowest priority first:
- *   1. DEFAULTS      – everything a fresh clone needs to boot
- *   2. site.config.json – the file humans edit (committed to git)
- *   3. data/settings.json – overrides written from the admin UI (gitignored)
- *   4. environment   – PORT / SITE_URL / ADMIN_USER / ADMIN_PASSWORD / SESSION_SECRET
+ *   1. DEFAULTS        - everything a fresh clone needs to boot
+ *   2. site.config.json - a bootstrap seed, read only while the database has
+ *                         never been written to; after that it is ignored
+ *   3. the database     - where the admin writes, and the real settings
+ *   4. environment      - PORT / SITE_URL / ADMIN_USER / ADMIN_PASSWORD / SESSION_SECRET
  */
+export const SETTINGS_KEY = 'settings';
 export const DEFAULTS = {
   title: 'My Home Page',
   tagline: 'Best viewed with Netscape Navigator 4.0 at 800x600',
@@ -21,9 +24,6 @@ export const DEFAULTS = {
   since: String(new Date().getFullYear()),
   url: 'http://localhost:4173',
   locale: 'zh-CN',
-  // where runtime data (hit counter, guestbook, sessions) is kept
-  // 'json' (one file per store, default) or 'sqlite' (node:sqlite, no dependency)
-  dataDriver: 'sqlite',
   // where the admin lives. 'admin' and '/admin' and '/my-secret-door' all work.
   adminPath: '/admin',
   langDir: 'ltr',
@@ -112,11 +112,19 @@ function deepMerge(base, patch) {
   return out;
 }
 
+/**
+ * The site configuration as it stands right now.
+ *
+ * The settings file is a seed, not a source: once the database holds settings,
+ * those are the answer and the file is ignored. A fresh clone boots from the
+ * file, the first save copies it into the database, and from then on there is
+ * exactly one place the configuration lives.
+ */
 export function loadConfig({ env = process.env } = {}) {
-  const fileConfig = readJson(path.join(CONFIG_DIR, 'site.config.json'));
-  const uiConfig = readJson(path.join(DATA_DIR, 'settings.json'));
+  const stored = sqliteGet(SETTINGS_KEY, null);
+  const bootstrap = stored ? {} : readJson(path.join(CONFIG_DIR, 'site.config.json'));
 
-  let config = deepMerge(deepMerge(DEFAULTS, fileConfig), uiConfig);
+  let config = deepMerge(deepMerge(DEFAULTS, bootstrap), stored || {});
 
   if (env.SITE_URL) config.url = env.SITE_URL.replace(/\/$/, '');
   if (env.SITE_TITLE) config.title = env.SITE_TITLE;
@@ -131,6 +139,17 @@ export function loadConfig({ env = process.env } = {}) {
   config.locale = config.locale || 'zh-CN';
   config.adminPath = normaliseAdminPath(config.adminPath);
   return config;
+}
+
+/** Persist the settings document. The admin screen is the only writer. */
+export function saveConfig(settings) {
+  sqlitePut(SETTINGS_KEY, settings);
+  return settings;
+}
+
+/** Forget the stored settings and fall back to the bootstrap file. */
+export function resetConfig() {
+  return sqlitePut(SETTINGS_KEY, {});
 }
 
 /** 'admin' → '/admin', '/my-secret-door/' → '/my-secret-door', junk → '/admin'. */

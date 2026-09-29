@@ -4,70 +4,78 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { ContentIndex } from '../src/lib/posts.js';
+// The index reads the site database, so this suite gets its own.
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'oldie-feat-'));
+process.env.OLDIE_DATA_DIR = path.join(tmp, 'data');
+process.env.OLDIE_ROOT = tmp;
 
-function makeIndex(specs) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oldie-feat-'));
-  const posts = path.join(dir, 'posts');
-  const pages = path.join(dir, 'pages');
-  fs.mkdirSync(posts, { recursive: true });
-  fs.mkdirSync(pages, { recursive: true });
+const { ContentIndex } = await import('../src/lib/posts.js');
+const { saveDoc, deleteDoc } = await import('../src/lib/writer.js');
+const { sqliteClose } = await import('../src/lib/db.js');
+
+test.after(() => {
+  sqliteClose();
+  try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* the OS will get it */ }
+});
+
+/** Store a set of posts, then read them back through a fresh index. */
+async function withIndex(specs, fn) {
+  const written = [];
   for (const [slug, spec] of Object.entries(specs)) {
-    const fm = [
-      '---',
-      'title: ' + slug,
-      'date: ' + spec.date,
-      spec.draft ? 'draft: true' : '',
-      spec.featured ? 'featured: true' : '',
-      spec.featuredAt ? 'featuredAt: "' + spec.featuredAt + '"' : '',
-      '---',
-      '',
-      'body of ' + slug,
-    ].filter(Boolean).join('\n');
-    fs.writeFileSync(path.join(posts, slug + '.md'), fm);
+    const fields = {
+      slug,
+      title: slug,
+      date: spec.date,
+      draft: spec.draft,
+      featured: spec.featured,
+      featuredAt: spec.featuredAt,
+    };
+    await saveDoc({ kind: 'post', slug: '', fields, body: 'body of ' + slug });
+    written.push(slug);
   }
-  const index = new ContentIndex({ postsDir: posts, pagesDir: pages });
-  return { index, cleanup: () => fs.rmSync(dir, { recursive: true, force: true }) };
+  const index = new ContentIndex({});
+  try {
+    return await fn(index);
+  } finally {
+    for (const slug of written) await deleteDoc({ kind: 'post', slug });
+    index.close();
+  }
 }
 
-test('every pinned post is returned, not just the first', () => {
-  const { index, cleanup } = makeIndex({
+test('every pinned post is returned, not just the first', async () => {
+  await withIndex({
     a: { date: '2026-01-01', featured: true, featuredAt: '2026-01-01' },
     b: { date: '2026-02-01', featured: true, featuredAt: '2026-02-01' },
     c: { date: '2026-03-01', featured: true, featuredAt: '2026-03-01' },
-  });
-  try {
+  }, (index) => {
     const featured = index.featured();
     assert.equal(featured.length, 3, 'a second pin must not be stranded');
     assert.deepEqual(featured.map((p) => p.slug), ['c', 'b', 'a']);
-  } finally { cleanup(); }
+  });
 });
 
-test('pinned posts come back newest-pin-first, not newest-published-first', () => {
-  const { index, cleanup } = makeIndex({
+test('pinned posts come back newest-pin-first, not newest-published-first', async () => {
+  await withIndex({
     old: { date: '2020-01-01', featured: true, featuredAt: '2026-06-01' },
     recent: { date: '2026-05-01', featured: true, featuredAt: '2026-05-02' },
-  });
-  try {
+  }, (index) => {
     assert.equal(index.featured()[0].slug, 'old', 'pinning an old post has to be visible');
-  } finally { cleanup(); }
+  });
 });
 
-test('unpinned posts are never featured', () => {
-  const { index, cleanup } = makeIndex({
+test('unpinned posts are never featured', async () => {
+  await withIndex({
     a: { date: '2026-01-01' },
     b: { date: '2026-02-01' },
-  });
-  try {
+  }, (index) => {
     assert.deepEqual(index.featured(), []);
-  } finally { cleanup(); }
+  });
 });
 
-test('a draft never sneaks into the pinned section', () => {
-  const { index, cleanup } = makeIndex({
+test('a draft never sneaks into the pinned section', async () => {
+  await withIndex({
     secret: { date: '2026-01-01', featured: true, featuredAt: '2026-01-01', draft: true },
-  });
-  try {
+  }, (index) => {
     assert.deepEqual(index.featured(), [], 'a draft must stay private');
-  } finally { cleanup(); }
+  });
 });

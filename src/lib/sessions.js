@@ -1,16 +1,14 @@
 import crypto from 'node:crypto';
-import { JsonStore } from './store.js';
-import { DATA_DIR } from './paths.js';
-import path from 'node:path';
+import { Store } from './store.js';
 
 const COOKIE = 'oldie_session';
 const MAX_AGE_MS = 1000 * 60 * 60 * 12; // 12h, like a long afternoon online
 
 /** Stateless HMAC cookie + tiny server-side session store (revocable). */
 export class Sessions {
-  constructor({ secret, storeFile = path.join(DATA_DIR, 'sessions.json') } = {}) {
+  constructor({ secret, name = 'sessions' } = {}) {
     this.secret = secret || crypto.randomBytes(32).toString('hex');
-    this.store = new JsonStore(storeFile, {});
+    this.store = new Store(name, {});
     this.cookieName = COOKIE;
   }
 

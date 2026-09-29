@@ -1,16 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Stats } from '../src/lib/stats.js';
-import { Community, spamScore, normaliseUrl, hostOf } from '../src/lib/community.js';
-import { hashPassword, verifyPassword } from '../src/lib/auth.js';
-import { runCommand, uptimeText } from '../src/lib/terminal.js';
-import { Sessions } from '../src/lib/sessions.js';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 
+// One database for everything means tests that share the real data dir would
+// be reading and writing the operator's own site. Point OLDIE_DATA_DIR at a
+// throwaway folder before anything imports paths.js.
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'oldie-stats-'));
+process.env.OLDIE_DATA_DIR = path.join(tmp, 'data');
+process.env.OLDIE_ROOT = tmp;
+
+const { Stats } = await import('../src/lib/stats.js');
+const { Community, spamScore, normaliseUrl, hostOf } = await import('../src/lib/community.js');
+const { hashPassword, verifyPassword } = await import('../src/lib/auth.js');
+const { runCommand, uptimeText } = await import('../src/lib/terminal.js');
+const { Sessions } = await import('../src/lib/sessions.js');
+
+test.after(() => {
+  try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* the OS will get it */ }
+});
 
 const fakeCtx = {
   site: { title: 'Test Site', description: 'd', author: 'me', email: 'me@x.test', url: 'http://x.test', webring: [{ title: 'A', url: 'https://a.test', note: 'n' }], since: '1998' },

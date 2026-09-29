@@ -35,13 +35,6 @@
     <div class="grid-2">
       <div class="field"><label for="directory"><%= t('admin.storage_dir') %></label><input id="directory" name="directory" value="<%= settings.storage.directory %>" placeholder="public/uploads"></div>
       <div class="field"><label for="publicPath"><%= t('admin.storage_public') %></label><input id="publicPath" name="publicPath" value="<%= settings.storage.publicPath %>" placeholder="/uploads"></div>
-      <div class="field"><label for="dataDriver"><%= t('admin.data_driver') %></label>
-        <select id="dataDriver" name="dataDriver" data-needs-restart>
-          <option value="json" <%= (settings.dataDriver || 'json') === 'json' ? 'selected' : '' %>><%= t('admin.driver_json') %></option>
-          <option value="sqlite" <%= settings.dataDriver === 'sqlite' ? 'selected' : '' %>><%= t('admin.driver_sqlite') %></option>
-        </select>
-        <div class="form-note"><%= t('admin.data_driver_hint') %></div>
-      </div>
       <div class="field"><label for="maxSizeMb"><%= t('admin.storage_size') %> (MB)</label><input id="maxSizeMb" name="maxSizeMb" type="number" min="1" max="50" value="<%= settings.storage.maxSizeMb %>"></div>
       <div class="field"><label for="region"><%= t('admin.s3_region') %></label><input id="region" name="region" value="<%= settings.storage.s3.region %>" placeholder="auto"><div class="form-note"><%= t('admin.s3_region_hint') %></div></div>
       <div class="field"><label for="bucket">Bucket</label><input id="bucket" name="bucket" value="<%= settings.storage.s3.bucket %>" placeholder="my-blog-assets"></div>

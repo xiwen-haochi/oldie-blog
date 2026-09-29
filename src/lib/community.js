@@ -1,15 +1,13 @@
-import { JsonStore } from './store.js';
-import { DATA_DIR } from './paths.js';
-import path from 'node:path';
+import { Store } from './store.js';
 
 /**
  * Guestbook + post comments share one store. Each entry targets either the
  * guestbook (target = 'guestbook') or a post slug (target = 'post:<slug>').
  */
 export class Community {
-  constructor({ file = path.join(DATA_DIR, 'guestbook.json'), subscribersFile = path.join(DATA_DIR, 'subscribers.json') } = {}) {
-    this.store = new JsonStore(file, { entries: [], nextId: 1, updatedAt: null });
-    this.subscribers = new JsonStore(subscribersFile, { emails: [], addedAt: {} });
+  constructor({ name = 'guestbook', subscribersName = 'subscribers' } = {}) {
+    this.store = new Store(name, { entries: [], nextId: 1, updatedAt: null });
+    this.subscribers = new Store(subscribersName, { emails: [], addedAt: {} });
   }
 
   #all() { return this.store.sync().entries || []; }

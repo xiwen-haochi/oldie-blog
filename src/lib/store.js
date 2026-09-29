@@ -1,44 +1,24 @@
-import fs from 'node:fs';
-import fsp from 'node:fs/promises';
-import path from 'node:path';
-import { backendName, sqliteGet, sqlitePut, databaseFile } from './db.js';
-
-/** Which backend a store should use. Set once at boot from the site config. */
-let driver = 'json';
-export function setDataDriver(name) {
-  driver = backendName({ dataDriver: name });
-  return driver;
-}
-export function getDataDriver() {
-  return driver;
-}
+import { sqliteGet, sqlitePut, sqliteDelete, databaseFile } from './db.js';
 
 /**
- * Runtime store. Two interchangeable backends:
+ * The runtime store. One implementation, one file: data/oldie.sqlite.
  *
- *   json    – one file per store, atomic writes (tmp + rename). Human
- *            readable, which is why it is the default.
- *   sqlite – everything in data/oldie.sqlite through node:sqlite, which
- *            ships with Node itself, so still no dependency to install.
+ * A "store" is a named JSON document inside that single database. Settings,
+ * hit counts, the guestbook, subscribers and sessions are each one of them;
+ * articles live alongside under their own keys (post:<slug>, page:<slug>).
  *
- * Reads are cached either way; writes go through a promise chain so two
- * requests can never interleave.
+ * Reads are cached; writes go through a promise chain so two requests can never
+ * interleave and lose one another's change.
  */
-export class JsonStore {
-  #file;
+export class Store {
   #name;
   #fallback;
   #cache = null;
   #queue = Promise.resolve();
 
-  constructor(file, fallback = {}, options = {}) {
-    this.#file = file;
-    this.#name = options.name || path.basename(file).replace(/\.json$/, '');
+  constructor(name, fallback = {}) {
+    this.#name = String(name);
     this.#fallback = fallback;
-  }
-
-  get file() {
-    return this.#file;
   }
 
   get name() {
@@ -46,35 +26,31 @@ export class JsonStore {
   }
 
   get backend() {
-    return driver;
+    return 'sqlite';
+  }
+
+  get file() {
+    return databaseFile();
+  }
+
+  /** Where this store physically lives, for the admin screens. */
+  where() {
+    return databaseFile();
   }
 
   /** Synchronous read of the cached value, loading from storage on first use. */
   sync() {
-    if (this.#cache === null) this.#cache = this.#loadSync();
+    if (this.#cache === null) this.#cache = this.#load();
     return this.#cache;
   }
 
-  #loadSync() {
-    if (driver === 'sqlite') return sqliteGet(this.#name, this.#fallback);
-    try {
-      return JSON.parse(fs.readFileSync(this.#file, 'utf8'));
-    } catch {
-      return structuredClone(this.#fallback);
-    }
+  #load() {
+    return sqliteGet(this.#name, this.#fallback);
   }
 
   async read() {
     if (this.#cache !== null) return this.#cache;
-    if (driver === 'sqlite') {
-      this.#cache = sqliteGet(this.#name, this.#fallback);
-      return this.#cache;
-    }
-    try {
-      this.#cache = JSON.parse(await fsp.readFile(this.#file, 'utf8'));
-    } catch {
-      this.#cache = structuredClone(this.#fallback);
-    }
+    this.#cache = this.#load();
     return this.#cache;
   }
 
@@ -92,23 +68,27 @@ export class JsonStore {
   }
 
   async flush(value = this.sync()) {
-    if (driver === 'sqlite') {
-      sqlitePut(this.#name, value);
-      return value;
-    }
-    await fsp.mkdir(path.dirname(this.#file), { recursive: true });
-    const tmp = this.#file + '.' + process.pid + '.' + Date.now() + '.tmp';
-    await fsp.writeFile(tmp, JSON.stringify(value, null, 2) + '\n', 'utf8');
-    await fsp.rename(tmp, this.#file);
+    sqlitePut(this.#name, value);
     return value;
   }
 
-  /** Drop the cache so the next read hits storage (settings hot-reload). */
+  /** Drop the cache so the next read hits the database. */
   invalidate() {
     this.#cache = null;
   }
 
-  where() {
-    return driver === 'sqlite' ? databaseFile() : this.#file;
+  async clear() {
+    sqliteDelete(this.#name);
+    this.#cache = null;
+    return true;
   }
+}
+
+/** Convenience for the one-off call sites that do not keep a Store around. */
+export function readStore(name, fallback = {}) {
+  return sqliteGet(name, fallback);
+}
+
+export function writeStore(name, value) {
+  return sqlitePut(name, value);
 }

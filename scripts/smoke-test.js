@@ -67,6 +67,8 @@ process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'smoke-test-password'
 // now the app can be imported: it will resolve everything inside the sandbox
 const { startServer } = await import('../src/server.js');
 const { CONFIG_DIR } = await import('../src/lib/paths.js');
+// the suite asserts on stored documents, not on files: articles are in the db
+const { readDoc, listDocs, fileNameFor } = await import('../src/lib/writer.js');
 
 const ROOT = SANDBOX;
 // unique per run: the suite can be run repeatedly against the same data dir
@@ -565,13 +567,14 @@ async function main() {
         body: '# Hello from the admin\n\nWritten by the smoke test.\n\n- one\n- two',
       });
       assert.equal(res.status, 302, 'save status ' + res.status);
-      const file = path.join(ROOT, 'content', 'posts', '2025-06-01-' + createdSlug + '.md');
-      assert.ok(fs.existsSync(file), 'markdown file was not written');
-      const body = fs.readFileSync(file, 'utf8');
-      assert.match(body, /^---\ntitle: Smoke Test Post/);
-      assert.match(body, /tags: \[smoke, testing\]/);
+      // articles live in the database now; there is no file to find on disk
+      const stored = readDoc({ kind: 'post', slug: createdSlug });
+      assert.ok(stored, 'the post was not stored');
+      assert.equal(stored.frontMatter.title, 'Smoke Test Post');
+      assert.deepEqual(stored.frontMatter.tags, ['smoke', 'testing']);
+      assert.match(stored.body, /Hello from the admin/);
       assert.equal((await get('/posts/' + createdSlug)).status, 200, 'post is not public');
-      return file.split('/').pop();
+      return fileNameFor(stored.frontMatter);
     });
 
     await check('drafts stay private', async () => {
@@ -735,9 +738,10 @@ async function main() {
     });
 
     await check('a cover is saved and actually drawn on the post', async () => {
-      const md = fs.readFileSync(path.join(ROOT, 'content', 'posts', '2025-06-01-' + createdSlug + '.md'), 'utf8');
-      assert.match(md, /cover: \/uploads\/smoke-cover\.png/, 'the cover never reached the front matter');
-      assert.match(md, /coverAlt: A cover, drawn/, 'the alt text never reached the front matter');
+      const stored = readDoc({ kind: 'post', slug: createdSlug });
+      assert.ok(stored, 'the post is not in the database');
+      assert.equal(stored.frontMatter.cover, '/uploads/smoke-cover.png', 'the cover never reached the front matter');
+      assert.equal(stored.frontMatter.coverAlt, 'A cover, drawn', 'the alt text never reached the front matter');
 
       const page = await (await get('/posts/' + createdSlug)).text();
       assert.match(page, /<figure class="article-cover">/, 'the cover is not drawn anywhere');

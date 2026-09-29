@@ -1,12 +1,11 @@
 /**
- * Storage backend for the runtime data (hit counter, guestbook, sessions,
- * settings overrides).
+ * The storage engine: one SQLite file, data/oldie.sqlite, holding everything —
+ * settings, articles, hit counts, guestbook, subscribers, sessions.
  *
- *   json    – one file per store. Human readable, git-ignorable, zero setup.
- *   sqlite – one file for everything, real transactions, survives power cuts.
- *
- * SQLite uses node:sqlite, which ships with Node 22.5+ — still no dependency.
- * The JSON store stays the default so a fresh clone needs nothing at all.
+ * There is no second backend. One file means one place to back up, one place to
+ * look when something is wrong, and no "which driver was I on" questions.
+ * SQLite is node:sqlite, which ships with Node 22.5+, so the project still
+ * installs with zero dependencies and nothing to compile.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -34,10 +33,13 @@ export function sqliteAvailable() {
   return Boolean(loadSqlite() && loadSqlite().DatabaseSync);
 }
 
-export function backendName(config) {
-  const want = String(config?.dataDriver || 'json').toLowerCase();
-  if (want === 'sqlite' && sqliteAvailable()) return 'sqlite';
-  return 'json';
+/** Fail loudly and usefully rather than silently writing nothing. */
+export function requireSqlite() {
+  if (sqliteAvailable()) return true;
+  throw new Error(
+    'This site stores everything in SQLite (node:sqlite), which ships with ' +
+    'Node 22.5 and later. Run it on Node 22.5+ — see .nvmrc — or upgrade.'
+  );
 }
 
 export function databaseFile() {
@@ -50,6 +52,7 @@ let db = null;
 
 function open() {
   if (db) return db;
+  requireSqlite();
   fs.mkdirSync(DATA_DIR, { recursive: true });
   db = new (loadSqlite().DatabaseSync)(databaseFile());
   db.exec('PRAGMA journal_mode = WAL');
@@ -78,6 +81,20 @@ export function sqliteNames() {
   return open().prepare('SELECT name FROM stores').all().map((r) => r.name);
 }
 
+/** Every key under a namespace, without the prefix. Articles use post:/page:. */
+export function sqliteKeysWith(prefix) {
+  return open()
+    .prepare('SELECT name FROM stores WHERE name LIKE ? ESCAPE ?')
+    .all(escapeLike(prefix) + '%', '\\')
+    .map((r) => r.name.slice(prefix.length));
+}
+
+export function sqliteDeleteWhere(prefix) {
+  return open()
+    .prepare('DELETE FROM stores WHERE name LIKE ? ESCAPE ?')
+    .run(escapeLike(prefix) + '%', '\\').changes;
+}
+
 export function sqliteDelete(name) {
   open().prepare('DELETE FROM stores WHERE name = ?').run(name);
   return true;
@@ -95,4 +112,9 @@ export function sqliteClose() {
     try { db.close(); } catch { /* already closed */ }
     db = null;
   }
+}
+
+/** LIKE treats % and _ as wildcards; a slug can contain neither, but be safe. */
+function escapeLike(value) {
+  return String(value).replace(/[\\%_]/g, (c) => '\\' + c);
 }

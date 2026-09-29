@@ -3,7 +3,6 @@ import path from 'node:path';
 import { search, parseQuery } from './search.js';
 import { toPlainText } from './markdown.js';
 import { formatDate, pad } from './text.js';
-import { getDataDriver } from './store.js';
 import { ROOT } from './paths.js';
 
 const FORTUNES = [
@@ -71,7 +70,7 @@ function colophonRows(ctx) {
     // The exact patch level is a free CVE-targeting hint. The major line is
     // enough for the joke and useless to an attacker.
     node: process.versions.node.split('.')[0],
-    driver: getDataDriver(),
+    driver: 'sqlite',
   };
 }
 

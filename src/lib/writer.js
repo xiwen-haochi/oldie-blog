@@ -1,46 +1,7 @@
-import fs from 'node:fs';
-import fsp from 'node:fs/promises';
-import path from 'node:path';
-import matter from 'gray-matter';
-import { POSTS_DIR, PAGES_DIR } from './paths.js';
+import { sqliteGet, sqlitePut, sqliteDelete, sqliteKeysWith } from './db.js';
 import { slugify } from './text.js';
 
-const FIELD_ORDER = [
-  'title', 'slug', 'date', 'updated', 'description', 'tags', 'author', 'cover', 'coverAlt',
-  'keywords', 'canonical', 'draft', 'featured', 'featuredAt', 'noindex', 'lang', 'series', 'audio',
-];
-
-const yamlString = (value) => {
-  const s = String(value == null ? '' : value);
-  if (!s) return '""';
-  if (/[:#\[\]{}&*!|>'"%@\u0060]|\n/.test(s) || /^\s|\s$/.test(s)) return JSON.stringify(s);
-  return s;
-};
-
-const yamlValue = (v) => {
-  if (typeof v === 'boolean' || typeof v === 'number') return String(v);
-  if (Array.isArray(v)) return v.length ? '[' + v.map(yamlString).join(', ') + ']' : '[]';
-  return yamlString(v);
-};
-
-/** Deterministic, human-editable front matter — the file stays readable. */
-export function frontMatter(fields, body) {
-  const lines = ['---'];
-  const rest = Object.keys(fields).filter((k) => !FIELD_ORDER.includes(k) && fields[k] !== undefined && fields[k] !== '');
-  const keys = [...FIELD_ORDER.filter((k) => fields[k] !== undefined && fields[k] !== ''), ...rest];
-  for (const key of keys) lines.push(key + ': ' + yamlValue(fields[key]));
-  lines.push('---', '', '');
-  return lines.join('\n') + String(body || '').replace(/^\n+/, '');
-}
-
-function fileNameFor(fields) {
-  const date = new Date(fields.date || Date.now());
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const d = String(date.getUTCDate()).padStart(2, '0');
-  return y + '-' + m + '-' + d + '-' + fields.slug + '.md';
-}
-
+/** Normalise whatever the editor sent into the shape a document stores. */
 export function normaliseFields(input = {}, existing = {}) {
   const pick = (k, fallback = '') => (input[k] === undefined ? fallback : input[k]);
   const on = (v) => v === 'on' || v === true || v === 'true' || v === '1';
@@ -71,58 +32,106 @@ export function normaliseFields(input = {}, existing = {}) {
   };
 }
 
+const PREFIX = { post: 'post:', page: 'page:' };
+const key = (kind, slug) => PREFIX[kind] + slugify(slug);
+
+/** The name this document would have on disk, for display and for exports. */
+export function fileNameFor(fields) {
+  const date = String(fields.date || new Date().toISOString().slice(0, 10));
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '0000-00-00';
+  return d + '-' + fields.slug + '.md';
+}
+
+const FIELD_ORDER = [
+  'title', 'slug', 'date', 'updated', 'description', 'tags', 'author', 'cover', 'coverAlt',
+  'keywords', 'canonical', 'draft', 'featured', 'featuredAt', 'noindex', 'lang', 'series', 'audio',
+];
+
+const yamlString = (value) => {
+  const s = String(value == null ? '' : value);
+  if (!s) return '""';
+  if (/[:#\[\]{}&*!|>'"%@\u0060]|\n/.test(s) || /^\s|\s$/.test(s)) return JSON.stringify(s);
+  return s;
+};
+
+const yamlValue = (v) => {
+  if (Array.isArray(v)) return '[' + v.map((x) => yamlString(x)).join(', ') + ']';
+  if (typeof v === 'boolean') return String(v);
+  if (v === null || v === undefined) return '""';
+  return yamlString(v);
+};
+
+/** The export form: a real Markdown file with real YAML front matter. */
+export function frontMatter(fields, body) {
+  const lines = ['---'];
+  for (const name of FIELD_ORDER) {
+    if (!(name in fields)) continue;
+    const value = fields[name];
+    // empty is worth nothing in an export, but false and 0 are answers
+    if (value === '' || value === null || value === undefined) continue;
+    if (Array.isArray(value) && !value.length) continue;
+    lines.push(name + ': ' + yamlValue(value));
+  }
+  lines.push('---', '', String(body || '').replace(/^\n+/, ''));
+  return lines.join('\n');
+}
+
 /**
- * Create or update a Markdown file on disk. Markdown stays the source of
- * truth — the admin UI is simply another editor for the same files.
+ * Create or update a document. Markdown in, a row in the database out; the
+ * front matter is kept as a parsed object rather than text, which is the whole
+ * point of not writing files any more.
  */
 export async function saveDoc({ kind = 'post', slug, fields, body }) {
-  const dir = kind === 'post' ? POSTS_DIR : PAGES_DIR;
-  await fsp.mkdir(dir, { recursive: true });
-
-  const previous = slug ? findFile(dir, slug) : null;
-  const keepName = previous && path.basename(previous.file).replace(/^\d{4}-\d{2}-\d{2}-/, '').replace(/\.md$/, '') === fields.slug;
-  const file = keepName ? previous.file : path.join(dir, fileNameFor(fields));
-
-  if (previous && !keepName) await fsp.rm(previous.file, { force: true });
-  await fsp.writeFile(file, frontMatter(fields, body), 'utf8');
-  return { file: path.basename(file), path: file, created: !previous };
+  const previous = slug ? readDoc({ kind, slug }) : null;
+  const doc = {
+    kind,
+    slug: fields.slug,
+    frontMatter: { ...fields },
+    body: String(body || ''),
+  };
+  if (previous && previous.slug !== fields.slug) sqliteDelete(key(kind, previous.slug));
+  sqlitePut(key(kind, fields.slug), doc);
+  return { file: fileNameFor(fields), key: key(kind, fields.slug), created: !previous };
 }
 
 export async function deleteDoc({ kind = 'post', slug }) {
-  const found = findFile(kind === 'post' ? POSTS_DIR : PAGES_DIR, slug);
+  const found = readDoc({ kind, slug });
   if (!found) return false;
-  await fsp.rm(found.file, { force: true });
+  sqliteDelete(key(kind, slug));
   return true;
 }
 
-export function findFile(dir, slug) {
+/** The stored document, or null. */
+export function readDoc({ kind = 'post', slug }) {
   const clean = slugify(slug);
-  let names = [];
-  try { names = fs.readdirSync(dir); } catch { return null; }
-  for (const name of names) {
-    if (!name.endsWith('.md')) continue;
-    const base = name.replace(/\.md$/, '');
-    const stripped = base.replace(/^\d{4}-\d{2}-\d{2}-/, '');
-    if (slugify(stripped) === clean || slugify(base) === clean) {
-      return { file: path.join(dir, name), name };
-    }
-  }
-  return null;
+  if (!clean) return null;
+  return sqliteGet(key(kind, clean), null);
 }
 
-/** Raw front matter + body, for the "edit the .md file directly" screen. */
+export function docExists({ kind = 'post', slug }) {
+  return Boolean(readDoc({ kind, slug }));
+}
+
+/** Front matter + body, which is what the editor needs. */
 export function rawOf({ kind = 'post', slug }) {
-  const found = findFile(kind === 'post' ? POSTS_DIR : PAGES_DIR, slug);
-  if (!found) return null;
-  const parsed = matter(fs.readFileSync(found.file, 'utf8'));
-  return { file: found.name, data: parsed.data, body: String(parsed.content).replace(/^\n+/, '') };
+  const doc = readDoc({ kind, slug });
+  if (!doc) return null;
+  return {
+    file: fileNameFor({ date: doc.frontMatter.date, slug: doc.slug }),
+    data: doc.frontMatter,
+    body: String(doc.body || '').replace(/^\n+/, ''),
+  };
 }
 
 export function listFiles(kind = 'post') {
-  const dir = kind === 'post' ? POSTS_DIR : PAGES_DIR;
-  try {
-    return fs.readdirSync(dir).filter((n) => n.endsWith('.md') && !n.startsWith('_'));
-  } catch {
-    return [];
-  }
+  return sqliteKeysWith(PREFIX[kind] || PREFIX.post)
+    .filter((slug) => !slug.startsWith('_'))
+    .map((slug) => fileNameFor({ date: sqliteGet(key(kind, slug), { frontMatter: {} }).frontMatter?.date, slug }));
+}
+
+/** Every stored document of a kind, for the index. */
+export function listDocs(kind = 'post') {
+  return sqliteKeysWith(PREFIX[kind] || PREFIX.post)
+    .map((slug) => sqliteGet(key(kind, slug), null))
+    .filter(Boolean);
 }

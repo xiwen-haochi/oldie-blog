@@ -3,7 +3,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { createZip, readZip, safeEntryPath } from './zip.js';
 import { ROOT, POSTS_DIR, PAGES_DIR, DATA_DIR, UPLOAD_DIR, CONFIG_DIR } from './paths.js';
-import { sqliteStats, sqliteGet, sqliteNames, databaseFile, backendName } from './db.js';
+import { sqliteStats, sqliteGet, sqliteNames, databaseFile } from './db.js';
 
 const IGNORE = /^(\.git|node_modules|\.cache|coverage|\.DS_Store|\.gitkeep|.*\.log$|.*\.tmp$|.*\.sqlite-wal$|.*\.sqlite-shm$|.*\.migrated-.*|.*\.before-restore-.*|\.restore-staging-.*)/;
 
@@ -58,7 +58,7 @@ export function backupPreview() {
     files: files.length,
     bytes,
     byGroup,
-    driver: backendName({ dataDriver: 'sqlite' }),
+    driver: 'sqlite',
     database: databaseFile(),
   };
 }
@@ -74,7 +74,7 @@ export function createBackup() {
     version: 1,
     createdAt: now.toISOString(),
     node: process.version,
-    storage: backendName({ dataDriver: 'sqlite' }),
+    storage: 'sqlite',
     files: files.map((f) => f.name),
   };
   const entries = [

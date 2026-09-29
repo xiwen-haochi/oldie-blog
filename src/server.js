@@ -12,7 +12,6 @@ import { apiRoutes } from './routes/api.js';
 import { adminRoutes } from './routes/admin.js';
 import { pageMeta, breadcrumbLd } from './lib/seo.js';
 import { privacyReport, sensitiveOnDisk } from './lib/privacy.js';
-import { getDataDriver } from './lib/store.js';
 import { cookies, clientIp, visitorId, geoGuess, gzipMiddleware, countPageview } from './lib/http.js';
 import { ensureCsrf } from './lib/sessions.js';
 import { resolveLocale, makeTranslator, availableLocales, localeMeta, normaliseLocale, clientStrings } from './lib/i18n.js';
@@ -201,7 +200,7 @@ export function startServer({ port = process.env.PORT || 4173, host = process.en
     for (const w of warnings) console.log('  ' + w);
     const secretFiles = sensitiveOnDisk();
     if (secretFiles.length) {
-      console.log('  \u001b[90m▸\u001b[0m data    ' + getDataDriver() + ' 存储，' + secretFiles.length + ' 个文件在 data/ 里（已 gitignore，不会提交）');
+      console.log('  \u001b[90m▸\u001b[0m data    data/oldie.sqlite' + (secretFiles.length ? ' - ' + secretFiles.length + ' files in data/ (gitignored)' : '') + '\u001b[0m');
     }
     console.log('  [32m▸[0m posts   ' + ctx.index.publishedPosts().length + ' published, ' + ctx.index.allPosts().filter((p) => p.draft).length + ' drafts');
     console.log('');
