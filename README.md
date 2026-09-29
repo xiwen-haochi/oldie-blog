@@ -143,9 +143,17 @@ docker exec -it <container> node scripts/reset-admin.js # anywhere else
 1. **New Project → Deploy from GitHub repo**, pick `xiwen-haochi/oldie-blog`. Railway reads
    the `Dockerfile` and builds it.
 
-2. **Attach a Volume at `/app/data`.** Railway's filesystem is ephemeral: without one,
-   every redeploy wipes your posts, guestbook and counters.
-   (Add a second volume at `/app/content` if you import articles from outside git.)
+2. **Attach volumes for what must survive, not just `/app/data`.** Railway's filesystem
+   is ephemeral — only a mounted volume survives a redeploy.
+
+   | Mount at | Holds | Without it |
+   | --- | --- | --- |
+   | `/app/content` | every post and page (`.md`) | **the next redeploy deletes every article** |
+   | `/app/data` | hits, guestbook, subscribers, admin settings | counters and messages reset to zero |
+   | `/app/config` | `site.config.json` and the admin password | the site forgets its own settings and password |
+
+   `/app/data` is the one everybody remembers to mount. It is not the one that matters
+   most: your `.md` sources are gitignored, so a lost `content` volume cannot be recovered.
 
 3. **Set three variables** (the Variables tab):
 

@@ -137,9 +137,17 @@ docker exec -it <容器名> node scripts/reset-admin.js    # 其他平台同理
 1. **New Project → Deploy from GitHub repo**，选 `xiwen-haochi/oldie-blog`。Railway 会自动读
    `Dockerfile` 并构建。
 
-2. **给服务加一个 Volume，挂到 `/app/data`** —— Railway 的文件系统是临时的，没有这个卷，
-   每次重新部署都会把文章、留言、访问量**全部清空**。
-   （文章在 `/app/content`，如果你也从 GitHub 之外的地方导入过文章，可以再挂一个到 `/app/content`。）
+2. **给要留存的东西挂卷，光挂 `/app/data` 是不够的。** Railway 的文件系统是临时的，
+   只有挂了卷的目录才能活过重新部署。
+
+   | 挂在 | 里面是什么 | 不挂会怎样 |
+   | --- | --- | --- |
+   | `/app/content` | 全部文章和页面（`.md`） | **下一次重新部署，所有文章消失** |
+   | `/app/data` | 访问量、留言、订阅者、后台设置 | 计数和留言被清零 |
+   | `/app/config` | `site.config.json` 和管理员密码 | 站点忘记自己的配置，密码也要重设 |
+
+   `/app/data` 是大多数人记得挂的那个，但它不是最重要的那个 —— 文章丢了就真的没了，
+   而且 `.md` 源文件不在 git 里，恢复不了。
 
 3. **设三个环境变量**（Variables 标签页）：
 
