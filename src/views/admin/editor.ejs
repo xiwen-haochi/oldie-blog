@@ -10,7 +10,7 @@
   const kindLabel = kind === 'post' ? t('admin.posts').replace(/^[^ ]+ /, '') : t('admin.pages').replace(/^[^ ]+ /, '');
 %>
 <div class="admin-head">
-  <h1>✏️ <%= fresh ? t('admin.new', { kind: kindLabel }) : kindLabel %> <span class="mono muted" style="font-size:13px">content/<%= kind === 'post' ? 'posts' : 'pages' %>/<%= doc.file || '(unsaved)' %></span></h1>
+  <h1>✏️ <%= fresh ? t('admin.new', { kind: kindLabel }) : kindLabel %> <% if (d.slug) { %><span class="mono muted" style="font-size:13px">/<%= kind === 'post' ? 'posts/' : '' %><%= d.slug %></span><% } %></h1>
   <div class="btn-row">
     <button class="btn primary" type="submit" form="editor-form">💾 <%= t('admin.save') %> (<%= fresh ? t('admin.create') : t('admin.update') %>)</button>
     <% if (!fresh) { %>

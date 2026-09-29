@@ -14,7 +14,7 @@ updated: 2026-09-28
 | 内容 | Markdown + front matter | 归 git 管，随时可搬走 |
 | 渲染 | markdown-it + highlight.js | 快、可扩展、不依赖前端框架 |
 | 服务端 | Node + Express | 一个进程一条命令，不要容器 |
-| 存储 | Markdown 文件 + 几个 JSON | 没有数据库，就没有迁移 |
+| 存储 | 一个 SQLite 文件 | 文章、设置、留言、计数都在里面，备份就是拷这一个文件 |
 | 搜索 | 内存倒排索引 | 支持中文分词，零依赖 |
 | 声音 | Web Audio 方波 | 0 字节音频资源 |
 | 追踪 | 没有 | 只留一个匿名访客 cookie |
@@ -41,8 +41,10 @@ pnpm install
 pnpm start         # → http://localhost:4173
 ```
 
-然后往 `content/posts/` 里丢一个 `.md` 文件，访问 `/admin` 登录即可。
-第一次启动会在终端里打印一个临时密码。
+然后访问 `/admin` 登录。第一次启动会在终端里打印一个临时密码，进去之后在后台写第一篇。
+
+已经有写好的 `.md`？放进 `content/posts/`，跑一次 `pnpm start` —— 首次启动会把它们导进
+数据库，导完这些文件就可以删了。
 
 ## 多语言
 

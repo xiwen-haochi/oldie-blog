@@ -28,7 +28,7 @@
       <tr>
         <td>
           <a href="<%= adminPath %>/posts/<%= p.slug %>/edit"><strong><%= p.title %></strong></a>
-          <div class="mono muted" style="font-size:11px">content/posts/<%= p.file %> · <%= p.wordCount %> · <%= p.readingTime %> <%= t('card.min') %></div>
+          <div class="mono muted" style="font-size:11px">/posts/&lt;%= p.slug %&gt; · <%= p.wordCount %> · <%= p.readingTime %> <%= t('card.min') %></div>
         </td>
         <td class="mono" style="font-size:11.5px"><%= formatDate(p.date, { locale: dateLocale }) %></td>
         <td><% p.tags.forEach(function (tag) { %><span class="stamp" style="background:#c0c0c0;color:#000"><%= tag %></span> <% }) %></td>

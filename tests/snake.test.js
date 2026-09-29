@@ -65,6 +65,14 @@ function load() {
     (id) => { timers.delete(id); },
   );
 
+  /**
+   * Park the apple somewhere the snake will not meet it. Food spawns at
+   * random, so a test that counts score is a coin flip: about one run in
+   * five the snake eats on its way into the wall and the total is not what
+   * the test wrote down.
+   */
+  const parkFood = () => { Snake.state.food = { x: 0, y: 0 }; };
+
   /** Run the field forward until it dies or the cap is hit. */
   function run(turns, dir) {
     for (let i = 0; i < turns; i++) {
@@ -76,7 +84,7 @@ function load() {
   }
 
   return {
-    Snake, body, saved,
+    Snake, body, saved, parkFood,
     live: () => timers.size,
     lines,
     said: (needle) => lines.filter((l) => l.includes(needle)).length,
@@ -194,6 +202,7 @@ test('a new field replaces the dead one instead of stacking below it', () => {
 test('the best score survives a restart', () => {
   const g = load();
   g.Snake.start();
+  g.parkFood();
   g.Snake.score = 70;
   g.run(40);
   assert.equal(g.saved.get('snake.best'), '70');
@@ -204,6 +213,7 @@ test('the best score survives a restart', () => {
 test('starting a new game does not wipe the stored record', () => {
   const g = load();
   g.Snake.start();
+  g.parkFood();
   g.Snake.score = 70;
   g.run(40);
   assert.equal(g.saved.get('snake.best'), '70');

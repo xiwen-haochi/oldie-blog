@@ -2,16 +2,17 @@
 
 ![home](docs/home.png)
 
-**老博客 / oldie-blog** — a 1990s personal homepage that outlived the dot-com winter.
-Markdown in, server-rendered HTML out, webrings, guestbooks, a DOS terminal in the corner,
-and a real SEO layer underneath.
+**oldie-blog** — a personal blog engine with a 1990s interface.
+
+Write in Markdown, rendered on the server, with an admin, full-text search
+and a complete SEO layer.
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
 [![node](https://img.shields.io/badge/node-%3E%3D22.13-3fa633?logo=node.js)](https://nodejs.org)
 ![license](https://img.shields.io/badge/license-MIT-blue.svg)
-![deps](https://img.shields.io/badge/runtime%20deps-6-informational)](#why-so-few-dependencies)
-![tests](https://img.shields.io/badge/tests-149%20unit%20%2B%2060%20e2e-success)
+![deps](https://img.shields.io/badge/runtime%20deps-6-informational)
+![tests](https://img.shields.io/badge/tests-206%20unit%20%2B%2077%20e2e-success)
 
 </div>
 
@@ -19,37 +20,46 @@ and a real SEO layer underneath.
 
 ## What it is
 
-A personal blog engine dressed as a 1996 GeoCities page. The nostalgia is the interface;
-underneath it is a boring, fast, server-rendered blog that keeps everything in **one SQLite
-file** — settings, articles, hits, guestbook, subscribers and sessions — with a real admin
-and a complete SEO surface.
+A single-process Node blog program. Posts, pages, settings, the guestbook, the
+hit counter and every session live in one file, `data/oldie.sqlite`. Six runtime
+dependencies, no build step.
+
+The interface is a 1990s personal homepage — webrings, a guestbook, a hit counter,
+a DOS terminal on every page, and a mode that switches the whole site back to 1998.
+The pages themselves are ordinary server-rendered HTML: no hydration, no frontend
+framework, no toolchain.
 
 | | |
 | --- | --- |
 | ![posts](docs/posts.png) | ![post](docs/post.png) |
-| **The index** — pinned post, then the rest | **A post** — Markdown in, HTML out |
+| The post list | A post |
 
-### Admin
+### The admin
 
 | | |
 | --- | --- |
 | ![dashboard](docs/admin-dashboard.png) | ![editor](docs/admin-editor.png) |
-| **Dashboard** — traffic, SEO self-check, moderation queue | **Editor** — Markdown with a live preview |
+| Dashboard: traffic, SEO self-check, moderation queue | Editor: write on the left, preview on the right |
 
 | | |
 | --- | --- |
-| ![settings](docs/admin-settings.png) | ![backup](docs/admin-backup.png) |
-| **Settings** — feature switches, storage driver, attachments | **Backup** — the whole site as one `.zip` |
+| ![settings](docs/admin-settings.png) | ![media](docs/admin-media.png) |
+| Settings: feature switches, storage, site details | Media library: uploaded images |
 
-### The rest of it
+| | |
+| --- | --- |
+| ![backup](docs/admin-backup.png) | ![login](docs/admin-login.png) |
+| Backup: the whole site as one `.zip` | The admin path is yours to choose |
+
+### Other pages
 
 | | |
 | --- | --- |
 | ![guestbook](docs/guestbook.png) | ![search](docs/search.png) |
-| **Guestbook** — sign it, with moderation | **Search** — CJK-aware, `tag:` included |
+| Guestbook: sign it, with moderation | Search: understands Chinese, understands `tag:` |
 
-| ![1998 mode](docs/mode-1998.png) | ![login](docs/admin-login.png) |
-| **1998 mode** — one click rewinds the whole site | The admin is never advertised, never indexed |
+| ![1998 mode](docs/mode-1998.png) | ![about](docs/about.png) |
+| 1998 mode | The about page |
 
 ---
 
@@ -64,8 +74,8 @@ pnpm install
 pnpm start         # → http://localhost:4173
 ```
 
-The first boot prints a temporary admin password. Sign in at `/admin` and change it under
-**Settings → Password**.
+The first boot prints a temporary admin password. Sign in at `/admin` and change
+it under **Settings → Password**.
 
 Want something to look at first?
 
@@ -77,17 +87,17 @@ pnpm seed          # five sample posts, a guestbook, a counter
 
 ## Deploying
 
-### One command with Docker
+### Docker
 
 ```bash
 cp .env.example .env      # set ADMIN_PASSWORD and SITE_URL
 docker compose up -d
 ```
 
-Your writing, your counters and your settings live in **named volumes**, so rebuilding
+Your writing, your counters and your settings live in named volumes, so rebuilding
 the image never loses them. `/healthz` backs the container healthcheck.
 
-### From GitHub, automatically
+### Built from GitHub
 
 Every push to `main` runs the test suite and builds the image into
 GitHub Container Registry:
@@ -104,7 +114,7 @@ if anything private is ever about to be committed.
 > → `oldie-blog` → **Package settings** → **Change visibility** → **Public**.
 > Until you do, `docker pull` from outside gets a 401.
 
-### Where the password comes from, and how to change it
+### The admin password
 
 **On the first boot** the app does one of two things:
 
@@ -123,8 +133,8 @@ first boot.
 
 **To change it:** sign in → **Settings → Password** → current password, then the new one.
 
-Afterwards the `ADMIN_PASSWORD` variable can be **deleted** — it only seeds the first
-boot, and from then on the password you chose is the one that counts, restarts included.
+Afterwards the `ADMIN_PASSWORD` variable can be deleted — it only seeds the first boot,
+and from then on the password you chose is the one that counts, restarts included.
 
 Inside a container (Railway's Console has no shell, so use SSH or run it locally):
 
@@ -133,28 +143,24 @@ docker compose exec blog node scripts/reset-admin.js   # with compose
 docker exec -it <container> node scripts/reset-admin.js # anywhere else
 ```
 
-> The image carries `scripts/`, so resetting the password, adding a post
-> (`new-post.js`) and seeding demo data (`seed-demo.js`) all work in a running
-> container. The test suite is not shipped.
+The image carries `scripts/`, so resetting the password, adding a post (`new-post.js`)
+and seeding demo data (`seed-demo.js`) all work in a running container.
+The test suite is not shipped.
 
-> A quicker route: delete `config/admin.json` and restart. The app generates a
-> fresh temporary password and prints it in the log.
-### Deploying to Railway (the three things that bite)
+### Railway
 
-1. **New Project → Deploy from GitHub repo**, pick `xiwen-haochi/oldie-blog`. Railway reads
-   the `Dockerfile` and builds it.
+1. **New Project → Deploy from GitHub repo**, pick `xiwen-haochi/oldie-blog`.
+   Railway reads the `Dockerfile` and builds it.
 
-2. **Attach one volume at `/app/data`.** Railway's filesystem is ephemeral, and that
-   directory holds the single file the whole site lives in.
+2. **Attach one volume, at `/app/data`.** Railway's filesystem is ephemeral and a
+   redeploy clears it; the whole site is in that one file.
 
    | Mount at | Holds | Without it |
    | --- | --- | --- |
-   | `/app/data` | `oldie.sqlite` — settings, every article, hits, guestbook, subscribers, sessions | **the next redeploy deletes the entire site** |
-   | `/app/config` | `site.config.json` and the admin password | read only on the very first boot, so nothing to worry about |
-   | `/app/content` | `.md` files, imported once at first boot | ditto |
+   | `/app/data` | `oldie.sqlite` — settings, every post and page, guestbook, subscribers, sessions | **the next redeploy empties the entire site** |
 
-   One volume, one file, one thing to back up. Copy `/app/data/oldie.sqlite` and you have
-   copied the site.
+   `config/` and `content/` do not need one: `site.config.json` is read once on the
+   first boot, and any `.md` under `content/` is imported once at the same time.
 
 3. **Set three variables** (the Variables tab):
 
@@ -170,10 +176,11 @@ Once it is live Railway hands you a `*.up.railway.app` address. **Settings → N
 lets you attach your own domain.
 
 > The free tier sleeps when idle, so a cold start takes a few seconds.
+
 ### On a plain server
 
 ```bash
-git clone … && cd oldie-blog && pnpm install --prod=false
+git clone … && cd oldie-blog && pnpm install
 NODE_ENV=production ADMIN_PASSWORD='…' SITE_URL='https://your.site' \
   node src/server.js
 ```
@@ -193,61 +200,58 @@ let the proxy terminate HTTPS — the app speaks plain HTTP and never redirects 
 
 ---
 
-## Publishing a post
+## Writing a post
 
-### 1. The admin — the normal way, no terminal required
-
-**You never have to touch a command line.** The admin is the whole workflow:
+### In the admin
 
 ```
 ①  open  https://your.site/admin/posts/new
 
 ②  title
 
-③  body    — Markdown box on the left, live preview on the right
-            the toolbar has B / I / heading / quote / link / image / code
+③  body    — Markdown on the left, live preview on the right
+             the toolbar has B / I / heading / quote / link / image / code
 
 ④  optional fields on the right
-       · tags        comma separated, they become tag pages
-       · description  leave blank and it takes the opening of the body;
-                      the same text is used for SEO and the feed
-       · cover        /uploads/photo.png
+      · tags        comma separated, they become tag pages
+      · description  leave blank and it takes the opening of the body;
+                     the same text is used for SEO and the feed
+      · cover        pick one from the media library, or type /uploads/photo.png
 
 ⑤  press Save        → published, live immediately
    tick Draft first  → only you can see it
-   tick Pin to home  → it lands in the pinned section
+   tick Pin first    → it sorts above everything else
 ```
 
 ![The editor](docs/admin-editor.png)
 
 **To edit a published post:** **Posts** in the sidebar → click the title → save again.
+**To delete one:** the delete button on the same row.
 
-**To delete one:** the delete button on the same row. It removes the `.md` file, so
-`rm`-ing it on the server does exactly the same thing.
+**Images:** drag the file into the body box, or upload it under **Media** and write
+`![alt](/uploads/photo.png)`.
 
-**Images:** either drag the file straight into the body box, or upload it under
-**Media** and write `![alt](/uploads/photo.png)` in the text.
+**Changed your mind?** the editor autosave only lives in your browser, so closing the
+tab discards it. A published post is in the database, and **Backup & restore** writes a
+`.zip` of exactly that.
 
-**Changed your mind about the text?** the editor autosave only lives in your browser,
-so closing the tab discards it. For something already published, take a backup
-first — **备份与恢复** writes a `.zip` holding the whole database.
-
-### 2. The command line (optional, for bulk work)
+### The command line
 
 ```bash
 pnpm new:post "My title" --tags=intro,tools --draft
+pnpm clean          # wipe posts, pages, messages and counters for a fresh start
 ```
 
-Creates the post in the database, ready to finish in the admin.
-**This is for people who like a terminal, not a requirement.**
+Both write to the database. There is also `seed-demo.js` if you want sample content.
 
-### 3. Markdown on disk
+### Markdown files
 
-Articles live in the database, but a backup also writes them out as real Markdown
-files under `content/`, and a fresh install imports any `.md` files it finds
-there. So a hand-written file is never a dead end.
+Posts live in the database. Two places still touch `.md` files:
 
-The whole format is this:
+- **a backup** writes a real Markdown copy alongside the database, so you can read it
+- **a fresh install** imports any `.md` it finds in `content/posts/` and `content/pages/`
+
+The format is:
 
 ```markdown
 ---
@@ -263,142 +267,89 @@ cover: /uploads/x.png        # optional, cover image
 The body is plain Markdown.
 ```
 
-**Saving is publishing** — the server watches that directory, so a refresh is all it takes.
-
-### Which one should you use
-
-| Situation | Use |
-| --- | --- |
-| Writing normally | **the admin**, publish with the mouse |
-| You live in vim / VS Code | the command line, or any editor |
-| Moving old posts in from elsewhere | drop the `.md` files into `content/posts/` and restart — the first boot imports them |
-
 ### What a push to GitHub actually does
 
 | | |
 | --- | --- |
 | Code changes | pushed; CI re-runs the tests and rebuilds the image |
-| **Your posts** | **not pushed** — `content/` is in `.gitignore` |
-| **The admin password** | **not pushed** — `config/admin.json` is in `.gitignore` |
-| Hits, guestbook, settings | **not pushed** — all under `data/` |
+| **Your posts** | **not pushed** |
+| **The admin password** | **not pushed** |
+| Messages, hits, settings | **not pushed** |
 
-That is deliberate, and it is the difference between this and an ordinary CMS:
-
-- **Anyone who clones your repo** gets an empty site plus the sample posts. Not one
-  word of your own writing comes with it.
-- **Change the password locally** and the deployed site's password does not move. Each
-  machine has its own.
-- **Running the same blog on a second machine** means exporting a `.zip` from
-  **Backup & restore** and importing it there — not using git.
-
-In short: **git carries the code, a `.zip` carries your content.**
+`content/`, `data/`, `config/admin.json` and `public/uploads/` are all in `.gitignore`.
+So anyone who clones your repo gets an empty site, and running the same blog on a
+second machine means exporting a `.zip` from **Backup & restore** and importing it
+there. **git carries the code, a `.zip` carries your content.**
 
 ### So where does it run
 
-GitHub itself **cannot** run this blog. It needs a long-lived Node process and a
-writable disk; GitHub Pages only serves static files. So pushing code is not the same
-as the site being live.
+GitHub itself cannot run this blog. It needs a long-lived Node process and a writable
+disk; GitHub Pages only serves static files. So pushing code is not the same as the
+site being live.
 
 For a real address, pick a host that gives you a persistent disk — Railway, Render,
-Fly.io, or your own server — and start it with the `docker-compose.yml` above:
+Fly.io, or your own server — and start it with the `docker-compose.yml` above.
 
-```bash
-cp .env.example .env      # set ADMIN_PASSWORD and SITE_URL
-docker compose up -d
-```
+---
 
-> **Attach a persistent volume.** Without one, a restart loses every post and every
-> guestbook entry.
->
-> **Set `SESSION_SECRET` and `ADMIN_PASSWORD` before the first boot**, or nobody stays
-> logged in across a restart.
-## Your writing is data, not code
-
-This is the part most blog engines get wrong. Here:
-
-- everything lives in **one file**: `data/oldie.sqlite` — settings, articles, hits, guestbook
-- that file is **gitignored** and never published
-- a fresh clone starts empty; `pnpm seed` gives you sample content to look at
-- **备份与恢复** writes a `.zip` that is both the database and a readable Markdown copy
-
-```bash
-pnpm new:post "Hello world" --tags=intro --draft
-pnpm clean          # wipe posts, pages, messages and counters for a fresh start
-```
-
-> **Trade-off, stated plainly:** your writing is no longer a file you can open in an
-> editor or `git diff`. In exchange you get one thing to back up, one thing to copy when
-> you move servers, and no chance of a half-written file. If you want plain text back,
-> the backup archive has it.
-
-### Where everything lives
+## Data and backup
 
 | Path | Holds | Published? |
 | --- | --- | --- |
-| `data/oldie.sqlite` | your posts, settings, messages, counters | no — that is yours |
-| `content/pages/*.md` | standalone pages | no |
-| `data/` | hit counter, guestbook, subscribers, sessions, settings | no |
-| `config/admin.json` | the admin password (scrypt) | no |
-| `config/site.config.json` | title, nav, webring names | **yes**, on purpose |
+| `data/oldie.sqlite` | posts, pages, settings, messages, hits, sessions | no |
+| `config/admin.json` | the admin password (a scrypt hash) | no |
 | `public/uploads/` | images you attached | no |
+| `content/` | imported on first boot, written by a backup | no |
+| `config/site.config.json` | title, nav, webring names | yes, the pages need it |
 
-**Backup** is one click in the admin: it writes a single `.zip` with your content,
-uploads, config and runtime data. Restoring puts the previous files aside rather than
-deleting them, so a mistake is always reversible.
+**Backup** is one click in the admin: it writes a single `.zip` with the database, the
+uploads and the config. Restoring puts the previous data aside rather than deleting it,
+so a mistake is always reversible.
+
+> A post is a row in a database, not a plain text file you can `git diff`. What you get
+> in exchange is one thing to back up and one thing to copy when you move servers.
+> If you want the plain text, the backup archive has it.
 
 ---
 
 ## Features
 
-**Writing** — Markdown with front matter, live preview, drafts, pinning, tags,
-per-post SEO, and a table of contents. Paste raw HTML and it is sanitised, not trusted:
-stylesheets, inline backgrounds and event handlers are stripped, tables and inline SVG survive.
+**Writing** — Markdown with front matter, live preview, drafts, pinning, tags, per-post
+SEO fields and a table of contents. Pasted HTML goes through an allowlist: `style`,
+inline backgrounds and event handlers are stripped; tables and inline SVG survive.
 
 **Reading** — full-text search that understands Chinese (unigram + bigram), an archive,
 tag pages, reading time, and every post downloadable as plain `.txt` or `.json`.
 
-**The 1990s** — webrings with neighbours, a guestbook that needs moderation, a hit counter,
-a marquee, blinking text, a DOS terminal on every page (<kbd>Ctrl</kbd>+<kbd>K</kbd>),
-a chiptune theme synthesised in the browser, and a **1998 mode** that rewinds the whole site.
+**The 1990s** — webrings with neighbours, a guestbook that needs moderation, a hit
+counter, a marquee, blinking text, a DOS terminal on every page
+(<kbd>Ctrl</kbd>+<kbd>K</kbd>), a chiptune theme synthesised in the browser, and a mode
+that switches the site back to 1998.
 
-**The real parts** — RSS/Atom/JSON Feed, `sitemap.xml`, JSON-LD, `llms.txt`, Open Graph,
-hreflang alternates, an admin at a configurable path that is never advertised, scrypt
-passwords, signed sessions, CSRF tokens, rate-limited login, and a per-request HTML sanitiser.
+**SEO and safety** — RSS / Atom / JSON Feed, `sitemap.xml`, JSON-LD, `llms.txt`,
+Open Graph, hreflang alternates. The admin path is configurable and never advertised;
+passwords are scrypt hashes, session cookies are signed, forms carry CSRF tokens, login
+is rate limited, and every request goes through the HTML sanitiser.
 
 **Switchable** — comments, comment moderation, the guestbook, search, the hit counter,
-random posts, the table of contents and reading time each have an off switch in the admin.
-
----
-
-## Why so few dependencies
-
-Six runtime packages: `express`, `ejs`, `markdown-it`, `highlight.js`, `gray-matter`,
-`multer`. Everything else is in `src/lib`:
-
-| Instead of | this repo has |
-| --- | --- |
-| a search library | a CJK-aware inverted index, ~200 lines |
-| a session library | HMAC-signed cookies, ~80 lines |
-| `bcrypt` | `node:crypto` `scrypt` |
-| a compression library | a hand-rolled gzip middleware |
-| a template engine beyond EJS | EJS, plus a small view layer |
-| an S3 SDK | a SigV4 signer over `fetch` |
-| a ZIP library | a deflate/store writer and reader |
-| a markdown sanitizer | an allowlist HTML sanitiser |
-
-No compiler, no `node-gyp`, no lockfile rot on a fresh clone. `pnpm install` takes seconds.
+random posts, the table of contents and reading time each have a switch in the admin.
 
 ---
 
 ## Development
 
 ```bash
-pnpm test          # 149 unit tests + a 60-check end-to-end suite against a real server
+pnpm test          # 206 unit tests + 77 end-to-end checks
 pnpm test:unit
 pnpm test:e2e
 pnpm dev           # node --watch
 node scripts/check-secrets.mjs
 ```
+
+Six runtime dependencies: `express`, `ejs`, `markdown-it`, `highlight.js`,
+`gray-matter`, `multer`. The search index, sessions, gzip, S3 signing and the ZIP
+reader/writer are in `src/lib`. No compiler, no native modules — `pnpm install`
+takes seconds on a fresh clone.
 
 The end-to-end suite boots a real server in a throwaway data directory, so it can never
 touch your own posts or counters.

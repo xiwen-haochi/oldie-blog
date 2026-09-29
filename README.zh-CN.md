@@ -2,16 +2,16 @@
 
 ![home](docs/home.png)
 
-**老博客 / oldie-blog** —— 一个活过 dot-com 寒冬的 1990 年代个人主页。
-Markdown 写内容，服务端渲染出 HTML，webring、留言簿、角落里的 DOS 终端，
-底下是一套完整的 SEO。
+**老博客 / oldie-blog** — 一个 1990 年代风格的个人博客。
+
+Markdown 写作，服务端渲染，带管理后台、全文搜索和一套完整的 SEO。
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
 [![node](https://img.shields.io/badge/node-%3E%3D22.13-3fa633?logo=node.js)](https://nodejs.org)
 ![license](https://img.shields.io/badge/license-MIT-blue.svg)
 ![deps](https://img.shields.io/badge/runtime%20deps-6-informational)
-![tests](https://img.shields.io/badge/tests-149%20unit%20%2B%2060%20e2e-success)
+![tests](https://img.shields.io/badge/tests-206%20unit%20%2B%2077%20e2e-success)
 
 </div>
 
@@ -19,35 +19,44 @@ Markdown 写内容，服务端渲染出 HTML，webring、留言簿、角落里�
 
 ## 这是什么
 
-一个打扮成 1996 年 GeoCities 页面的博客引擎。怀旧的是界面，底下是正经的服务端渲染博客：
-所有内容都存在**一个 SQLite 文件**里 —— 设置、文章、访问量、留言、订阅、会话。后台是真的，SEO 是完整的。
+一个单进程的 Node 博客程序。文章、页面、设置、留言、访问计数和会话都写在
+`data/oldie.sqlite` 这一个文件里；运行时依赖一共六个，装完就能跑，没有构建步骤。
+
+界面是 1990 年代个人主页的样子 —— webring、留言簿、访问计数器、每页都有的 DOS 终端，
+以及一键把整站切回 1998 年的模式。页面本身是普通的服务端渲染：没有 hydration，
+没有前端框架，也没有一整套构建工具链。
 
 | | |
 | --- | --- |
 | ![posts](docs/posts.png) | ![post](docs/post.png) |
-| **首页** —— 置顶文章 + 最新文章 | **文章** —— 每一页都是一个 `.md` 文件 |
+| 文章列表 | 一篇文章 |
 
 ### 后台
 
 | | |
 | --- | --- |
 | ![dashboard](docs/admin-dashboard.png) | ![editor](docs/admin-editor.png) |
-| **控制台** —— 流量、SEO 自检、审核队列 | **编辑器** —— Markdown + 实时预览 |
+| 控制台：流量、SEO 自检、审核队列 | 编辑器：左边写，右边实时预览 |
 
 | | |
 | --- | --- |
-| ![settings](docs/admin-settings.png) | ![backup](docs/admin-backup.png) |
-| **设置** —— 功能开关、存储驱动、附件 | **备份** —— 整站打成一个 `.zip` |
+| ![settings](docs/admin-settings.png) | ![media](docs/admin-media.png) |
+| 设置：功能开关、存储方式、站点信息 | 媒体库：上传的图片 |
 
-### 其他
+| | |
+| --- | --- |
+| ![backup](docs/admin-backup.png) | ![login](docs/admin-login.png) |
+| 备份：整站打成一个 `.zip` | 后台的地址可以自己改 |
+
+### 其他页面
 
 | | |
 | --- | --- |
 | ![guestbook](docs/guestbook.png) | ![search](docs/search.png) |
-| **留言簿** —— 签名，带审核 | **搜索** —— 支持中文，支持 `tag:` |
+| 留言簿：签名，带审核 | 搜索：支持中文，支持 `tag:` |
 
-| ![1998 模式](docs/mode-1998.png) | ![login](docs/admin-login.png) |
-| **1998 模式** —— 一键把整站倒回过去 | 后台从不出现在任何公开页面 |
+| ![1998 mode](docs/mode-1998.png) | ![about](docs/about.png) |
+| 1998 模式 | 关于页 |
 
 ---
 
@@ -62,48 +71,47 @@ pnpm install
 pnpm start         # → http://localhost:4173
 ```
 
-第一次启动会在终端打印一个临时密码，登录 `/admin` 后到「设置 → 密码」改掉。
+第一次启动会在终端打印一个临时后台密码，登录 `/admin` 之后到「设置 → 密码」改掉。
 
 想先看看长什么样：
 
 ```bash
-pnpm seed          # 五篇示例文章、一个留言簿、一个计数器
+pnpm seed          # 五篇示例文章、一个留言簿、一个访问计数器
 ```
 
 ---
 
 ## 部署
 
-### 一条命令（Docker）
+### Docker
 
 ```bash
 cp .env.example .env      # 填 ADMIN_PASSWORD 和 SITE_URL
 docker compose up -d
 ```
 
-文章、计数器和设置都放在**命名卷**里，重建镜像不会丢。`/healthz` 供容器健康检查使用。
+文章、计数器和设置都放在命名卷里，重建镜像不会丢。`/healthz` 供容器健康检查使用。
 
 ### 从 GitHub 自动构建
 
-每次推送 `main` 都会跑测试并把镜像构建到 GitHub Container Registry：
+每次推送 `main` 都会跑测试，并把镜像构建到 GitHub Container Registry：
 
 ```bash
 docker pull ghcr.io/xiwen-haochi/oldie-blog:latest
 ```
 
-`.github/workflows/ci.yml` 还会跑 `scripts/check-secrets.mjs`，一旦有敏感文件要被提交就直接让构建失败。
+`.github/workflows/ci.yml` 还会跑 `scripts/check-secrets.mjs`，一旦有敏感文件要被提交就让构建失败。
 
-> **第一次构建后要做一件事**：GitHub 的镜像包**不会**跟着仓库自动变公开。
+> **第一次构建后要做一件事**：GitHub 的镜像包不会跟着仓库自动变公开。
 > 打开 [Packages](https://github.com/xiwen-haochi/oldie-blog/packages) → `oldie-blog` →
 > **Package settings** → **Change visibility** → **Public**。
-> 不做这一步，别人 `docker pull` 会收到 401。
 
-### 密码从哪来，怎么改
+### 后台密码
 
-**第一次启动**时应用会做两件事之一：
+第一次启动时应用会做两件事之一：
 
-- 设了 `ADMIN_PASSWORD` 环境变量 → 用它，并**只在这一次生效**
-- 没设 → 随机生成一个，打印在启动日志里：
+- 设了 `ADMIN_PASSWORD` 环境变量 → 用它，并且只在这一次生效
+- 没设 → 随机生成一个，打印在启动日志里
 
 ```
 ┌─ first run ─────────────────────────────────────────────┐
@@ -112,42 +120,36 @@ docker pull ghcr.io/xiwen-haochi/oldie-blog:latest
 └──────────────────────────────────────────────────────────┘
 ```
 
-**在哪看那行日志**：Railway 服务页 → **Console** 标签页 → 往回翻到第一次启动。
+**在哪看那行日志**：服务页面 → **Console** 标签页 → 往回翻到第一次启动。
 
 **改密码**：登录后 → **设置 → 密码** → 填当前密码和新密码。
 
-改完之后 `ADMIN_PASSWORD` 这个环境变量就可以**删掉了** —— 它只在首次启动起作用，
-之后你设的密码说了算，重启也不会被冲掉。
+改完之后 `ADMIN_PASSWORD` 就可以删掉了 —— 它只管首次启动，之后你设的密码说了算，重启也不会被冲掉。
 
-在容器里（Railway 的 Console 没有 shell，得用 SSH 或在本地跑）：
+在容器里改（Railway 的 Console 没有 shell，得用 SSH 或者在本地跑）：
 
 ```bash
 docker compose exec blog node scripts/reset-admin.js   # 用 compose 部署时
 docker exec -it <容器名> node scripts/reset-admin.js    # 其他平台同理
 ```
 
-> 镜像里带了 `scripts/`，所以重置密码、新建文章（`new-post.js`）、
-> 灌演示数据（`seed-demo.js`）都能直接在容器里跑。
-> 测试脚本和测试文件不进镜像。
+镜像里带了 `scripts/`，所以重置密码、新建文章（`new-post.js`）、
+灌演示数据（`seed-demo.js`）都能直接在容器里跑；测试脚本和测试文件不进镜像。
 
-> 还有一招更省事：删掉 `config/admin.json` 再重启，应用会生成一个新的临时密码
-> 并打印在日志里。
-### 部署到 Railway（最容易出坑的三个地方）
+### Railway
 
-1. **New Project → Deploy from GitHub repo**，选 `xiwen-haochi/oldie-blog`。Railway 会自动读
-   `Dockerfile` 并构建。
+1. **New Project → Deploy from GitHub repo**，选 `xiwen-haochi/oldie-blog`。
+   Railway 会自己读 `Dockerfile` 构建。
 
-2. **给要留存的东西挂卷，光挂 `/app/data` 是不够的。** Railway 的文件系统是临时的，
-   只有挂了卷的目录才能活过重新部署。
+2. **挂一个卷，路径填 `/app/data`。** Railway 的文件系统是临时的，重新部署会清空；
+   整站的数据就在这一个文件里。
 
    | 挂在 | 里面是什么 | 不挂会怎样 |
    | --- | --- | --- |
-   | `/app/content` | 全部文章和页面（`.md`） | **下一次重新部署，所有文章消失** |
-   | `/app/data` | 访问量、留言、订阅者、后台设置 | 计数和留言被清零 |
-   | `/app/config` | `site.config.json` 和管理员密码 | 站点忘记自己的配置，密码也要重设 |
+   | `/app/data` | `oldie.sqlite`：设置、全部文章和页面、留言、订阅者、会话 | **下一次重新部署，整站清空** |
 
-   `/app/data` 是大多数人记得挂的那个，但它不是最重要的那个 —— 文章丢了就真的没了，
-   而且 `.md` 源文件不在 git 里，恢复不了。
+   `config/` 和 `content/` 不用挂：`site.config.json` 只在第一次启动读一次，
+   `content/` 里的 `.md` 也只在第一次启动导入。
 
 3. **设三个环境变量**（Variables 标签页）：
 
@@ -163,7 +165,8 @@ docker exec -it <容器名> node scripts/reset-admin.js    # 其他平台同理
 可以换成自己的域名。
 
 > Railway 免费额度会在闲置时休眠，冷启动要等十几秒。
-### 裸机部署
+
+### 裸机
 
 ```bash
 git clone … && cd oldie-blog && pnpm install
@@ -185,58 +188,53 @@ NODE_ENV=production ADMIN_PASSWORD='…' SITE_URL='https://你的域名' \
 
 ---
 
-## 发新文章的流程
+## 写文章
 
-### 1. 在后台写 —— 推荐，命令行不是必须的
-
-**你完全不需要碰命令行。** 打开网站后台就是全部的写作流程：
+### 在后台
 
 ```
 ① 打开  http://你的域名/admin/posts/new
 
-② 写标题
-③ 写正文   —— 左上角是 Markdown 输入框，右下角实时预览
-              工具栏上有 B / I / 标题 / 引用 / 链接 / 图片 / 代码块
+② 标题
+
+③ 正文   —— 左边 Markdown，右边实时预览
+           工具栏上有 B / I / 标题 / 引用 / 链接 / 图片 / 代码块
 
 ④ 右边填可选信息
       · 标签      逗号分隔，会生成标签页
       · 描述      留空自动取正文开头，同时用作 SEO 和订阅源摘要
-      · 封面图    填 /uploads/xxx.png
+      · 封面图    从媒体库选，或者填 /uploads/xxx.png
 
 ⑤ 点「保存」      → 立刻发布，全站可见
    勾「草稿」再存  → 只有你自己看得到
-   勾「置顶到首页」→ 出现在首页最上面的置顶区
+   勾「置顶」再存  → 排在所有文章最前面
 ```
 
 ![编辑器](docs/admin-editor.png)
 
-**发布以后想改？** 后台左侧「文章」→ 点标题 → 直接改 → 再点保存。
+**改已经发布的**：后台左侧「文章」→ 点标题 → 改完再保存。
+**删掉**：同一行的删除按钮。
 
-**想删？** 同一页右侧的删除按钮。删的是数据库里的一条记录，
-所以你也可以在服务器上直接 `rm` 掉，效果一样。
+**图片**：直接把文件拖进正文框，或者在「媒体」页上传，然后写 `![说明](/uploads/photo.png)`。
 
-**图片怎么加？** 两种方式，都不用命令行：
-
-- 直接把图片文件**拖进正文框**
-- 或者去后台「媒体」页上传，复制它给出的 `/uploads/xxx.png` 地址，
-  在正文里写 `![说明](/uploads/xxx.png)`
-
-**写错了想撤销？** 后台的自动保存只存在浏览器里，关掉页面就没了；
+**想撤销？** 后台的自动保存只存在浏览器里，关掉页面就没了。
 已经发布的文章在数据库里，**备份与恢复**导出的 `.zip` 就是它的备份。
 
-### 2. 命令行（可选，适合批量或者用别的编辑器）
+### 命令行
 
 ```bash
 pnpm new:post "标题" --tags=随笔,工具 --draft
+pnpm clean          # 清空文章、页面、留言和计数，重新开始
 ```
 
-会直接在数据库里建好这篇文章，然后你去后台接着写。
-**这条命令是给习惯终端的人用的，不是必经之路。**
+会在数据库里建好这篇文章，然后去后台接着写。习惯终端的话还有 `seed-demo.js` 可以灌演示数据。
 
-### 3. 手写 Markdown 也认
+### Markdown 文件
 
-文章存在数据库里，但备份包会同时导出一份真实的 `.md`，而全新安装时也会自动导入
-`content/` 下找到的 `.md` 文件。所以手写的文件不会白写。
+文章平时存在数据库里。只有两个地方会碰到 `.md` 文件：
+
+- **备份**会额外导出一份，方便自己翻
+- **全新安装**会把 `content/posts/` 和 `content/pages/` 下找到的 `.md` 导入进来
 
 文件格式就这些：
 
@@ -244,7 +242,7 @@ pnpm new:post "标题" --tags=随笔,工具 --draft
 ---
 title: "标题"              # 必填
 date: 2026-09-29           # 必填，决定排序
-description: "一句话摘要"  # 选填，留空自动取正文前 140 字
+description: "一句话摘要"  # 选填，留空自动取正文开头
 tags: [随笔, 工具]          # 选填，逗号分隔也行
 featured: true             # 选填，置顶
 draft: true                # 选填，草稿不公开
@@ -254,130 +252,86 @@ cover: /uploads/x.png      # 选填，封面图
 正文是标准 Markdown。
 ```
 
-**格式就是这样。** 放进 `content/posts/` 后重启，第一次启动会自动导入数据库。
-
-### 三种方式怎么选
-
-| 场景 | 用哪个 |
-| --- | --- |
-| 平时写博客 | **后台**，鼠标点完就发布了 |
-| 习惯 vim / VS Code | 命令行或任何编辑器 |
-| 从别的平台搬旧文章 | 复制 `.md` 文件进 `content/posts/`，重启后自动导入 |
-
 ### 推送到 GitHub 会发生什么
 
 | | |
 | --- | --- |
 | 代码改动 | 会推上去，CI 重跑测试、重新构建镜像 |
-| **你的文章** | **不会推上去**，`content/` 在 `.gitignore` 里 |
-| **管理员密码** | **不会推上去**，`config/admin.json` 在 `.gitignore` 里 |
-| 访问量、留言、设置 | **不会推上去**，都在 `data/` 里 |
+| **你的文章** | **不会推上去** |
+| **后台密码** | **不会推上去** |
+| 留言、访问量、设置 | **不会推上去** |
 
-这是**故意的**，也正是这个博客和普通 CMS 的区别：
-
-- **别人 clone 你的仓库**，拿到的是空站 + 示例文章，看不到你写的任何一个字
-- **你本地改密码**，线上那个站点的密码纹丝不动 —— 两台机器各有一份
-- **你要在另一台机器上跑同一个站**，正确做法是后台「备份与恢复」导出一个 `.zip`，
-  拿去那边导入，而不是用 git
-
-换句话说：**git 管代码，`.zip` 管内容。**
+`content/`、`data/`、`config/admin.json` 和 `public/uploads/` 都在 `.gitignore` 里。
+所以别人 clone 你的仓库，拿到的是一个空站；想在另一台机器上跑同一个站，
+用后台的「备份与恢复」导出一个 `.zip` 拿去那边导入。
+**git 管代码，`.zip` 管内容。**
 
 ### 那部署在哪
 
-GitHub 本身**不能**直接跑这个博客。它需要常驻的 Node 进程和一块可写磁盘，
-而 GitHub Pages 只能托管静态文件。所以推代码 ≠ 网站上线。
+GitHub 本身不能直接跑这个博客 —— 它需要常驻的 Node 进程和一块可写磁盘，
+而 GitHub Pages 只能托管静态文件。推代码不等于网站上线。
 
 要一个真正的地址，选一个能挂持久磁盘的平台（Railway / Render / Fly.io / 自己的服务器），
-用上面那份 `docker-compose.yml` 起就行 —— 三行命令：
+用上面那份 `docker-compose.yml` 起就行。
 
-```bash
-cp .env.example .env      # 填 ADMIN_PASSWORD 和 SITE_URL
-docker compose up -d
-```
+---
 
-> **务必挂持久卷。** 没有卷的话重启一次，文章和留言会全部消失。
->
-> **务必先设 `SESSION_SECRET` 和 `ADMIN_PASSWORD`**，否则每次重启都要重新登录。
-## 你的文章是数据，不是代码
-
-这是大部分博客引擎做错的地方。这里：
-
-- 所有内容都在**一个文件**里：data/oldie.sqlite —— 设置、文章、访问量、留言、订阅
-- 那个文件**在 .gitignore 里**，永远不会被发布
-- 新克隆是空的；`pnpm seed` 给你示例内容看看
-
-```bash
-pnpm new:post "第一篇" --tags=随笔 --draft
-pnpm clean          # 清空文章、页面、留言和计数，重新开始
-```
-
-### 东西都放哪
+## 数据和备份
 
 | 位置 | 放什么 | 会发布吗 |
 | --- | --- | --- |
-| `data/oldie.sqlite` | 你的文章、设置、留言、计数 | ❌ 这是你的东西 |
-| `content/pages/*.md` | 独立页面 | ❌ |
-| `data/` | 访问量、留言簿、订阅者、会话、设置 | ❌ |
-| `config/admin.json` | 管理员密码（scrypt） | ❌ |
-| `config/site.config.json` | 站名、导航、webring 名字 | ✅ 这是故意的 |
-| `public/uploads/` | 你上传的图片 | ❌ |
+| `data/oldie.sqlite` | 文章、页面、设置、留言、访问计数、会话 | 否 |
+| `config/admin.json` | 后台密码（scrypt 哈希） | 否 |
+| `public/uploads/` | 你上传的图片 | 否 |
+| `content/` | 首次启动导入用、备份导出用 | 否 |
+| `config/site.config.json` | 站名、导航、webring 名字 | 是，页面要用 |
 
-**备份**在后台一键完成：打成一个 `.zip`，包含文章、上传、配置和运行时数据。
-恢复时旧文件是先挪走而不是删除，所以操作永远可逆。
+**备份**在后台一键完成：打成一个 `.zip`，包含数据库、图片和配置。
+恢复的时候旧数据先挪走而不是删掉，所以操作可以反悔。
+
+> 文章是数据库里的记录，不是能直接 `git diff` 的纯文本文件。
+> 换来的是备份只有一样东西、换服务器只需要拷一样东西。
+> 想要纯文本，备份包里就有。
 
 ---
 
 ## 功能
 
-**写作** —— Markdown + front matter，实时预览，草稿，置顶，标签，单篇 SEO，目录。
-可以直接粘贴 HTML，但会被消毒：`style`、内联背景、事件处理器一律去掉，表格和内联 SVG 保留。
+**写作** —— Markdown 加 front matter，实时预览，草稿，置顶，标签，每篇单独的 SEO 字段，
+自动目录。粘贴的 HTML 会过一遍白名单：`style`、内联背景、事件处理器会被去掉，
+表格和内联 SVG 保留。
 
-**阅读** —— 懂中文的全文搜索（unigram + bigram），归档，标签页，阅读时长，
+**阅读** —— 懂中文的全文搜索（unigram + bigram）、归档、标签页、阅读时长，
 每篇文章都能下载成 `.txt` 或 `.json`。
 
-**1990 年代** —— 带邻居站的 webring，要审核的留言簿，访问计数器，走马灯，闪烁文字，
-每页都有 DOS 终端（<kbd>Ctrl</kbd>+<kbd>K</kbd>），浏览器里合成的芯片音乐，
-还有一键**倒回 1998** 的模式。
+**1990 年代** —— 带邻居的 webring、要审核的留言簿、访问计数器、走马灯、闪烁文字、
+每页都有的 DOS 终端（<kbd>Ctrl</kbd>+<kbd>K</kbd>）、浏览器里合成的芯片音乐，
+以及一键切回 1998 年的模式。
 
-**正经的部分** —— RSS/Atom/JSON Feed、`sitemap.xml`、JSON-LD、`llms.txt`、Open Graph、
-hreflang 多语言、可配置且从不对外宣传的后台路径、scrypt 密码、签名会话、CSRF、登录限流、
-逐请求的 HTML 消毒。
+**SEO 和安全** —— RSS / Atom / JSON Feed、`sitemap.xml`、JSON-LD、`llms.txt`、
+Open Graph、hreflang 多语言。后台路径可以自己配，不出现在任何公开页面里；
+密码用 scrypt，会话 cookie 签名，表单带 CSRF，登录有限流，每次请求过一遍 HTML 消毒。
 
 **可开关** —— 评论、评论审核、留言簿、搜索、访问计数器、随机文章、目录、阅读时长，
 后台里各有一个开关。
 
 ---
 
-## 为什么只有六个依赖
-
-运行时依赖只有 `express`、`ejs`、`markdown-it`、`highlight.js`、`gray-matter`、`multer`，
-其余都在 `src/lib` 里自己写：
-
-| 不用 | 换成了 |
-| --- | --- |
-| 搜索库 | 支持中文的倒排索引，约 200 行 |
-| session 库 | HMAC 签名 cookie，约 80 行 |
-| `bcrypt` | `node:crypto` 的 `scrypt` |
-| 压缩库 | 手写的 gzip 中间件 |
-| S3 SDK | 基于 `fetch` 的 SigV4 签名 |
-| ZIP 库 | 自己写的 deflate/store 打包与解包 |
-| HTML 消毒库 | 白名单消毒器 |
-
-没有编译器，没有 `node-gyp`，新克隆不会卡在原生模块上。`pnpm install` 几秒就完。
-
----
-
 ## 开发
 
 ```bash
-pnpm test          # 149 个单元测试 + 60 项针对真实服务器的端到端检查
+pnpm test          # 206 个单元测试 + 77 项端到端检查
 pnpm test:unit
 pnpm test:e2e
 pnpm dev           # node --watch
 node scripts/check-secrets.mjs
 ```
 
-端到端测试在临时数据目录里跑一个真实服务器，**碰不到**你自己的文章和计数。
+运行时依赖只有六个：`express`、`ejs`、`markdown-it`、`highlight.js`、`gray-matter`、`multer`。
+搜索索引、会话、gzip、S3 签名和 ZIP 打包都在 `src/lib` 里，没有编译器也没有原生模块，
+新克隆 `pnpm install` 几秒就完。
+
+端到端测试在临时数据目录里跑一个真实服务器，碰不到你自己的文章和计数。
 
 ---
 
