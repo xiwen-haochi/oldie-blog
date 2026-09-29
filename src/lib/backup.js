@@ -5,7 +5,7 @@ import { createZip, readZip, safeEntryPath } from './zip.js';
 import { ROOT, POSTS_DIR, PAGES_DIR, DATA_DIR, UPLOAD_DIR, CONFIG_DIR } from './paths.js';
 import { sqliteStats, sqliteGet, sqliteNames, databaseFile, backendName } from './db.js';
 
-const IGNORE = /^(\.git|node_modules|\.cache|coverage|\.DS_Store|.*\.log$|.*\.tmp$|.*\.sqlite-wal$|.*\.sqlite-shm$|.*\.migrated-.*\.json$)/;
+const IGNORE = /^(\.git|node_modules|\.cache|coverage|\.DS_Store|\.gitkeep|.*\.log$|.*\.tmp$|.*\.sqlite-wal$|.*\.sqlite-shm$|.*\.migrated-.*|.*\.before-restore-.*|\.restore-staging-.*)/;
 
 /** Files worth putting in a backup, relative to the project root. */
 export function collectBackupFiles() {

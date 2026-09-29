@@ -36,6 +36,16 @@ test('a backup collects posts, pages, uploads, config and data', () => {
   assert.ok(names.includes('data/settings.json'));
 });
 
+test('leftovers and restore scratch space stay out of the archive', () => {
+  fs.writeFileSync(path.join(sandbox, 'data', 'stats.json.123.456.tmp'), 'temp');
+  fs.writeFileSync(path.join(sandbox, 'data', 'guestbook.json.migrated-2026-01-01'), 'old copy');
+  fs.writeFileSync(path.join(sandbox, 'data', 'oldie.sqlite-wal'), 'wal');
+  const names = collectBackupFiles().map((f) => f.name);
+  for (const junk of names) {
+    assert.ok(!/\.tmp$|\.migrated-|\.sqlite-wal$|\.sqlite-shm$/.test(junk), 'junk in the archive: ' + junk);
+  }
+});
+
 test('the preview summarises what will be inside', () => {
   const preview = backupPreview();
   assert.ok(preview.files > 0);
