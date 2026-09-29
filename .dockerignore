@@ -6,8 +6,10 @@ content/posts
 content/pages
 public/uploads
 docs
+# tests never belong in a runtime image, but scripts/ does: reset-admin,
+# new-post and seed are how you operate a running container.
 tests
-scripts
+scripts/smoke-test.js
 .git
 .github
 *.log

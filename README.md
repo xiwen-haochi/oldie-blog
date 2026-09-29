@@ -125,7 +125,19 @@ first boot.
 Afterwards the `ADMIN_PASSWORD` variable can be **deleted** — it only seeds the first
 boot, and from then on the password you chose is the one that counts, restarts included.
 
-> Forgotten it? Run `node scripts/reset-admin.js` on the server; it prints a new one.
+Inside a container (Railway's Console has no shell, so use SSH or run it locally):
+
+```bash
+docker compose exec blog node scripts/reset-admin.js   # with compose
+docker exec -it <container> node scripts/reset-admin.js # anywhere else
+```
+
+> The image carries `scripts/`, so resetting the password, adding a post
+> (`new-post.js`) and seeding demo data (`seed-demo.js`) all work in a running
+> container. The test suite is not shipped.
+
+> A quicker route: delete `config/admin.json` and restart. The app generates a
+> fresh temporary password and prints it in the log.
 ### Deploying to Railway (the three things that bite)
 
 1. **New Project → Deploy from GitHub repo**, pick `xiwen-haochi/oldie-blog`. Railway reads

@@ -22,6 +22,16 @@ const flag = (name, fallback = '') => {
 };
 
 const file = path.join(CONFIG_DIR, 'admin.json');
+/** The admin path is configurable, so read it rather than guessing. */
+function adminPathFromConfig() {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(CONFIG_DIR, 'site.config.json'), 'utf8'));
+    return cfg.adminPath || '/admin';
+  } catch {
+    return '/admin';
+  }
+}
+
 let current = {};
 try { current = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* first boot */ }
 
@@ -50,6 +60,6 @@ console.log('  用户名 : ' + username);
 console.log('  密码   : ' + password);
 console.log('  文件   : config/admin.json');
 console.log('');
-console.log('  现在就能登录：' + path.resolve(process.cwd(), 'config/site.config.json') + ' 里配置的 adminPath');
+console.log('  现在就能登录：' + adminPathFromConfig() + '（/admin 是默认值）');
 console.log('  建议登录后在「设置 → 密码」里再改一次。');
 console.log('');

@@ -119,7 +119,19 @@ docker pull ghcr.io/xiwen-haochi/oldie-blog:latest
 改完之后 `ADMIN_PASSWORD` 这个环境变量就可以**删掉了** —— 它只在首次启动起作用，
 之后你设的密码说了算，重启也不会被冲掉。
 
-> 忘了密码就在服务器上跑 `node scripts/reset-admin.js`，会打印一个新密码。
+在容器里（Railway 的 Console 没有 shell，得用 SSH 或在本地跑）：
+
+```bash
+docker compose exec blog node scripts/reset-admin.js   # 用 compose 部署时
+docker exec -it <容器名> node scripts/reset-admin.js    # 其他平台同理
+```
+
+> 镜像里带了 `scripts/`，所以重置密码、新建文章（`new-post.js`）、
+> 灌演示数据（`seed-demo.js`）都能直接在容器里跑。
+> 测试脚本和测试文件不进镜像。
+
+> 还有一招更省事：删掉 `config/admin.json` 再重启，应用会生成一个新的临时密码
+> 并打印在日志里。
 ### 部署到 Railway（最容易出坑的三个地方）
 
 1. **New Project → Deploy from GitHub repo**，选 `xiwen-haochi/oldie-blog`。Railway 会自动读

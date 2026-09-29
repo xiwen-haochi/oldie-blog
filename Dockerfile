@@ -23,6 +23,9 @@ COPY package.json ./
 COPY bin ./bin
 COPY public ./public
 COPY src ./src
+# the operational scripts travel with the image: without them a running
+# container has no way to reset a password, add a post, or seed the demo data
+COPY scripts ./scripts
 COPY docker/entrypoint.sh ./docker/entrypoint.sh
 
 # /app/config and /app/content are volumes. A fresh (empty) volume is seeded
