@@ -106,30 +106,177 @@
     b.addEventListener('click', function () { insertAtCursor('![' + (title ? title.value : 'image') + '](' + b.getAttribute('data-insert-image') + ')'); });
   });
 
+
+  /* -------------------------------------------- media library + picker */
+  var adminPath = form.getAttribute('data-admin-path') || '/admin';
+  var maxUpload = parseInt(form.getAttribute('data-max-bytes') || '', 10) || 4 * 1024 * 1024;
+  var modal = $('#media-modal');
+  var grid = $('#media-grid');
+  var uploadState = $('#media-upload-state');
+  var mediaFiles = [];
+  var loadingMedia = false;
+
+  function altText() {
+    var t = title && title.value ? title.value.trim() : '';
+    return t || say('mediaAltDefault', 'image');
+  }
+
+  function insertImage(url) {
+    insertAtCursor('![' + altText() + '](' + url + ')');
+  }
+
+  function humanSize(n) {
+    if (!n && n !== 0) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+    return (n / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function sayBusy(text) {
+    if (uploadState) uploadState.textContent = text || '';
+  }
+
+  /** Upload for real and hand back the stored url — never a data: URL. */
+  function uploadImage(file) {
+    if (!file) return Promise.resolve(null);
+    if (file.size > maxUpload) {
+      return Promise.reject(new Error(say('uploadTooLarge', 'too large') + ' ' + humanSize(maxUpload)));
+    }
+    var data = new FormData();
+    data.append('file', file, file.name || 'pasted-image.png');
+    sayBusy(say('mediaUploading', 'Uploading…'));
+    return fetch(adminPath + '/media', {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': CSRF, Accept: 'application/json' },
+      body: data,
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (d) {
+        sayBusy('');
+        if (!d || !d.url) throw new Error('no url back');
+        mediaFiles.unshift({ name: d.name, url: d.url, size: d.size });
+        return d;
+      })
+      .catch(function (err) {
+        sayBusy('');
+        throw err;
+      });
+  }
+
+  function renderGrid() {
+    if (!grid) return;
+    grid.innerHTML = '';
+    if (!mediaFiles.length) {
+      var empty = document.createElement('p');
+      empty.className = 'form-note';
+      empty.textContent = say('mediaPickerEmpty', 'The media library is empty.');
+      grid.appendChild(empty);
+      return;
+    }
+    mediaFiles.forEach(function (f) {
+      var cell = document.createElement('button');
+      cell.className = 'upload-pick';
+      cell.type = 'button';
+      cell.title = f.name + (f.size ? ' · ' + humanSize(f.size) : '');
+      var img = document.createElement('img');
+      img.src = f.url;
+      img.alt = f.name;
+      img.loading = 'lazy';
+      cell.appendChild(img);
+      cell.addEventListener('click', function () {
+        insertImage(f.url);
+        closeMedia();
+      });
+      grid.appendChild(cell);
+    });
+  }
+
+  function loadMedia() {
+    if (loadingMedia) return;
+    loadingMedia = true;
+    return fetch(adminPath + '/media.json', { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        mediaFiles = (d && d.files) || [];
+        renderGrid();
+      })
+      .catch(function () {
+        if (grid) grid.innerHTML = '<p class="form-note">' + (say('mediaUploadFailed', 'failed').split(':')[0]) + '</p>';
+      })
+      .then(function () { loadingMedia = false; });
+  }
+
+  function openMedia() {
+    if (!modal) return;
+    modal.hidden = false;
+    if (!mediaFiles.length) loadMedia();
+    else renderGrid();
+  }
+
+  function closeMedia() {
+    if (modal) modal.hidden = true;
+  }
+
+  $$('[data-open-media]').forEach(function (b) {
+    b.addEventListener('click', openMedia);
+  });
+  $$('[data-close-media]').forEach(function (b) {
+    b.addEventListener('click', closeMedia);
+  });
+  if (modal) {
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) closeMedia();
+    });
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal && !modal.hidden) closeMedia();
+  });
+
+  var mediaUploadInput = $('#media-upload-input');
+  if (mediaUploadInput) {
+    mediaUploadInput.addEventListener('change', function () {
+      var file = mediaUploadInput.files && mediaUploadInput.files[0];
+      mediaUploadInput.value = '';
+      if (!file) return;
+      uploadImage(file)
+        .then(function (saved) {
+          renderGrid();
+          insertImage(saved.url);
+          closeMedia();
+        })
+        .catch(function (err) { sayBusy(say('mediaUploadFailed', 'Upload failed') + ' ' + err.message); });
+    });
+  }
+
+  // the paperclip: upload straight into the text, no base64 in sight
   var fileInput = $('#upload-inline');
   if (fileInput) {
     fileInput.addEventListener('change', function () {
       var file = fileInput.files && fileInput.files[0];
+      fileInput.value = '';
       if (!file) return;
-      if (file.size > 4 * 1024 * 1024) { alert('Too big: max 4 MB'); return; }
-      var reader = new FileReader();
-      reader.onload = function () { insertAtCursor('![' + (title ? title.value : 'image') + '](' + reader.result + ')'); };
-      reader.readAsDataURL(file);
+      uploadImage(file)
+        .then(function (saved) { insertImage(saved.url); })
+        .catch(function (err) { sayBusy(say('mediaUploadFailed', 'Upload failed') + ' ' + err.message); });
     });
   }
 
+  // a screenshot pasted straight into the text is an upload, not 200 KB of base64
   document.addEventListener('paste', function (e) {
-    var target = e.target.getAttribute && e.target.getAttribute('data-paste-target');
-    if (!target) return;
+    if (e.target !== body) return;
     var items = (e.clipboardData && e.clipboardData.items) || [];
     for (var i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') === 0) {
-        var file = items[i].getAsFile();
-        var reader = new FileReader();
-        reader.onload = function () { $('#' + target).value = reader.result; };
-        reader.readAsDataURL(file);
-        break;
-      }
+      if (items[i].type.indexOf('image') !== 0) continue;
+      var file = items[i].getAsFile();
+      if (!file) return;
+      e.preventDefault();
+      uploadImage(file)
+        .then(function (saved) { insertImage(saved.url); })
+        .catch(function (err) { sayBusy(say('mediaUploadFailed', 'Upload failed') + ' ' + err.message); });
+      return;
     }
   });
 
@@ -138,7 +285,7 @@
   var lastSaved = null;
   function refreshPreview() {
     var data = new FormData(form);
-    fetch('/admin/preview', {
+    fetch(adminPath + '/preview', {
       method: 'POST',
       headers: {
         'X-CSRF-Token': CSRF,

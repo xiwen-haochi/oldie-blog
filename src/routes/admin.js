@@ -106,6 +106,8 @@ export function adminRoutes(ctx) {
       nav: adminNav(i18n.t, A),
       isNew: false,
       originalSlug: '',
+      // the editor's uploader must not carry its own idea of the size limit
+      maxUploadBytes: maxBytes(ctx.site),
       flash: res.locals.flash || null,
       csrf: (locals.req && locals.req.session && locals.req.session.csrf) || '',
       ...i18n,
@@ -585,11 +587,26 @@ export function adminRoutes(ctx) {
 
       const saved = await putFile(ctx.site, { buffer, filename: name, type });
       ctx.site.uploads = await listUploads();
+      // the picker uploads with fetch and needs the url back; the plain browser
+      // form keeps its redirect
+      if (String(req.get('accept') || '').includes('application/json')) {
+        return res.json({ ok: true, name: saved.name, url: saved.url, size: saved.size });
+      }
       setFlash(res, 'ok', t('admin.uploaded', { name: saved.url }));
       res.redirect(U('/media'));
     } catch (err) {
       next(err);
     }
+  });
+
+  // the editor's image picker asks for the library as JSON, on demand, so
+  // opening an editor never waits on the object store
+  router.get(A + '/media.json', requireAuth, async (req, res) => {
+    const files = await listUploads();
+    res.set('Cache-Control', 'no-store');
+    res.json({
+      files: files.map((f) => ({ name: f.name, url: f.url, size: f.size, mtime: f.mtime })),
+    });
   });
 
   router.post(A + '/media/delete', requireAuth, requireCsrf, async (req, res) => {

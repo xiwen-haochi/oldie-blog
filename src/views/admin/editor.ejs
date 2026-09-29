@@ -20,7 +20,8 @@
   </div>
 </div>
 
-<form id="editor-form" method="post" action="<%= action %>" class="editor-form">
+<form id="editor-form" method="post" action="<%= action %>" class="editor-form"
+      data-admin-path="<%= adminPath %>" data-max-bytes="<%= maxUploadBytes %>">
   <input type="hidden" name="_csrf" value="<%= csrf %>">
   <input type="hidden" name="originalSlug" value="<%= originalSlug || '' %>">
   <input type="hidden" name="lang" value="<%= locale %>">
@@ -45,9 +46,9 @@
         <button class="btn tiny" type="button" data-wrap="- ">•</button>
         <button class="btn tiny" type="button" data-wrap="> ">quote</button>
         <button class="btn tiny" type="button" data-wrap="[text](url)">link</button>
-        <button class="btn tiny" type="button" data-wrap="![](url)">image</button>
+        <button class="btn tiny" type="button" data-open-media title="<%= t('admin.media_picker') %>">image</button>
         <button class="btn tiny" type="button" data-wrap="<!-- more -->">more…</button>
-        <label class="btn tiny" for="upload-inline" title="<%= t('admin.paste_data_url') %>">📎</label>
+        <label class="btn tiny" for="upload-inline" title="<%= t('admin.media_upload') %>">📎</label>
         <input type="file" id="upload-inline" accept="image/*" hidden>
         <span class="form-note" id="autosave-state"></span>
       </div>
@@ -131,3 +132,24 @@
     </fieldset>
   </aside>
 </form>
+
+<div class="modal" id="media-modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="media-modal-title">
+    <div class="modal-head">
+      <strong id="media-modal-title">🖼 <%= t('admin.media_picker') %></strong>
+      <span class="spacer"></span>
+      <button class="btn tiny" type="button" data-close-media>✕ <%= t('admin.media_picker_close') %></button>
+    </div>
+    <p class="form-note"><%= t('admin.media_picker_hint') %></p>
+    <div class="modal-body">
+      <div class="upload-grid big" id="media-grid">
+        <p class="form-note"><%= t('admin.media_picker_loading') %></p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <label class="btn primary" for="media-upload-input">⬆ <%= t('admin.upload') %></label>
+      <input type="file" id="media-upload-input" accept="image/*" hidden>
+      <span class="form-note" id="media-upload-state"></span>
+    </div>
+  </div>
+</div>

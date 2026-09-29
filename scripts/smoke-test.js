@@ -41,11 +41,18 @@ try {
 } catch {
   copyDir(path.join(PROJECT, 'src'), path.join(SANDBOX, 'src'));
 }
-// static assets are big and read-only: a symlink is enough and keeps it fast
-try {
-  fs.symlinkSync(path.join(PROJECT, 'public'), path.join(SANDBOX, 'public'), 'dir');
-} catch {
-  copyDir(path.join(PROJECT, 'public'), path.join(SANDBOX, 'public'));
+// Static assets are big and read-only, so each one is a symlink and stays fast.
+// public/ itself must NOT be: uploads land in public/uploads, and a symlink
+// there would write every test upload into the operator's real library.
+fs.mkdirSync(path.join(SANDBOX, 'public', 'uploads'), { recursive: true });
+for (const asset of ['assets', 'css', 'js', 'vendor', 'favicon.svg']) {
+  const from = path.join(PROJECT, 'public', asset);
+  if (!fs.existsSync(from)) continue;
+  try {
+    fs.symlinkSync(from, path.join(SANDBOX, 'public', asset));
+  } catch {
+    copyDir(from, path.join(SANDBOX, 'public', asset));
+  }
 }
 // the bundled sample posts, so the suite is deterministic on a fresh clone
 copyDir(path.join(PROJECT, 'scripts', 'sample-content', 'posts'), path.join(SANDBOX, 'content', 'posts'));
@@ -590,6 +597,37 @@ async function main() {
       assert.equal(res.status, 302);
       assert.ok((await text('/')).includes('Smoke test banner'), 'banner not applied');
       return 'applied';
+    });
+
+    await check('the media library is readable as JSON for the editor picker', async () => {
+      const png = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        'base64'
+      );
+      const form = new FormData();
+      form.set('_csrf', adminCsrf);
+      form.set('file', new Blob([png], { type: 'image/png' }), 'picker-pixel.png');
+      const up = await fetch(base + '/admin/media', {
+        method: 'POST',
+        redirect: 'manual',
+        headers: { cookie: jar.header(), accept: 'application/json' },
+        body: form,
+      });
+      jar.absorb(up);
+      assert.equal(up.status, 200, 'a JSON upload must not redirect: ' + up.status);
+      const saved = await up.json();
+      assert.equal(saved.ok, true, JSON.stringify(saved));
+      assert.ok(saved.url, 'no url in the response: ' + JSON.stringify(saved));
+      assert.ok(saved.name, 'no name in the response: ' + JSON.stringify(saved));
+
+      const list = await get('/admin/media.json');
+      assert.equal(list.status, 200);
+      const json = await list.json();
+      const found = json.files.find((f) => f.name === saved.name);
+      assert.ok(found, 'the uploaded file is missing from media.json');
+      assert.equal(found.url, saved.url, 'the picker and the upload must agree on the url');
+      assert.equal(typeof found.size, 'number');
+      return json.files.length + ' files, url ' + found.url;
     });
 
     await check('a checkbox that is turned OFF stays off', async () => {
