@@ -643,6 +643,23 @@ async function main() {
       return 'drawn with alt text';
     });
 
+    await check('a cover shows up on the post list', async () => {
+      // a fresh, dated-today post: the old smoke post is the oldest thing in
+      // the archive and would sit on the last page of the list
+      const today = new Date().toISOString().slice(0, 10);
+      await post('/admin/posts', {
+        _csrf: adminCsrf, title: 'Covered Post', slug: 'covered-post', date: today,
+        cover: '/uploads/smoke-cover.png', coverAlt: 'A cover, drawn', body: 'Look at the list.',
+      });
+      const list = await (await get('/posts')).text();
+      assert.match(list, /<li class="has-cover">/, 'the card did not become a cover card');
+      assert.match(list, /<a class="post-thumb" href="\/posts\/covered-post" tabindex="-1" aria-hidden="true">\s*<img src="\/uploads\/smoke-cover\.png" alt="" loading="lazy">/,
+        'the thumbnail markup is wrong');
+      // a linked thumbnail must not be announced twice next to the title link
+      assert.ok(!/post-thumb[^>]*><\s*<img src="[^"]+" alt="\S/.test(list), 'the thumbnail needs an empty alt');
+      return 'thumbnail on the card';
+    });
+
     await check('a post with no cover gets no cover element', async () => {
       await post('/admin/posts', {
         _csrf: adminCsrf, title: 'No Cover Here', slug: 'no-cover-here',

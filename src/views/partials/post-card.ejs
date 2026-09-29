@@ -1,21 +1,29 @@
-<li>
-  <h3>
-    <% if (post.draft) { %><span class="stamp draft"><%= t('card.draft') %></span> <% } %>
-    <% if (post.featured) { %><span class="stamp featured"><%= t('card.featured') %></span> <% } %>
-    <a href="<%= post.url %>"><%= post.title %></a>
-  </h3>
-  <div class="post-meta">
-    <span>📅 <%= formatDate(post.date, { locale: dateLocale }) %></span>
-    <span>⏱ <%= post.readingTime %> <%= t('card.min') %></span>
-    <span>🔤 <%= post.wordCount %></span>
-    <% post.tags.slice(0, 4).forEach(function (tag) { %>
-      <a class="tag" href="/tags/<%= slugify(tag) %>"><%= tag %></a>
-    <% }) %>
-  </div>
-  <p class="post-excerpt"><%= post.description %></p>
-  <div class="linkbar">
-    <a class="btn tiny" href="<%= post.url %>">▶ <%= t('card.read_more') %></a>
-    <a class="btn tiny" href="<%= post.url %>.txt" download>💾 <%= t('card.txt') %></a>
-    <a class="btn tiny" href="<%= post.url %>#comments">💬 <%= t('card.comments') %></a>
+<li<% if (post.cover) { %> class="has-cover"<% } %>>
+  <%# hidden from assistive tech: the title link right next to it says the same thing %>
+  <% if (post.cover) { %>
+    <a class="post-thumb" href="<%= post.url %>" tabindex="-1" aria-hidden="true">
+      <img src="<%= post.cover %>" alt="" loading="lazy">
+    </a>
+  <% } %>
+  <div class="post-card-body">
+    <h3>
+      <% if (post.draft) { %><span class="stamp draft"><%= t('card.draft') %></span> <% } %>
+      <% if (post.featured) { %><span class="stamp featured"><%= t('card.featured') %></span> <% } %>
+      <a href="<%= post.url %>"><%= post.title %></a>
+    </h3>
+    <div class="post-meta">
+      <span>📅 <%= formatDate(post.date, { locale: dateLocale }) %></span>
+      <span>⏱ <%= post.readingTime %> <%= t('card.min') %></span>
+      <span>🔤 <%= post.wordCount %></span>
+      <% post.tags.slice(0, 4).forEach(function (tag) { %>
+        <a class="tag" href="/tags/<%= slugify(tag) %>"><%= tag %></a>
+      <% }) %>
+    </div>
+    <p class="post-excerpt"><%= post.description %></p>
+    <div class="linkbar">
+      <a class="btn tiny" href="<%= post.url %>">▶ <%= t('card.read_more') %></a>
+      <a class="btn tiny" href="<%= post.url %>.txt" download>💾 <%= t('card.txt') %></a>
+      <a class="btn tiny" href="<%= post.url %>#comments">💬 <%= t('card.comments') %></a>
+    </div>
   </div>
 </li>

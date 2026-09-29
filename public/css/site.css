@@ -255,6 +255,21 @@ legend { font-family: var(--font-ui); font-size: 12px; padding: 0 4px; }
 .breadcrumbs .sep { color: var(--face-dark); padding: 0 4px; }
 
 .post-list { list-style: none; margin: 0; padding: 0; }
+/* a post with a cover gets a small thumbnail beside the text, the way a
+   1990s index page would have shown it — text stays the main event */
+.post-list > li.has-cover { display: flex; gap: 10px; align-items: flex-start; }
+.post-thumb {
+  flex: 0 0 auto; width: 104px; margin-top: 2px;
+  border: 1px solid var(--face-dark); background: #fff; padding: 2px;
+  box-shadow: var(--bevel-out);
+}
+.post-thumb img { display: block; width: 100%; height: 78px; object-fit: cover; }
+.post-card-body { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 480px) {
+  .post-list > li.has-cover { gap: 8px; }
+  .post-thumb { width: 76px; }
+  .post-thumb img { height: 58px; }
+}
 .post-list > li {
   border: 1px solid var(--face-dark); background: var(--paper-dim);
   box-shadow: var(--bevel-out); padding: 10px 12px; margin-bottom: 12px;
