@@ -1,12 +1,20 @@
 #!/usr/bin/env node
 /**
- * Reset the runtime stores so a fresh clone has something to look at:
- * a few guestbook entries, some subscribers and a believable hit-counter
- * history. Safe to run any time — it only writes data/*.json.
+ * Give a fresh clone something to look at.
+ *
+ *   pnpm seed
+ *
+ * Two things happen: the bundled sample posts are copied into content/, and the
+ * runtime stores get a believable history. Everything goes through the real store
+ * layer, so it works whichever backend is configured (JSON files or SQLite).
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { DATA_DIR } from '../src/lib/paths.js';
+import { fileURLToPath } from 'node:url';
+import { DATA_DIR, POSTS_DIR, PAGES_DIR } from '../src/lib/paths.js';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const SAMPLES = path.join(ROOT, 'scripts', 'sample-content');
 
 const day = 86400000;
 const now = Date.now();
@@ -15,68 +23,54 @@ const iso = (offsetDays, hour = 11) =>
 
 const entries = [
   ['阿飞', '中国 上海', '路过你们环形网过来的！页面做得真讲究，访问计数器还在跳，爷青回。', 12, 'approved'],
-  ['Ada Lovelace', 'London, UK', 'Found you through the Dial-Up Survivors ring. The blinking text is glorious.', 9, 'approved'],
-  ['Grace H.', 'Arlington, VA', 'The chiptune player made me smile out loud at my desk. Respect.', 7, 'approved'],
-  [' webmaster@geocities.invalid', '日本 东京', '日本語も読めます。DOS ターミナル unstoppable！', 5, 'approved'],
-  ['zeldatron', 'Portland, OR', 'this site is a time machine and I am here for it. signed, linked back.', 4, 'approved'],
-  ['小张', '中国 成都', '朋友推荐的，说这站能下载 .TXT，收藏了！', 3, 'pending'],
-  ['anonymous ftp user', 'the World Wide Web', 'cool page! add me to your webring!!', 1, 'approved'],
+  ['Ada Lovelace', 'London, UK', 'Found you through the Dial-Up Survivors ring. The blinking cursor is a marvel.', 9, 'approved'],
+  ['Grace H.', 'Arlington, VA', 'The chiptune player made me smile out loud at my desk. Signing the book.', 6, 'approved'],
+  [' webmaster@geocities.invalid', '日本 東京', '日本語も読めます。DOS ターミナル unstoppable！', 5, 'approved'],
+  ['zeldatron', 'Portland, OR', 'this site is a time machine and I am here for it. signed.', 3, 'approved'],
+  ['小张', '中国 成都', '朋友推荐的，说这站能下载 .TXT，收藏了！', 2, 'pending'],
 ].map(([name, location, message, daysAgo, status], i) => ({
   id: i + 1,
   target: 'guestbook',
   name,
-  email: '',
-  url: '',
-  host: '',
   location,
   message,
-  date: iso(daysAgo, 9 + i),
   status,
+  createdAt: iso(daysAgo),
   ip: '',
-  ua: 'seed',
+  userAgent: 'seed',
 }));
 
 const comments = [
-  {
-    id: 100,
-    target: 'post:welcome-to-my-homepage',
-    name: 'Reader Bob',
-    email: '',
-    url: '',
-    host: '',
-    location: 'Ohio, US',
-    message: 'Ctrl+K worked on the first try. Ten out of ten.',
-    date: iso(2, 14),
-    status: 'approved',
-    ip: '',
-    ua: 'seed',
-  },
-];
-
-const days = {};
-for (let i = 29; i >= 0; i--) {
-  const key = new Date(now - i * day).toISOString().slice(0, 10);
-  days[key] = 6 + Math.floor(Math.abs(Math.sin(i * 1.7)) * 40);
-}
-days[new Date(now).toISOString().slice(0, 10)] = 3;
+  ['Reader', 'The Ctrl+K terminal answered `help` on the first try. Unreal.', 4, 'approved'],
+  ['阿飞', '转载了 .TXT 版本到我的摇客圈 thanks!', 2, 'approved'],
+].map(([name, message, daysAgo, status], i) => ({
+  id: 100 + i,
+  target: 'post:welcome-to-my-homepage',
+  name,
+  message,
+  status,
+  createdAt: iso(daysAgo),
+  ip: '',
+  userAgent: 'seed',
+}));
 
 const writes = {
-  'guestbook.json': { entries: [...entries, ...comments], nextId: 101, updatedAt: new Date().toISOString() },
-  'subscribers.json': {
-    emails: ['fei@example.com', 'ada@example.com', 'zeldatron@example.com'],
-    addedAt: {},
-  },
-  'stats.json': {
+  guestbook: { entries: [...entries, ...comments], nextId: 200 },
+  subscribers: { list: [{ email: 'ada@example.com', createdAt: iso(30) }] },
+  stats: {
     total: 19980,
-    firstSeen: '2025-01-01T00:00:00.000Z',
-    days,
+    days: Object.fromEntries(
+      Array.from({ length: 30 }, (_, i) => {
+        const d = iso(29 - i);
+        const day = d.slice(0, 10);
+        return [day, { views: 40 + ((i * 37) % 60), uniques: 6 + ((i * 13) % 11) }];
+      }),
+    ),
     paths: {
-      '/': 8123,
-      '/posts/welcome-to-my-homepage': 1204,
-      '/posts/a-dos-terminal-in-every-webpage': 861,
-      '/posts/writing-in-markdown-in-the-year-of-the-terminal': 540,
-      '/guestbook': 233,
-      '/archive': 122,
+      '/': 8402,
+      '/posts': 1240,
+      '/posts/welcome-to-my-homepage': 611,
+      '/guestbook': 402,
       '/tags': 96,
       '/search': 41,
     },
@@ -85,9 +79,33 @@ const writes = {
   },
 };
 
+// 1. sample content -------------------------------------------------------
+let copied = 0;
+for (const [from, to] of [[path.join(SAMPLES, 'posts'), POSTS_DIR], [path.join(SAMPLES, 'pages'), PAGES_DIR]]) {
+  if (!fs.existsSync(from)) continue;
+  fs.mkdirSync(to, { recursive: true });
+  for (const name of fs.readdirSync(from)) {
+    if (!name.endsWith('.md')) continue;
+    fs.copyFileSync(path.join(from, name), path.join(to, name));
+    copied++;
+  }
+}
+
+// 2. the runtime stores, through the store layer so sqlite works too ------
+// imported dynamically: the driver is read from the config at import time.
+const { JsonStore, setDataDriver } = await import('../src/lib/store.js');
+const { loadConfig } = await import('../src/lib/config.js');
+const site = loadConfig();
+setDataDriver(site.dataDriver);
+
 fs.mkdirSync(DATA_DIR, { recursive: true });
 for (const [name, data] of Object.entries(writes)) {
-  fs.writeFileSync(path.join(DATA_DIR, name), JSON.stringify(data, null, 2) + '\n');
-  console.log('wrote data/' + name);
+  const store = new JsonStore(path.join(DATA_DIR, name + '.json'), data);
+  await store.flush(data);
+  console.log('seeded ' + name);
 }
-console.log('\nDemo stores ready. Run \'pnpm start\' and open the site.');
+
+console.log('');
+console.log('  ' + copied + ' sample posts, guestbook, subscribers and a hit counter.');
+console.log('  Run \'pnpm start\' and open the site.');
+console.log('');

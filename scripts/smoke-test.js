@@ -3,43 +3,92 @@
  * End-to-end smoke test: boots the real server on a random port and drives
  * every public surface plus the whole admin flow over HTTP.
  *
- *   node scripts/smoke-test.js
+ *   pnpm test:e2e
  *
- * Exits non-zero on the first failing group so CI can gate on it.
+ * It runs against a throwaway tree — its own content/, data/ and config/ — so
+ * it passes on a fresh clone that has no posts yet, and it can never touch the
+ * operator's own writing, counters or credentials.
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { startServer } from '../src/server.js';
-import { CONFIG_DIR } from '../src/lib/paths.js';
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const PROJECT = path.resolve(HERE, '..');
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// --- build a sandbox before the app is imported: paths.js reads the env once --
+const SANDBOX = fs.mkdtempSync(path.join(os.tmpdir(), 'oldie-e2e-'));
+const copyDir = (from, to) => {
+  fs.mkdirSync(to, { recursive: true });
+  for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+    const src = path.join(from, entry.name);
+    const dest = path.join(to, entry.name);
+    if (entry.isDirectory()) {
+      copyDir(src, dest);
+    } else if (entry.isFile()) {
+      fs.copyFileSync(src, dest);
+    }
+  }
+};
+
+copyDir(path.join(PROJECT, 'config'), path.join(SANDBOX, 'config'));
+// the view layer is resolved from ROOT/src, so the sandbox needs it too — as a
+// symlink, because the templates are the code under test, not fixtures
+try {
+  fs.symlinkSync(path.join(PROJECT, 'src'), path.join(SANDBOX, 'src'), 'dir');
+} catch {
+  copyDir(path.join(PROJECT, 'src'), path.join(SANDBOX, 'src'));
+}
+// static assets are big and read-only: a symlink is enough and keeps it fast
+try {
+  fs.symlinkSync(path.join(PROJECT, 'public'), path.join(SANDBOX, 'public'), 'dir');
+} catch {
+  copyDir(path.join(PROJECT, 'public'), path.join(SANDBOX, 'public'));
+}
+// the bundled sample posts, so the suite is deterministic on a fresh clone
+copyDir(path.join(PROJECT, 'scripts', 'sample-content', 'posts'), path.join(SANDBOX, 'content', 'posts'));
+copyDir(path.join(PROJECT, 'scripts', 'sample-content', 'pages'), path.join(SANDBOX, 'content', 'pages'));
+fs.mkdirSync(path.join(SANDBOX, 'data'), { recursive: true });
+
+process.env.OLDIE_ROOT = SANDBOX;
+process.env.OLDIE_DATA_DIR = path.join(SANDBOX, 'data');
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'smoke-test-password';
 
+// now the app can be imported: it will resolve everything inside the sandbox
+const { startServer } = await import('../src/server.js');
+const { CONFIG_DIR } = await import('../src/lib/paths.js');
+
+const ROOT = SANDBOX;
 // unique per run: the suite can be run repeatedly against the same data dir
 const RUN_TAG = Math.random().toString(36).slice(2, 8);
 const results = [];
 let failures = 0;
 
-// the suite rotates the admin password; put the real one back afterwards so
-// running the tests never locks anyone out of their own blog.
+// The sandbox has its own config dir, so nothing here can ever touch the real
+// admin.json or settings.json. The backup dance is kept as a belt-and-braces
+// guard for anyone who points OLDIE_ROOT somewhere unexpected.
 const CREDS = path.join(CONFIG_DIR, 'admin.json');
-// the suite saves and then RESETS settings; that must not touch the operator's file
-const DATA_DIR = path.join(path.dirname(path.dirname(new URL(import.meta.url).pathname)), 'data');
+const DATA_DIR = path.join(ROOT, 'data');
 const SETTINGS = path.join(DATA_DIR, 'settings.json');
 const settingsBackup = fs.existsSync(SETTINGS) ? fs.readFileSync(SETTINGS, 'utf8') : null;
 const credsBackup = fs.existsSync(CREDS) ? fs.readFileSync(CREDS, 'utf8') : null;
 function restoreCreds() {
   if (settingsBackup === null) { try { fs.rmSync(SETTINGS, { force: true }); } catch { /* ignore */ } }
   else { try { fs.writeFileSync(SETTINGS, settingsBackup, 'utf8'); } catch { /* ignore */ } }
-  if (credsBackup === null) { try { fs.rmSync(CREDS, { force: true }); } catch { /* ignore */ } return; }
-  try { fs.writeFileSync(CREDS, credsBackup, 'utf8'); } catch { /* ignore */ }
+  if (credsBackup === null) { try { fs.rmSync(CREDS, { force: true }); } catch { /* ignore */ } }
+  else { try { fs.writeFileSync(CREDS, credsBackup, 'utf8'); } catch { /* ignore */ } }
 }
-
-async function check(name, fn) {
+function cleanSandbox() {
+  try {
+    fs.rmSync(SANDBOX, { recursive: true, force: true });
+  } catch {
+    // the OS cleans the temp dir eventually
+  }
+}
+ async function check(name, fn) {
   try {
     const detail = await fn();
     results.push({ ok: true, name, detail });
@@ -622,6 +671,7 @@ async function main() {
 
   server.close();
   restoreCreds();
+  cleanSandbox();
 
   console.log('\n' + '─'.repeat(60));
   const passed = results.filter((r) => r.ok).length;
@@ -635,6 +685,7 @@ async function main() {
 
 main().catch((err) => {
   restoreCreds();
+  cleanSandbox();
   console.error('\u001b[31msmoke test crashed:\u001b[0m', err);
   process.exit(1);
 });
