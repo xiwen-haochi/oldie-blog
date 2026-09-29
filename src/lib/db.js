@@ -77,6 +77,15 @@ export function sqlitePut(name, value) {
   return value;
 }
 
+/**
+ * When the row was last written, which is the only trace of creation time a
+ * document that predates the createdAt field leaves behind.
+ */
+export function sqliteWrittenAt(name) {
+  const row = open().prepare('SELECT updated_at FROM stores WHERE name = ?').get(name);
+  return (row && row.updated_at) || null;
+}
+
 export function sqliteNames() {
   return open().prepare('SELECT name FROM stores').all().map((r) => r.name);
 }

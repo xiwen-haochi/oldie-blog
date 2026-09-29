@@ -6,7 +6,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { sqliteNames, sqlitePut, sqliteGet, sqliteKeysWith } from './db.js';
+import { sqliteNames, sqlitePut, sqliteGet, sqliteKeysWith, sqliteWrittenAt } from './db.js';
 import { SETTINGS_KEY } from './config.js';
 
 const RUNTIME_STORES = ['stats', 'guestbook', 'subscribers', 'sessions'];
@@ -43,6 +43,32 @@ function readMarkdown(file, kind) {
     frontMatter,
     body: raw.slice(match[0].length),
   };
+}
+
+/**
+ * Give every document a creation stamp, once.
+ *
+ * Posts written before createdAt existed have none, and two of them sharing
+ * a publish date were then ordered by their titles -- so the one you had just
+ * finished sat at the bottom. The row's own updated_at is the only record of
+ * when they were written that anyone kept. It is a guess for a document that
+ * was edited after it was created, and a correct one for everything else;
+ * a document that already has a stamp is never touched, so this runs once and
+ * then never again.
+ */
+function stampCreationTimes() {
+  let stamped = 0;
+  // sqliteKeysWith hands back the key without its prefix, which is no use
+  // here: the row has to be read under its full name.
+  const names = sqliteNames().filter((n) => n.startsWith('post:') || n.startsWith('page:'));
+  for (const name of names) {
+    const doc = sqliteGet(name, null);
+    if (!doc || doc.createdAt) continue;
+    doc.createdAt = sqliteWrittenAt(name) || new Date().toISOString();
+    sqlitePut(name, doc);
+    stamped++;
+  }
+  return stamped;
 }
 
 export function importExistingData({ dataDir, root }) {
@@ -100,7 +126,7 @@ export function importExistingData({ dataDir, root }) {
     }
   }
 
-  return { migrated };
+  return { migrated, stamped: stampCreationTimes() };
 }
 
 /** Everything in the database, as plain objects. Used by the backup export. */

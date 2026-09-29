@@ -40,8 +40,9 @@
           old article cannot make it look like news. This list used to be four
           sentences typed into this file, which is why it never changed. %>
       <ul class="recent-updates">
-        <% (recent || []).forEach(function (post) { %>
-          <li>✔ <span class="blink">NEW</span> <a href="<%= post.url %>"><%= post.title %></a> <span class="mono muted" style="font-size:11px"><%= formatDate(post.date, { locale: dateLocale }) %></span></li>
+        <%# NEW marks the newest one. Five blinking rows is a strobe, not news. %>
+        <% (recent || []).forEach(function (post, i) { %>
+          <li>✔ <% if (i === 0) { %><span class="blink">NEW</span> <% } %><a href="<%= post.url %>"><%= post.title %></a> <span class="mono muted" style="font-size:11px"><%= formatDate(post.date, { locale: dateLocale }) %></span></li>
         <% }) %>
       </ul>
       <div class="linkbar">

@@ -806,7 +806,8 @@ async function main() {
       assert.ok(recentBlock(home), 'the home page has no recent-updates panel at all');
       assert.doesNotMatch(home, /chiptune theme player —/,
         'the four hardcoded sentences are still in the template');
-      assert.match(recentBlock(home), /blink/, 'the flashing NEW badge is gone again');
+      assert.equal((recentBlock(home).match(/class="blink"/g) || []).length, 1,
+        'NEW belongs on the newest row only');
 
       // same publish date, three posts: the one written last has to lead, in
       // the panel and in the post list. The title used to break the tie.
