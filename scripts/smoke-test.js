@@ -774,28 +774,42 @@ async function main() {
 
     await check('a checkbox that is turned OFF stays off', async () => {
       // A browser omits an unchecked box from the POST entirely, so the form
-      // has to carry a hidden value and the handler has to treat only an
-      // explicit "on" as yes. Testing "the field is missing" is what the old
-      // code got wrong; posting a literal "off" hid it.
+      // carries a hidden value and the handler reads that one. Note the
+      // semantics: a field that is *absent* now means "no change"; turning
+      // something off means sending the explicit off.
       const checked = (html) => /name="pathStyle" value="on"[^>]*checked/.test(html);
       const form = await text('/admin/settings');
       assert.match(form, /type="hidden" name="pathStyle" value="off"/,
         'without a hidden fallback an unchecked box submits nothing at all');
 
-      await post('/admin/settings', { _csrf: adminCsrf });
-      assert.equal(checked(await text('/admin/settings')), false, 'a missing field must mean off');
-
-      await post('/admin/settings', { _csrf: adminCsrf, pathStyle: 'off' });
-      assert.equal(checked(await text('/admin/settings')), false, '"off" must mean off');
-
       await post('/admin/settings', { _csrf: adminCsrf, pathStyle: 'on' });
       assert.equal(checked(await text('/admin/settings')), true, '"on" must mean on');
 
       await post('/admin/settings', { _csrf: adminCsrf, pathStyle: 'off' });
-      assert.equal(checked(await text('/admin/settings')), false, 'and it must be able to go back off');
-      return 'off, on, off';
+      assert.equal(checked(await text('/admin/settings')), false, '"off" must mean off');
+
+      await post('/admin/settings', { _csrf: adminCsrf });
+      assert.equal(checked(await text('/admin/settings')), false, 'an absent field must mean no change, not off');
+      return 'on, off, untouched';
     });
 
+    await check('a partial settings save does not switch anything off', async () => {
+      // Sending only the title used to blank every feature flag and empty every
+      // text field it did not mention — the whole site off in one request.
+      const res = await post('/admin/settings', { _csrf: adminCsrf, title: 'Partial Save Probe' });
+      assert.equal(res.status, 302, 'settings save failed');
+
+      const page = await (await get('/admin/settings')).text();
+      const on = (name) => new RegExp('name="' + name + '"[^>]*checked').test(page);
+      for (const flag of ['fComments', 'fGuestbook', 'fSearch', 'fHitCounter', 'showMarquee', 'showCounter']) {
+        assert.ok(on(flag), flag + ' was silently switched off by a partial save');
+      }
+      assert.match(page, /value="Partial Save Probe"/, 'the one field that was sent did not land');
+      // the nav textarea is multi-line, so match the first entry that was there
+      assert.match(page, /<textarea[^>]*name="nav"[^>]*>[\\s\\S]*HOME/i, 'the navigation was wiped');
+      assert.match(page, /name="accent"[^>]*value="#008080"/, 'the theme colour was reset');
+      return 'nothing else moved';
+    });
     await check('settings reset restores the config file', async () => {
       const res = await post('/admin/settings/reset', { _csrf: adminCsrf });
       assert.equal(res.status, 302);

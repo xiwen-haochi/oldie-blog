@@ -9,7 +9,7 @@
   </div>
 </div>
 
-<div class="alert info"><%= t(settings.dataDriver === 'sqlite' ? 'admin.settings_note_sqlite' : 'admin.settings_note_json') %></div>
+<div class="alert info"><%= t('admin.settings_note') %></div>
 
 <form id="settings-form" method="post" action="<%= adminPath %>/settings" class="settings-form">
   <input type="hidden" name="_csrf" value="<%= csrf %>">

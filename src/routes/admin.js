@@ -440,6 +440,14 @@ export function adminRoutes(ctx) {
   router.post(A + '/settings', requireAuth, requireCsrf, async (req, res, next) => {
     try {
       const b = req.body;
+      // A save that does not mention a field must not delete it. The browser
+      // form sends everything, but a partial POST used to blank every checkbox
+      // and every text field it happened to leave out — which turned the whole
+      // site off in a single request.
+      const cur = ctx.site;
+      const keep = (k, fallback) => (b[k] === undefined ? fallback : b[k]);
+      const flag = (k, current) => (b[k] === undefined ? !!current : !!b[k]);
+      const text = (k, current, max) => String(keep(k, current === undefined || current === null ? '' : current)).slice(0, max);
       const parseList = (v) => String(v || '').split('\n').map((x) => x.trim()).filter(Boolean);
       const parseNav = (v) => String(v || '').split('\n').map((line) => {
         const [label, href] = line.split(/\s*[|>]\s*/);
@@ -454,56 +462,65 @@ export function adminRoutes(ctx) {
         return m ? { text: m[1].trim(), href: m[2].trim() } : { text: line.trim(), href: '#' };
       }).filter((x) => x.text);
 
+      const features = cur.features || {};
+      const s3 = (cur.storage && cur.storage.s3) || {};
+      const storage = (cur.storage && cur.storage) || {};
+      const theme = cur.theme || {};
+
       const settings = {
-        title: String(b.title || ctx.site.title).slice(0, 120),
-        tagline: String(b.tagline || '').slice(0, 200),
-        description: String(b.description || '').slice(0, 400),
-        author: String(b.author || '').slice(0, 120),
-        email: String(b.email || '').slice(0, 120),
-        since: String(b.since || '').slice(0, 20),
-        url: String(b.url || ctx.site.url).replace(/\/+$/, ''),
-        dataDriver: b.dataDriver === 'sqlite' ? 'sqlite' : 'json',
-        locale: String(b.locale || 'en').slice(0, 16),
-        postsPerPage: Math.min(50, Math.max(1, Number(b.postsPerPage) || 8)),
-        nav: parseNav(b.nav),
-        webring: parseRing(b.webring),
-        banners: parseBanners(b.banners),
-        footer: String(b.footer || '').slice(0, 300),
-        icp: String(b.icp || '').slice(0, 200),
-        analytics: String(b.analytics || '').slice(0, 4000),
+        title: text('title', cur.title, 120),
+        tagline: text('tagline', cur.tagline, 200),
+        description: text('description', cur.description, 400),
+        author: text('author', cur.author, 120),
+        email: text('email', cur.email, 120),
+        since: text('since', cur.since, 20),
+        url: text('url', cur.url, 300).replace(/\/+$/, ''),
+        dataDriver: keep('dataDriver', cur.dataDriver) === 'sqlite' ? 'sqlite' : 'json',
+        locale: text('locale', cur.locale || 'zh-CN', 16),
+        postsPerPage: Math.min(50, Math.max(1, Number(keep('postsPerPage', cur.postsPerPage || 8)) || 8)),
+        nav: b.nav === undefined ? (cur.nav || []) : parseNav(b.nav),
+        webring: b.webring === undefined ? (cur.webring || []) : parseRing(b.webring),
+        banners: b.banners === undefined ? (cur.banners || []) : parseBanners(b.banners),
+        footer: text('footer', cur.footer, 300),
+        icp: text('icp', cur.icp, 200),
+        analytics: text('analytics', cur.analytics, 4000),
         features: {
-          comments: !!b.fComments,
-          moderateComments: !!b.fModerateComments,
-          guestbook: !!b.fGuestbook,
-          moderateGuestbook: !!b.fModerateGuestbook,
-          search: !!b.fSearch,
-          hitCounter: !!b.fHitCounter,
-          randomPost: !!b.fRandomPost,
-          showToc: !!b.fShowToc,
-          showReadingTime: !!b.fShowReadingTime,
+          comments: flag('fComments', features.comments),
+          moderateComments: flag('fModerateComments', features.moderateComments),
+          guestbook: flag('fGuestbook', features.guestbook),
+          moderateGuestbook: flag('fModerateGuestbook', features.moderateGuestbook),
+          search: flag('fSearch', features.search),
+          hitCounter: flag('fHitCounter', features.hitCounter),
+          randomPost: flag('fRandomPost', features.randomPost),
+          showToc: flag('fShowToc', features.showToc),
+          showReadingTime: flag('fShowReadingTime', features.showReadingTime),
         },
         storage: {
-          driver: b.s3Enabled === 'on' ? 's3' : 'local',
-          directory: String(b.directory || 'public/uploads'),
-          maxSizeMb: Math.min(50, Math.max(1, Number(b.maxSizeMb) || 4)),
-          publicPath: String(b.publicPath || '/uploads'),
+          driver: b.s3Enabled === undefined ? (storage.driver || 'local') : (b.s3Enabled === 'on' ? 's3' : 'local'),
+          directory: text('directory', storage.directory || 'public/uploads', 200),
+          maxSizeMb: Math.min(50, Math.max(1, Number(keep('maxSizeMb', storage.maxSizeMb || 4)) || 4)),
+          publicPath: text('publicPath', storage.publicPath || '/uploads', 200),
           s3: {
-            bucket: String(b.bucket || ''),
-            region: String(b.region || 'auto'),
-            endpoint: String(b.endpoint || ''),
-            accessKeyId: String(b.accessKeyId || ''),
-            secretAccessKey: String(b.secretAccessKey || ''),
-            prefix: String(b.prefix || 'blog'),
-            publicUrl: String(b.publicUrl || ''),
-            pathStyle: b.pathStyle === 'on',
+            bucket: text('bucket', s3.bucket, 120),
+            region: text('region', s3.region || 'auto', 40),
+            endpoint: text('endpoint', s3.endpoint, 200),
+            accessKeyId: text('accessKeyId', s3.accessKeyId, 120),
+            // the field promises "leave empty to keep", so honour it: an
+            // empty box must not wipe the stored secret
+            secretAccessKey: String(b.secretAccessKey || '').trim()
+              ? String(b.secretAccessKey).slice(0, 200)
+              : String(s3.secretAccessKey || ''),
+            prefix: text('prefix', s3.prefix === undefined ? 'blog' : s3.prefix, 120),
+            publicUrl: text('publicUrl', s3.publicUrl, 300),
+            pathStyle: b.pathStyle === undefined ? !!s3.pathStyle : b.pathStyle === 'on',
           },
         },
         theme: {
-          accent: String(b.accent || '#008080'),
-          accent2: String(b.accent2 || '#000080'),
-          showMarquee: !!b.showMarquee,
-          showTerminal: !!b.showTerminal,
-          showCounter: !!b.showCounter,
+          accent: text('accent', theme.accent || '#008080', 20),
+          accent2: text('accent2', theme.accent2 || '#000080', 20),
+          showMarquee: flag('showMarquee', theme.showMarquee),
+          showTerminal: flag('showTerminal', theme.showTerminal),
+          showCounter: flag('showCounter', theme.showCounter),
         },
       };
 
