@@ -25,7 +25,7 @@ const archiveUpload = multer({
   limits: { fileSize: 512 * 1024 * 1024, files: 1 },
   fileFilter: (req, file, cb) => {
     const ok = /\.zip$/i.test(file.originalname || '') || /zip|x-zip|octet-stream/.test(file.mimetype || '');
-    cb(ok ? null : Object.assign(new Error('只能上传 .zip 备份文件'), { status: 400 }), ok);
+    cb(ok ? null : Object.assign(new Error('not a zip'), { status: 400, code: 'NOT_A_ZIP' }), ok);
   },
 });
 const ALLOWED_IMAGE = /^image\/(png|jpeg|gif|webp|svg\+xml|avif)$/;
@@ -52,14 +52,14 @@ export function adminRoutes(ctx) {
 
   const requireCsrf = (req, res, next) => {
     if (checkCsrf(req, (req.body && req.body._csrf) || req.get('x-csrf-token'))) return next();
+    // Rendered through the shared helper on purpose: the admin chrome needs
+    // site/t/nav/csrf, and a half-filled locals bag made this page itself
+    // throw, turning a 403 into a 500.
     res.status(403);
-    return res.render('aw/error', {
+    return render(res, 'error', {
       req,
-      title: 'Access denied',
-      nav: adminNav(null, A),
-      csrf: (req.session && req.session.csrf) || '',
-      flash: null,
-      message: 'Your session token expired or was missing. Reload the admin page and try again.',
+      title: tr(req)('admin.access_denied'),
+      message: tr(req)('admin.csrf_error'),
     });
   };
 
@@ -121,6 +121,23 @@ export function adminRoutes(ctx) {
       path: '/',
       maxAge: 15000,
     });
+  };
+
+  /**
+   * Multer refuses a file before the route handler ever runs, so its
+   * complaints used to land on the generic error page. Send the operator back
+   * to the form with the actual reason — on an upload screen, "something went
+   * wrong" is useless.
+   */
+  const uploadRefused = (back, limitBytes) => (err, req, res, next) => {
+    if (!err || (!err.code && !err.status)) return next(err);
+    const t = tr(req);
+    let text;
+    if (err.code === 'NOT_A_ZIP') text = t('admin.restore_pick_zip');
+    else if (err.code === 'LIMIT_FILE_SIZE') text = t('admin.upload_too_large', { max: humanBytes(limitBytes) });
+    else text = t('admin.upload_failed', { msg: String(err.message || err.code).slice(0, 120) });
+    setFlash(res, 'err', text);
+    res.redirect(back);
   };
 
   /** Attachments come from whichever driver is configured (local disk or S3). */
@@ -533,7 +550,7 @@ export function adminRoutes(ctx) {
     });
   });
 
-  router.post(A + '/media', requireAuth, upload.single('file'), requireCsrf, async (req, res, next) => {
+  router.post(A + '/media', requireAuth, upload.single('file'), uploadRefused(U('/media'), MAX_UPLOAD), requireCsrf, async (req, res, next) => {
     const t = makeTranslator((req && req.locale) || ctx.site.locale);
     try {
       const file = req.file;
@@ -611,7 +628,7 @@ export function adminRoutes(ctx) {
     }
   });
 
-  router.post(A + '/backup/restore', requireAuth, requireCsrf, archiveUpload.single('archive'), async (req, res) => {
+  router.post(A + '/backup/restore', requireAuth, archiveUpload.single('archive'), uploadRefused(U('/backup'), 512 * 1024 * 1024), requireCsrf, async (req, res) => {
     const t = makeTranslator((req && req.locale) || ctx.site.locale);
     try {
       const buffer = req.file ? req.file.buffer : null;

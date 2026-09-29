@@ -126,7 +126,7 @@ function cookieJar() {
 
 async function main() {
   console.log('\n\u001b[1moldie-blog smoke test\u001b[0m');
-  const { server } = startServer({ port: 0, host: '127.0.0.1' });
+  const { server, ctx } = startServer({ port: 0, host: '127.0.0.1' });
   await new Promise((resolve) => server.once('listening', resolve));
   const base = 'http://127.0.0.1:' + server.address().port;
   const jar = cookieJar();
@@ -155,6 +155,18 @@ async function main() {
     const a = html.match(/name="csrf-token" content="([^"]+)"/);
     const b = html.match(/name="_csrf" value="([^"]+)"/);
     return (a && a[1]) || (b && b[1]) || '';
+  };
+  // Browsers post enctype="multipart/form-data", which is a different body
+  // parser from the urlencoded one the other admin forms use.
+  const postMultipart = async (p, form) => {
+    const res = await fetch(base + p, {
+      method: 'POST',
+      redirect: 'manual',
+      headers: { cookie: jar.header() },
+      body: form,
+    });
+    jar.absorb(res);
+    return res;
   };
 
   section('public pages');
@@ -661,6 +673,42 @@ async function main() {
     const page = await (await get('/admin/backup')).text();
     assert.ok(!page.includes('已恢复'), 'nothing should have been restored');
     return 'refused';
+  });
+
+  await check('a restore from the wrong kind of file explains itself', async () => {
+    const form = new FormData();
+    form.set('_csrf', adminCsrf);
+    form.set('confirm', ctx.site.title);
+    form.set('archive', new Blob([Buffer.from('not a zip at all')], { type: 'text/plain' }), 'notes.txt');
+    const res = await postMultipart('/admin/backup/restore', form);
+    assert.equal(res.status, 302, 'status ' + res.status);
+    assert.match(res.headers.get('location') || '', /\/backup$/, 'should go back to the form');
+    const page = await (await get('/admin/backup')).text();
+    assert.match(page, /只能恢复 \.zip 备份包/, 'the operator is not told what was wrong');
+    return 'redirected with a reason';
+  });
+
+  await check('a restore posted the way a browser posts it works', async () => {
+    // the real form is enctype="multipart/form-data"; posting urlencoded
+    // instead hides CSRF-from-body bugs that only multipart can trigger
+    const archive = Buffer.from(await (await get('/admin/backup/download')).arrayBuffer());
+    const form = new FormData();
+    form.set('_csrf', adminCsrf);
+    form.set('confirm', ctx.site.title);
+    form.set('archive', new Blob([archive], { type: 'application/zip' }), 'backup.zip');
+    const res = await postMultipart('/admin/backup/restore', form);
+    const preview = (await res.clone().text()).slice(0, 300).replace(/\n/g, ' ');
+    assert.equal(res.status, 302, 'status ' + res.status + ' loc=' + res.headers.get('location') + ' body=' + preview);
+    assert.match(res.headers.get('location') || '', /restored=1/, 'restore did not report success');
+    return 'restored ' + archive.length + ' bytes';
+  });
+
+  await check('a stale CSRF token is refused with 403, not a crash', async () => {
+    const res = await post('/admin/settings', { _csrf: 'not-the-real-token', title: 'x' });
+    assert.equal(res.status, 403, 'status ' + res.status);
+    const page = await res.text();
+    assert.match(page, /拒绝访问/, 'the admin should explain itself instead of showing an error page');
+    return 'readable 403';
   });
   await check('logout ends the session', async () => {
       assert.equal((await post('/admin/logout', { _csrf: adminCsrf })).status, 302);
