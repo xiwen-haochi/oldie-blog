@@ -115,6 +115,8 @@
   var uploadState = $('#media-upload-state');
   var mediaFiles = [];
   var loadingMedia = false;
+  // when set, choosing an image fills this input instead of the text
+  var mediaTarget = null;
 
   function altText() {
     var t = title && title.value ? title.value.trim() : '';
@@ -123,6 +125,17 @@
 
   function insertImage(url) {
     insertAtCursor('![' + altText() + '](' + url + ')');
+  }
+
+  /** One decision point: a cover field wants a url, the body wants markdown. */
+  function useImage(url) {
+    if (mediaTarget) {
+      mediaTarget.value = url;
+      mediaTarget.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+      insertImage(url);
+    }
+    closeMedia();
   }
 
   function humanSize(n) {
@@ -187,8 +200,7 @@
       img.loading = 'lazy';
       cell.appendChild(img);
       cell.addEventListener('click', function () {
-        insertImage(f.url);
-        closeMedia();
+        useImage(f.url);
       });
       grid.appendChild(cell);
     });
@@ -209,8 +221,9 @@
       .then(function () { loadingMedia = false; });
   }
 
-  function openMedia() {
+  function openMedia(target) {
     if (!modal) return;
+    mediaTarget = target || null;
     modal.hidden = false;
     if (!mediaFiles.length) loadMedia();
     else renderGrid();
@@ -221,7 +234,8 @@
   }
 
   $$('[data-open-media]').forEach(function (b) {
-    b.addEventListener('click', openMedia);
+    var selector = b.getAttribute('data-pick-target');
+    b.addEventListener('click', function () { openMedia(selector ? $(selector) : null); });
   });
   $$('[data-close-media]').forEach(function (b) {
     b.addEventListener('click', closeMedia);
@@ -244,8 +258,7 @@
       uploadImage(file)
         .then(function (saved) {
           renderGrid();
-          insertImage(saved.url);
-          closeMedia();
+          useImage(saved.url);
         })
         .catch(function (err) { sayBusy(say('mediaUploadFailed', 'Upload failed') + ' ' + err.message); });
     });

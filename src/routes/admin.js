@@ -304,7 +304,11 @@ export function adminRoutes(ctx) {
   router.post(A + '/posts', requireAuth, requireCsrf, async (req, res, next) => {
     try {
       const slug = String(req.body.originalSlug || '');
-      const fields = normaliseFields(req.body, {});
+      // Patching, not replacing: a field the request never mentions has to keep
+      // the value it already had. Saving an edit used to silently drop the
+      // cover, because the stored front matter was thrown away first.
+      const previous = slug ? rawOf({ kind: 'post', slug }) : null;
+      const fields = normaliseFields(req.body, previous ? previous.data : {});
       if (fields.featured && !fields.featuredAt) fields.featuredAt = new Date().toISOString();
       const saved = await saveDoc({ kind: 'post', slug, fields, body: req.body.body || '' });
       ctx.refresh();
@@ -361,7 +365,9 @@ export function adminRoutes(ctx) {
   router.post(A + '/pages', requireAuth, requireCsrf, async (req, res, next) => {
     try {
       const slug = String(req.body.originalSlug || '');
-      const fields = normaliseFields(req.body, {});
+      // same patching rule as posts: an omitted field keeps the value it had
+      const previous = slug ? rawOf({ kind: 'page', slug }) : null;
+      const fields = normaliseFields(req.body, previous ? previous.data : {});
       if (fields.featured && !fields.featuredAt) fields.featuredAt = new Date().toISOString();
       const saved = await saveDoc({ kind: 'page', slug, fields, body: req.body.body || '' });
       ctx.refresh();

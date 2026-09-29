@@ -8,6 +8,12 @@
       <% doc.tags.forEach(function (tag) { %><a class="tag" href="/tags/<%= slugify(tag) %>">#<%= tag %></a><% }) %>
     </div>
   </header>
+  <%# the cover was stored and used for og:image, but nothing ever drew it %>
+  <% if (doc.cover) { %>
+    <figure class="article-cover">
+      <img src="<%= doc.cover %>" alt="<%= doc.coverAlt || doc.title %>">
+    </figure>
+  <% } %>
   <div class="prose" data-post-body><%- doc.html %></div>
   <div class="post-footer">
     <div class="linkbar">

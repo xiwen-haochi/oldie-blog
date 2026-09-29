@@ -505,6 +505,8 @@ async function main() {
         date: '2025-06-01',
         description: 'Written by the smoke test to prove the writer works.',
         tags: 'smoke, testing',
+        cover: '/uploads/smoke-cover.png',
+        coverAlt: 'A cover, drawn',
         body: '# Hello from the admin\n\nWritten by the smoke test.\n\n- one\n- two',
       });
       assert.equal(res.status, 302, 'save status ' + res.status);
@@ -628,6 +630,27 @@ async function main() {
       assert.equal(found.url, saved.url, 'the picker and the upload must agree on the url');
       assert.equal(typeof found.size, 'number');
       return json.files.length + ' files, url ' + found.url;
+    });
+
+    await check('a cover is saved and actually drawn on the post', async () => {
+      const md = fs.readFileSync(path.join(ROOT, 'content', 'posts', '2025-06-01-' + createdSlug + '.md'), 'utf8');
+      assert.match(md, /cover: \/uploads\/smoke-cover\.png/, 'the cover never reached the front matter');
+      assert.match(md, /coverAlt: A cover, drawn/, 'the alt text never reached the front matter');
+
+      const page = await (await get('/posts/' + createdSlug)).text();
+      assert.match(page, /<figure class="article-cover">/, 'the cover is not drawn anywhere');
+      assert.match(page, /<img src="\/uploads\/smoke-cover\.png" alt="A cover, drawn">/, 'the image or its alt text is wrong');
+      return 'drawn with alt text';
+    });
+
+    await check('a post with no cover gets no cover element', async () => {
+      await post('/admin/posts', {
+        _csrf: adminCsrf, title: 'No Cover Here', slug: 'no-cover-here',
+        date: '2025-06-03', body: 'Plain.',
+      });
+      const page = await (await get('/posts/no-cover-here')).text();
+      assert.ok(!page.includes('article-cover'), 'an empty cover box was rendered');
+      return 'no empty box';
     });
 
     await check('a checkbox that is turned OFF stays off', async () => {

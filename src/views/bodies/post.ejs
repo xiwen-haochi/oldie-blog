@@ -19,6 +19,12 @@
       <% post.tags.forEach(function (tag) { %><a class="tag" href="/tags/<%= slugify(tag) %>">#<%= tag %></a><% }) %>
     </div>
   </header>
+  <%# the cover was stored and used for og:image, but nothing ever drew it %>
+  <% if (post.cover) { %>
+    <figure class="article-cover">
+      <img src="<%= post.cover %>" alt="<%= post.coverAlt || post.title %>">
+    </figure>
+  <% } %>
 
   <div class="linkbar">
     <a class="btn" href="#" data-listen-post><%= t('post.listen') %></a>

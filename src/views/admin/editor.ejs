@@ -91,7 +91,11 @@
       </div>
       <div class="field">
         <label for="cover"><%= t('admin.field_cover') %></label>
-        <input id="cover" name="cover" value="<%= val('cover') %>" placeholder="/uploads/cover.png">
+        <div class="input-row">
+          <input id="cover" name="cover" value="<%= val('cover') %>" placeholder="/uploads/cover.png">
+          <button class="btn tiny" type="button" data-open-media data-pick-target="#cover"
+                  title="<%= t('admin.media_pick_button') %>">🖼 <%= t('admin.media_pick_button') %></button>
+        </div>
       </div>
       <div class="field">
         <label for="coverAlt"><%= t('admin.field_cover_alt') %></label>
