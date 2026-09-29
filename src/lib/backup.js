@@ -2,46 +2,79 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { createZip, readZip, safeEntryPath } from './zip.js';
-import { ROOT, POSTS_DIR, PAGES_DIR, DATA_DIR, UPLOAD_DIR, CONFIG_DIR } from './paths.js';
-import { sqliteStats, sqliteGet, sqliteNames, databaseFile } from './db.js';
+import { ROOT, DATA_DIR, UPLOAD_DIR, CONFIG_DIR } from './paths.js';
+import { sqliteStats, sqliteGet, sqliteNames, databaseFile, sqlitePut, sqliteDelete, sqliteDeleteWhere } from './db.js';
+import { listDocs, fileNameFor, frontMatter } from './writer.js';
 
 const IGNORE = /^(\.git|node_modules|\.cache|coverage|\.DS_Store|\.gitkeep|.*\.log$|.*\.tmp$|.*\.sqlite-wal$|.*\.sqlite-shm$|.*\.migrated-.*|.*\.before-restore-.*|\.restore-staging-.*)/;
 
-/** Files worth putting in a backup, relative to the project root. */
+const walkFiles = (dir, label, out, depth = 0) => {
+  if (depth > 4) return out;
+  let entries = [];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const entry of entries) {
+    const rel = label + '/' + entry.name;
+    if (IGNORE.test(entry.name) || IGNORE.test(rel)) continue;
+    if (entry.isDirectory()) {
+      walkFiles(path.join(dir, entry.name), rel, out, depth + 1);
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    try {
+      out.push({ name: rel, data: fs.readFileSync(path.join(dir, entry.name)) });
+    } catch {
+      /* skip anything we cannot read (a file being rewritten right now) */
+    }
+  }
+  return out;
+};
+
+/**
+ * Everything a restore needs, in one archive.
+ *
+ * The database is exported twice on purpose: once as one JSON document, which
+ * is what a restore reads back, and once as real Markdown files under
+ * content/, so the backup stays readable and greppable by a human.
+ */
 export function collectBackupFiles() {
   const out = [];
-  const roots = [
-    { dir: path.join(ROOT, 'content'), label: 'content' },
-    { dir: DATA_DIR, label: 'data' },
-    { dir: UPLOAD_DIR, label: 'public/uploads' },
-    { dir: CONFIG_DIR, label: 'config' },
-  ];
 
-  const walk = (dir, label, depth) => {
-    if (depth > 4) return;
-    let names = [];
-    try {
-      names = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of names) {
-      const rel = label + '/' + entry.name;
-      if (IGNORE.test(entry.name) || IGNORE.test(rel)) continue;
-      if (entry.isDirectory()) {
-        walk(path.join(dir, entry.name), rel, depth + 1);
-        continue;
-      }
-      if (!entry.isFile()) continue;
-      try {
-        out.push({ name: rel, data: fs.readFileSync(path.join(dir, entry.name)) });
-      } catch {
-        /* skip anything we cannot read (a file being rewritten right now) */
-      }
-    }
-  };
+  out.push({
+    name: 'database/oldie.json',
+    data: Buffer.from(JSON.stringify(exportDatabase(), null, 2) + '\n', 'utf8'),
+  });
 
-  for (const root of roots) walk(root.dir, root.label, 0);
+  for (const kind of ['post', 'page']) {
+    for (const doc of listDocs(kind)) {
+      const dir = kind === 'post' ? 'content/posts' : 'content/pages';
+      out.push({
+        name: dir + '/' + fileNameFor(doc.frontMatter),
+        data: Buffer.from(frontMatter(doc.frontMatter, doc.body), 'utf8'),
+      });
+    }
+  }
+
+  walkFiles(UPLOAD_DIR, 'public/uploads', out);
+  walkFiles(CONFIG_DIR, 'config', out);
+  return out;
+}
+
+/** The whole database as plain objects, keyed exactly as it is stored. */
+export function exportDatabase() {
+  const out = {};
+  for (const name of sqliteNames()) {
+    if (name.includes(':')) {
+      const cut = name.indexOf(':');
+      const namespace = name.slice(0, cut);
+      (out[namespace] = out[namespace] || {})[name.slice(cut + 1)] = sqliteGet(name, null);
+    } else {
+      out[name] = sqliteGet(name, null);
+    }
+  }
   return out;
 }
 /** What a backup would contain, for the admin screen. */
@@ -107,7 +140,9 @@ export async function restoreBackup(buffer, opts = {}) {
   }
   if (manifest.format !== 'oldie-blog-backup') throw new Error('备份格式不认识：' + manifest.format);
 
-  const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+  // Millisecond precision on purpose: two restores in the same minute used to
+  // produce the same .before-restore-* folder, and the second one collided.
+  const stamp = new Date().toISOString().replace(/[-:TZ.]/g, '');
   const staging = path.join(ROOT, '.restore-staging-' + stamp);
   await fsp.rm(staging, { recursive: true, force: true });
   await fsp.mkdir(staging, { recursive: true });
@@ -123,23 +158,43 @@ export async function restoreBackup(buffer, opts = {}) {
     written.push(rel);
   }
 
-  // move what is currently there out of the way, then swap the archive in
-  const groups = {
-    content: POSTS_DIR.slice(0, 0) || null,
-  };
-  void groups;
+  // The database is replaced wholesale, and the old one is kept as a file so a
+  // restore is itself reversible.
+  const databaseEntry = written.indexOf('database/oldie.json');
+  const backups = [];
+  if (databaseEntry >= 0) {
+    const doc = JSON.parse(fs.readFileSync(path.join(staging, 'database/oldie.json'), 'utf8'));
+    const aside = path.join(ROOT, '.before-restore-' + stamp);
+    await fsp.mkdir(aside, { recursive: true });
+    const previous = path.join(aside, 'oldie.json');
+    fs.writeFileSync(previous, JSON.stringify(exportDatabase(), null, 2) + '\n', 'utf8');
+    backups.push(path.relative(ROOT, previous));
+
+    for (const name of Object.keys(doc)) {
+      const value = doc[name];
+      // post:/page: are namespaces: a map of slug -> document
+      const isNamespace = value && typeof value === 'object' && !Array.isArray(value)
+        && Object.values(value).some((v) => v && typeof v === 'object' && 'slug' in v);
+      if (isNamespace) {
+        sqliteDeleteWhere(name + ':');
+        for (const [slug, doc2] of Object.entries(value)) sqlitePut(name + ':' + slug, doc2);
+        continue;
+      }
+      sqliteDelete(name);
+      if (value !== null && value !== undefined) sqlitePut(name, value);
+    }
+  }
+
+  // uploads and the config file still live on disk
   const moves = [
-    { from: path.join(ROOT, 'content'), label: 'content' },
-    { from: DATA_DIR, label: 'data' },
-    { from: UPLOAD_DIR, label: 'uploads' },
+    { from: UPLOAD_DIR, label: 'public/uploads' },
     { from: CONFIG_DIR, label: 'config' },
   ];
-  const backups = [];
-  const present = new Set(written.map((name) => name.split('/')[0] === 'public' ? 'uploads' : name.split('/')[0]));
+  const present = new Set(written.map((n) => n.split('/')[0] === 'public' ? 'public/uploads' : n.split('/')[0]));
   for (const move of moves) {
     if (!fs.existsSync(move.from)) continue;
-    if (!present.has(move.label)) continue;   // the archive has nothing for this group
-    if (move.label === 'uploads' && opts.keepUploads) continue;
+    if (!present.has(move.label)) continue;
+    if (move.label === 'public/uploads' && opts.keepUploads) continue;
     const aside = path.join(ROOT, '.before-restore-' + stamp, move.label);
     await fsp.mkdir(path.dirname(aside), { recursive: true });
     await fsp.rename(move.from, aside);
@@ -147,6 +202,8 @@ export async function restoreBackup(buffer, opts = {}) {
   }
 
   for (const entry of written) {
+    if (entry === 'database/oldie.json') continue;
+    if (entry.split('/')[0] === 'content') continue;   // the .md files are only for humans
     const target = path.join(ROOT, entry);
     await fsp.mkdir(path.dirname(target), { recursive: true });
     await fsp.rename(path.join(staging, entry), target);
@@ -159,5 +216,3 @@ export async function restoreBackup(buffer, opts = {}) {
     previous: backups,
   };
 }
-
-export { sqliteStats, sqliteGet, sqliteNames };
