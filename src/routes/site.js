@@ -43,7 +43,7 @@ export function siteRoutes(ctx) {
   /* ------------------------------------------------------- post index */
   router.get('/posts', (req, res) => {
     const t = tr(req);
-    const posts = ctx.index.publishedPosts();
+    const posts = ctx.index.list();
     const pager = paginate(posts, req.query.page, ctx.site.postsPerPage || 8);
     const page = pageMeta(ctx.site, {
       title: 'All dispatches',
@@ -122,7 +122,7 @@ export function siteRoutes(ctx) {
   /* --------------------------------------------------------- archive */
   router.get('/archive', (req, res) => {
     const t = tr(req);
-    const posts = ctx.index.publishedPosts();
+    const posts = ctx.index.list();
     const page = pageMeta(ctx.site, {
       title: 'Archive',
       description: t('meta.archive', { site: ctx.site.title }),

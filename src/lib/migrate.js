@@ -31,6 +31,12 @@ function readMarkdown(file, kind) {
     }
     frontMatter[kv[1]] = value;
   }
+  // A pin carries a time, and a hand-written one often has no featuredAt.
+  // Stamp it with the publish date so the newest pin really does come first,
+  // instead of guessing on every request.
+  if (frontMatter.featured === true && !frontMatter.featuredAt && frontMatter.date) {
+    frontMatter.featuredAt = new Date(frontMatter.date + 'T00:00:00.000Z').toISOString();
+  }
   return {
     kind,
     slug: path.basename(file).replace(/^\d{4}-\d{2}-\d{2}-/, '').replace(/\.md$/, ''),

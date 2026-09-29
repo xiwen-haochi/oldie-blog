@@ -6,6 +6,15 @@ import { slugify, readingTime, stripHtml, countWords } from './text.js';
 const asArray = (v) => (v == null ? [] : Array.isArray(v) ? v : String(v).split(',').map((s) => s.trim()).filter(Boolean));
 const toBool = (v) => (typeof v === 'boolean' ? v : String(v ?? '').toLowerCase() === 'true');
 
+/**
+ * When a post was pinned. A pin without a stamp — a hand-edited front matter, an
+ * import — falls back to the publish date, because that is the only time we
+ * actually know about.
+ */
+function pinTime(post) {
+  return (post.featuredAt || post.date || 0);
+}
+
 function coerceDate(value) {
   if (value instanceof Date) return value;
   if (!value) return null;
@@ -149,14 +158,39 @@ export class ContentIndex {
   }
 
   /**
-   * Pinned posts, most recently pinned first. Sorting by featuredAt (and not
-   * by publish date) is what makes pinning an *old* post visibly do something.
+   * Pinned posts, most recently pinned first.
+   *
+   * "Pinned" is a position, not a label, so it has to carry a time. A post pinned
+   * by hand-editing its front matter had no featuredAt, and sorting it by
+   * publish date is exactly what made pinning look like it had stopped
+   * working. A pin with no stamp falls back to the publish date, the only
+   * honest guess available.
    */
   featured(limit = Infinity) {
     return this.publishedPosts()
       .filter((p) => p.featured)
-      .sort((a, b) => (b.featuredAt || b.date) - (a.featuredAt || a.date))
+      .sort((a, b) => pinTime(b) - pinTime(a))
       .slice(0, limit);
+  }
+
+  /**
+   * The order every list uses: pinned first, most recently pinned first, then
+   * newest first. One place, so the index, the archive and a tag page cannot
+   * disagree about what "pinned" means.
+   */
+  list(opts = {}) {
+    const all = opts.includeDrafts ? this.#all : this.publishedPosts();
+    return [...all].sort((a, b) => {
+      const aPin = a.featured ? pinTime(a) : null;
+      const bPin = b.featured ? pinTime(b) : null;
+      if (aPin !== bPin) {
+        if (!aPin) return 1;
+        if (!bPin) return -1;
+        const newer = bPin - aPin;
+        if (newer) return newer;
+      }
+      return b.date - a.date || a.title.localeCompare(b.title);
+    });
   }
 
   related(post, limit = 4) {
@@ -208,9 +242,9 @@ export class ContentIndex {
 
   allTags() { return [...this.tags.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)); }
 
-  postsByTag(tag, { includeDrafts = false } = {}) {
+  postsByTag(tag, opts = {}) {
     const t = slugify(tag);
-    return (includeDrafts ? this.#all : this.publishedPosts()).filter((p) => p.tags.some((x) => slugify(x) === t));
+    return this.list(opts).filter((p) => p.tags.some((x) => slugify(x) === t));
   }
 
   /** Deterministic-ish daily random post (same day → same post for everyone). */

@@ -29,6 +29,7 @@ async function withIndex(specs, fn) {
       draft: spec.draft,
       featured: spec.featured,
       featuredAt: spec.featuredAt,
+      tags: spec.tags || [],
     };
     await saveDoc({ kind: 'post', slug: '', fields, body: 'body of ' + slug });
     written.push(slug);
@@ -77,5 +78,48 @@ test('a draft never sneaks into the pinned section', async () => {
     secret: { date: '2026-01-01', featured: true, featuredAt: '2026-01-01', draft: true },
   }, (index) => {
     assert.deepEqual(index.featured(), [], 'a draft must stay private');
+  });
+});
+
+test('list() puts pinned first, newest pin first, then newest first', async () => {
+  await withIndex({
+    newest: { date: '2026-06-01' },
+    older: { date: '2026-01-01' },
+    'old-pinned': { date: '2020-01-01', featured: true, featuredAt: '2026-06-01' },
+    'mid-pinned': { date: '2026-05-01', featured: true, featuredAt: '2026-01-01' },
+  }, (index) => {
+    assert.deepEqual(
+      index.list().map((p) => p.slug),
+      ['old-pinned', 'mid-pinned', 'newest', 'older'],
+      'pinned first, and the most recently pinned of those at the very top'
+    );
+  });
+});
+
+test('a pin with no timestamp still counts as a pin', async () => {
+  // this is the shape a hand-edited front matter produces, and sorting it by
+  // publish date is what made pinning look broken
+  await withIndex({
+    plain: { date: '2026-06-01' },
+    stamped: { date: '2020-01-01', featured: true, featuredAt: '2026-06-01' },
+    unstamped: { date: '2026-03-01', featured: true },
+  }, (index) => {
+    const slugs = index.list().map((p) => p.slug);
+    assert.deepEqual(slugs, ['stamped', 'unstamped', 'plain'], 'an unstamped pin fell behind an unpinned post');
+    assert.deepEqual(index.featured().map((p) => p.slug), ['stamped', 'unstamped']);
+  });
+});
+
+test('a tag page uses the same order as the index', async () => {
+  await withIndex({
+    'tagged-plain': { date: '2026-06-01', tags: ['x'] },
+    'tagged-pinned': { date: '2026-02-01', featured: true, featuredAt: '2026-02-01', tags: ['x'] },
+    'tagged-elsewhere': { date: '2026-07-01', featured: true, featuredAt: '2026-07-01' },
+  }, (index) => {
+    assert.deepEqual(
+      index.postsByTag('x').map((p) => p.slug),
+      ['tagged-pinned', 'tagged-plain'],
+      'a tag page must pin-sort too, and must not borrow other tags\' pins'
+    );
   });
 });
