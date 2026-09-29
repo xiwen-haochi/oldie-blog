@@ -27,3 +27,8 @@ config/admin.json
 public/uploads/*
 !public/uploads/.gitkeep
 .cache/
+
+# restore scratch space (a restore moves the old files here first)
+.before-restore-*/
+.restore-staging-*/
+content/.backup-*/

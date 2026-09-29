@@ -215,6 +215,28 @@ pnpm new:post "文章标题" --tags=retro,web --draft
    `javascript:` 一律去掉；表格、图片、`video`、内联 `svg` 保留。
 
 所以你可以放心粘贴，页面样式不会被带崩。
+## 备份与恢复
+
+后台 → 💾 备份与恢复。
+
+**导出**：一个 `.zip` 压缩包，包含
+
+- `MANIFEST.json` —— 备份清单（时间、版本、文件列表）
+- `content/posts/*.md`、`content/pages/*.md` —— 文章和页面
+- `public/uploads/` —— 上传的图片
+- `config/` —— 站点配置和管理员密码
+- `data/` —— 访问量、留言板、订阅者、后台设置（含 S3 密钥和 AI key）
+
+**恢复**：选压缩包 → 输入站点标题确认 → 恢复。
+
+- 旧文件不会立刻删除，而是挪到 `.before-restore-<时间>/`，后悔了还能找回来
+- 可以勾选「保留当前的上传图片」
+- 恢复完重启服务生效
+- 压缩包不是本程序导出的会被拒绝；含 `../` 恶意路径的会被拦下
+
+压缩包用的是 Node 自带的 zlib 写的 ZIP（store + deflate），**零依赖**，
+可以直接用系统 `unzip`、Finder、Windows 资源管理器打开。
+
 ## 发布到 GitHub 之前
 
 ```bash
@@ -234,8 +256,8 @@ pnpm clean --force    # 直接删掉，不留备份
 
 ### 运行时数据可以换 SQLite
 
-默认是 JSON（一个文件一个 store，好读好备份）。想要 SQLite 就在
-「设置 → 运行时数据存储」里切到 SQLite，重启生效：
+**默认就是 SQLite**（Node 自带 `node:sqlite`，不用装任何依赖）；想换回 JSON 就在
+「设置 → 运行时数据存储」里选 JSON，重启生效：
 
 - 底层是 Node 自带的 `node:sqlite`（22.5+），**不需要装任何依赖**
 - 全部数据在一个 `data/oldie.sqlite`，WAL 模式，断电也不容易坏

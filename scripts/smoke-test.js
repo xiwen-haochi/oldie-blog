@@ -589,7 +589,31 @@ async function main() {
       return 'cleaned';
     });
 
-    await check('logout ends the session', async () => {
+    await check('backup archive downloads', async () => {
+    const res = await get('/admin/backup/download');
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-type') || '', /zip/);
+    const buf = Buffer.from(await res.arrayBuffer());
+    assert.ok(buf.length > 0, 'the archive is empty');
+    assert.equal(buf.subarray(0, 2).toString('latin1'), 'PK', 'not a zip file');
+    return buf.length + ' bytes';
+  });
+
+  await check('the backup page asks before it overwrites', async () => {
+    const page = await (await get('/admin/backup')).text();
+    assert.match(page, /name="archive"/, 'no upload field');
+    assert.match(page, /name="confirm"/, 'restore must ask for confirmation');
+    return 'guarded';
+  });
+
+  await check('a restore with the wrong confirmation is refused', async () => {
+    const res = await post('/admin/backup/restore', { _csrf: adminCsrf, confirm: 'definitely not the title' });
+    assert.equal(res.status, 302);
+    const page = await (await get('/admin/backup')).text();
+    assert.ok(!page.includes('已恢复'), 'nothing should have been restored');
+    return 'refused';
+  });
+  await check('logout ends the session', async () => {
       assert.equal((await post('/admin/logout', { _csrf: adminCsrf })).status, 302);
       assert.equal((await get('/admin/dashboard')).status, 302, 'still authenticated after logout');
       return 'signed out';

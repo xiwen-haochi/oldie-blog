@@ -10,6 +10,7 @@ import { Sessions } from './lib/sessions.js';
 import { ensureAdminCredentials, loadCredentials } from './lib/auth.js';
 import { DATA_DIR, ROOT, VIEWS_DIR } from './lib/paths.js';
 import { setDataDriver, getDataDriver } from './lib/store.js';
+import { migrateJsonToSqlite } from './lib/migrate.js';
 
 /** Everything a request handler might need, created exactly once. */
 export function createContext() {
@@ -17,6 +18,11 @@ export function createContext() {
 
   const site = loadConfig();
   setDataDriver(site.dataDriver);
+  // a switch to sqlite should never cost anyone their guestbook or hit count
+  const migration = migrateJsonToSqlite({ dataDir: DATA_DIR });
+  if (migration.migrated.length) {
+    console.log('  已把 ' + migration.migrated.map((m) => m.name).join(', ') + ' 从 JSON 迁移到 SQLite（原文件保留为 .migrated-*.json）');
+  }
   if (site.dataDriver === 'sqlite' && getDataDriver() !== 'sqlite') {
     console.warn('  ⚠ 这个 Node 没有 node:sqlite，继续使用 JSON 存储');
   }

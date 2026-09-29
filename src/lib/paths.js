@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 /** Project root (…/oldie-blog) */
-export const ROOT = path.resolve(here, '..', '..');
+export const ROOT = process.env.OLDIE_ROOT
+  ? path.resolve(process.env.OLDIE_ROOT)
+  : path.resolve(here, '..', '..');
 export const CONFIG_DIR = path.join(ROOT, 'config');
 export const CONTENT_DIR = path.join(ROOT, 'content');
 export const POSTS_DIR = path.join(CONTENT_DIR, 'posts');

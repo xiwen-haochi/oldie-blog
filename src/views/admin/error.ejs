@@ -2,4 +2,4 @@
   <h1 class="ph-title"><%= t('admin.access_denied') %></h1>
   <div class="ph-body"><p style="margin:0"><%= message %></p></div>
 </div>
-<p><a class="btn" href="<%= adminPath %>/dashboard">◀ <%= t('admin.dashboard') %></a></p>
+<p><a class="btn" href="<%= (typeof adminPath !== 'undefined' ? adminPath : (typeof site !== 'undefined' && site.adminPath ? site.adminPath : '/admin')) %>/dashboard">◀ <%= t('admin.dashboard') %></a></p>

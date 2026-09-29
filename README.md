@@ -218,6 +218,28 @@ straight from another document. Two things happen on the way out:
    figures, `video` and inline `svg` survive.
 
 So you can paste freely without taking the blog's styling down with it.
+## Backup and restore
+
+Admin → 💾 Backup & restore.
+
+**Export** produces a single `.zip` containing
+
+- `MANIFEST.json` — what is in it, when, which version
+- `content/posts/*.md`, `content/pages/*.md` — your writing
+- `public/uploads/` — uploaded images
+- `config/` — site configuration and the admin password
+- `data/` — hits, guestbook, subscribers, admin settings (S3 keys, AI key)
+
+**Restore**: pick the archive, type the site title to confirm, done.
+
+- nothing is deleted on the spot: the old files move to `.before-restore-<time>/`
+- tick “keep my current uploads” to leave your images alone
+- restart the server afterwards
+- foreign archives are refused, and so is any entry containing `../`
+
+The archive is written with Node's own zlib (store + deflate), so there is no
+dependency to install, and `unzip`, Finder or Explorer can open it.
+
 ## Before you publish
 
 ```bash
@@ -237,8 +259,8 @@ out of the repository, and the app re-checks on boot and shouts if one slips in.
 
 ### Runtime data can live in SQLite
 
-JSON files are the default (one file per store, readable, easy to back up).
-Switch to SQLite in **Settings → Runtime data storage** and restart:
+**SQLite is the default** (Node ships `node:sqlite`, nothing to install).
+Switch back to JSON files in **Settings → Runtime data storage** and restart:
 
 - it is Node's own `node:sqlite` (22.5+), so **nothing to install**
 - everything in one `data/oldie.sqlite`, WAL mode, survives power cuts

@@ -23,7 +23,7 @@ export const DEFAULTS = {
   locale: 'zh-CN',
   // where runtime data (hit counter, guestbook, sessions) is kept
   // 'json' (one file per store, default) or 'sqlite' (node:sqlite, no dependency)
-  dataDriver: 'json',
+  dataDriver: 'sqlite',
   // where the admin lives. 'admin' and '/admin' and '/my-secret-door' all work.
   adminPath: '/admin',
   langDir: 'ltr',

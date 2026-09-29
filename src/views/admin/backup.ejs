@@ -1,0 +1,49 @@
+<div class="admin-head">
+  <h1>💾 <%= t('admin.backup') %></h1>
+  <div class="btn-row">
+    <a class="btn primary" href="<%= adminPath %>/backup/download">⬇️ <%= t('admin.backup_export') %></a>
+  </div>
+</div>
+
+<% if (query && query.restored) { %>
+  <div class="alert warn"><%= t('admin.restore_restart') %></div>
+<% } %>
+
+<div class="admin-cols">
+  <section class="admin-panel">
+    <h2 class="widget-title">📦 <%= t('admin.backup_contents') %></h2>
+    <p class="form-note"><%= t('admin.backup_hint') %></p>
+    <table class="table">
+      <tbody>
+        <tr><td>content/posts</td><td><%= t('admin.backup_posts') %></td></tr>
+        <tr><td>content/pages</td><td><%= t('admin.backup_pages') %></td></tr>
+        <tr><td>public/uploads</td><td><%= t('admin.backup_uploads') %></td></tr>
+        <tr><td>config</td><td><%= t('admin.backup_config') %></td></tr>
+        <tr><td>data (<%= preview.driver %>)</td><td><%= t('admin.backup_data') %></td></tr>
+      </tbody>
+    </table>
+    <p class="form-note" style="margin-top:8px">
+      <%= t('admin.backup_size', { files: preview.files, size: Math.round(preview.bytes / 1024) }) %>
+    </p>
+  </section>
+
+  <section class="admin-panel">
+    <h2 class="widget-title">♻️ <%= t('admin.restore') %></h2>
+    <p class="form-note"><%= t('admin.restore_hint') %></p>
+    <form method="post" action="<%= adminPath %>/backup/restore" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <div class="field">
+        <label for="archive"><%= t('admin.restore_file') %></label>
+        <input type="file" id="archive" name="archive" accept=".zip,application/zip" required>
+      </div>
+      <div class="field">
+        <label for="confirm"><%= t('admin.restore_confirm', { title: site.title }) %></label>
+        <input type="text" id="confirm" name="confirm" placeholder="<%= site.title %>" autocomplete="off" required>
+      </div>
+      <label class="checkline"><input type="checkbox" name="keepUploads" checked> <%= t('admin.restore_keep_uploads') %></label>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn danger" type="submit" data-confirm="<%= t('admin.restore_confirm_prompt') %>">♻️ <%= t('admin.restore_button') %></button>
+      </div>
+    </form>
+  </section>
+</div>

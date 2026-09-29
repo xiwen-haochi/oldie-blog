@@ -13,11 +13,22 @@ import { slugify, formatDate, humanBytes, readingTime, truncate } from '../lib/t
 import { UPLOAD_DIR, DATA_DIR, ROOT } from '../lib/paths.js';
 import { DEFAULTS } from '../lib/config.js';
 import { listFiles as storageList, putFile, deleteFile, checkUpload, describeStorage, maxBytes } from '../lib/storage.js';
+import { createBackup, restoreBackup, backupPreview } from '../lib/backup.js';
+import { enrichLocals } from '../lib/present.js';
 import { makeTranslator, availableLocales, localeMeta, clientStrings } from '../lib/i18n.js';
 import { ask as aiAsk, AI_TASKS, aiReady, aiConfigError } from '../lib/ai.js';
 
 const loginLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 10 });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024, files: 1 } });
+// a backup archive is not an image, and can be much larger than 4MB
+const archiveUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 512 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    const ok = /\.zip$/i.test(file.originalname || '') || /zip|x-zip|octet-stream/.test(file.mimetype || '');
+    cb(ok ? null : Object.assign(new Error('只能上传 .zip 备份文件'), { status: 400 }), ok);
+  },
+});
 const ALLOWED_IMAGE = /^image\/(png|jpeg|gif|webp|svg\+xml|avif)$/;
 const MAX_UPLOAD = 4 * 1024 * 1024;
 
@@ -606,6 +617,51 @@ export function adminRoutes(ctx) {
     }
   });
 
+  /* ------------------------------------------------------ backup/restore */
+  router.get(A + '/backup', requireAuth, async (req, res) => {
+    render(res, 'backup', {
+      query: req.query,
+      req,
+      title: makeTranslator(req.locale || ctx.site.locale)('admin.backup'),
+      preview: backupPreview(),
+    });
+  });
+
+  router.get(A + '/backup/download', requireAuth, async (req, res, next) => {
+    try {
+      const { buffer, manifest } = createBackup();
+      const stamp = manifest.createdAt.slice(0, 19).replace(/[-:T]/g, '');
+      const name = (ctx.site.title || 'oldie-blog').replace(/[^\w\-\u4e00-\u9fff]+/g, '-') + '-backup-' + stamp + '.zip';
+      res.set('Content-Type', 'application/zip');
+      res.set('Content-Disposition', 'attachment; filename*=UTF-8\'\'' + encodeURIComponent(name));
+      res.set('Cache-Control', 'no-store');
+      res.send(buffer);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post(A + '/backup/restore', requireAuth, requireCsrf, archiveUpload.single('archive'), async (req, res) => {
+    const t = makeTranslator((req && req.locale) || ctx.site.locale);
+    try {
+      const buffer = req.file ? req.file.buffer : null;
+      if (!buffer) {
+        setFlash(res, 'err', t('admin.restore_no_file'));
+        return res.redirect(U('/backup'));
+      }
+      // restoring replaces your posts, messages and settings: make them type it
+      if (String(req.body.confirm || '').trim() !== (ctx.site.title || '')) {
+        setFlash(res, 'err', t('admin.restore_confirm_mismatch', { title: ctx.site.title }));
+        return res.redirect(U('/backup'));
+      }
+      const result = await restoreBackup(buffer, { keepUploads: !!req.body.keepUploads });
+      setFlash(res, 'ok', t('admin.restore_done', { files: result.files, date: result.createdAt }));
+      res.redirect(U('/backup?restored=1'));
+    } catch (err) {
+      setFlash(res, 'err', t('admin.restore_failed', { msg: err.message }));
+      res.redirect(U('/backup'));
+    }
+  });
   /* ----------------------------------------------------------- tools */
   router.get(A + '/tools', requireAuth, async (req, res) => {
     render(res, 'tools', {
@@ -626,6 +682,29 @@ export function adminRoutes(ctx) {
     res.set('Content-Disposition', 'attachment; filename="oldie-export.json"').json(buildExport(ctx));
   });
 
+  // The admin renders its own errors. Without this the global handler would
+  // render a public 500 page with no nav, and that page would then throw,
+  // hiding the real message.
+  router.use((err, req, res, next) => {
+    const status = err.status || 500;
+    if (status >= 500) console.error('[admin error]', err);
+    const i18n = chrome(req);
+    res.status(status).render('aw/error', {
+      site: ctx.site,
+      ctx,
+      req,
+      nav: adminNav(i18n.t, A),
+      isNew: false,
+      originalSlug: '',
+      flash: res.locals.flash || null,
+      csrf: (req.session && req.session.csrf) || '',
+      status,
+      title: status + ' \u2014 ' + i18n.t('error.title'),
+      message: err.expose ? err.message : i18n.t('error.detail'),
+      detail: err.expose ? err.message : i18n.t('error.detail'),
+      ...i18n,
+    });
+  });
   return router;
 }
 
@@ -641,6 +720,7 @@ function adminNav(t, A = '/admin') {
     { href: A + '/media', label: label('admin.media', '🖼 Media') },
     { href: A + '/settings', label: label('admin.settings', '⚙ Settings') },
     { href: A + '/tools', label: label('admin.tools', '🛠 Tools') },
+    { href: A + '/backup', label: label('admin.backup', '💾 Backup') },
     { href: '/', label: label('admin.view_site', '🌐 View site') },
   ];
 }
