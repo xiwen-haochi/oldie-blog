@@ -281,15 +281,6 @@ So anyone who clones your repo gets an empty site, and running the same blog on 
 second machine means exporting a `.zip` from **Backup & restore** and importing it
 there. **git carries the code, a `.zip` carries your content.**
 
-### So where does it run
-
-GitHub itself cannot run this blog. It needs a long-lived Node process and a writable
-disk; GitHub Pages only serves static files. So pushing code is not the same as the
-site being live.
-
-For a real address, pick a host that gives you a persistent disk — Railway, Render,
-Fly.io, or your own server — and start it with the `docker-compose.yml` above.
-
 ---
 
 ## Data and backup
