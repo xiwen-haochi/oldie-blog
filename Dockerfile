@@ -23,13 +23,15 @@ COPY package.json ./
 COPY bin ./bin
 COPY public ./public
 COPY src ./src
+COPY docker/entrypoint.sh ./docker/entrypoint.sh
 
-# the shipped defaults live read-only; /app/config is a volume on top of it
-COPY config/site.config.json ./config.default/site.config.json
-COPY content ./.gitkeep ./content
+# /app/config and /app/content are volumes. A fresh (empty) volume is seeded
+# from exactly what the image ships, which is why the default config has to
+# live at the real path rather than in some staging directory.
+COPY config/site.config.json ./config/site.config.json
+COPY content/.gitkeep ./content/.gitkeep
 
-RUN mkdir -p /app/config /app/content/posts /app/content/pages /app/data /app/public/uploads \
-    && cp -r /app/config.default /app/config \
+RUN mkdir -p /app/content/posts /app/content/pages /app/data /app/public/uploads \
     && chown -R node:node /app \
     && chmod +x /app/docker/entrypoint.sh
 
