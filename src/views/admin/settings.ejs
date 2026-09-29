@@ -43,9 +43,9 @@
         <div class="form-note"><%= t('admin.data_driver_hint') %></div>
       </div>
       <div class="field"><label for="maxSizeMb"><%= t('admin.storage_size') %> (MB)</label><input id="maxSizeMb" name="maxSizeMb" type="number" min="1" max="50" value="<%= settings.storage.maxSizeMb %>"></div>
-      <div class="field"><label for="region"><%= t('admin.s3_region') %></label><input id="region" name="region" value="<%= settings.storage.s3.region %>" placeholder="auto"></div>
+      <div class="field"><label for="region"><%= t('admin.s3_region') %></label><input id="region" name="region" value="<%= settings.storage.s3.region %>" placeholder="auto"><div class="form-note"><%= t('admin.s3_region_hint') %></div></div>
       <div class="field"><label for="bucket">Bucket</label><input id="bucket" name="bucket" value="<%= settings.storage.s3.bucket %>" placeholder="my-blog-assets"></div>
-      <div class="field"><label for="endpoint">Endpoint</label><input id="endpoint" name="endpoint" value="<%= settings.storage.s3.endpoint %>" placeholder="https://s3.ap-east-1.amazonaws.com"></div>
+      <div class="field"><label for="endpoint">Endpoint</label><input id="endpoint" name="endpoint" value="<%= settings.storage.s3.endpoint %>" placeholder="oss-cn-shanghai.aliyuncs.com"><div class="form-note"><%= t('admin.s3_endpoint_hint') %></div></div>
       <div class="field"><label for="prefix">Prefix</label><input id="prefix" name="prefix" value="<%= settings.storage.s3.prefix %>" placeholder="blog"></div>
       <div class="field"><label for="publicUrl"><%= t('admin.s3_public') %></label><input id="publicUrl" name="publicUrl" value="<%= settings.storage.s3.publicUrl %>" placeholder="https://cdn.example.com"></div>
       <div class="field"><label for="accessKeyId">Access Key ID</label><input id="accessKeyId" name="accessKeyId" value="<%= settings.storage.s3.accessKeyId %>" autocomplete="off"></div>

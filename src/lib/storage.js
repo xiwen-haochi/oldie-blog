@@ -93,29 +93,56 @@ export async function localDelete(config, name) {
 const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 const hmac = (key, data) => crypto.createHmac('sha256', key).update(data).digest();
 
+/** "blog", "/blog/" and "blog//" all mean the same thing. */
+function cleanPrefix(value) {
+  return String(value || '').split('/').filter(Boolean).join('/');
+}
+
+/**
+ * An endpoint without a scheme is the most common mistake here: every console
+ * shows a bare host, and fetch refuses "oss-cn-shanghai.aliyuncs.com" with an
+ * ERR_INVALID_URL that explains nothing. Assume https, and complain clearly
+ * when even that is not a URL.
+ */
+function endpointUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const absolute = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : 'https://' + raw;
+  let parsed;
+  try {
+    parsed = new URL(absolute);
+  } catch {
+    throw new Error('对象存储的 endpoint 不是合法地址：' + raw);
+  }
+  return parsed.origin + parsed.pathname.replace(/\/+$/, '');
+}
+
 function s3Config(config) {
   const s3 = config.storage?.s3 || {};
   if (!s3.bucket) throw new Error('对象存储还没配置：缺少 bucket');
   if (!s3.endpoint) throw new Error('对象存储还没配置：缺少 endpoint');
   if (!s3.accessKeyId || !s3.secretAccessKey) throw new Error('对象存储还没配置：缺少 accessKeyId / secretAccessKey');
-  return s3;
+  return { ...s3, endpoint: endpointUrl(s3.endpoint), prefix: cleanPrefix(s3.prefix) };
 }
 
 function s3ObjectUrl(s3, key) {
-  const base = (s3.publicUrl || `${String(s3.endpoint).replace(/\/+$/, '')}/${s3.bucket}`).replace(/\/+$/, '');
+  const base = (s3.publicUrl ? endpointUrl(s3.publicUrl) : s3.endpoint + '/' + s3.bucket).replace(/\/+$/, '');
   return base + '/' + key.split('/').map(encodeURIComponent).join('/');
 }
 
+/**
+ * The key is the whole object key, prefix included: s3Put builds it that way
+ * and S3 hands it back that way when listing. Adding the prefix here a second
+ * time is what put every upload under blog/blog/.
+ */
 function s3Target(s3, key) {
   const host = String(s3.endpoint).replace(/^https?:\/\//, '').replace(/\/+$/, '');
-  const prefix = [s3.bucket, ...String(s3.prefix || '').split('/').filter(Boolean)].join('/');
-  const full = prefix + '/' + key;
   if (s3.pathStyle === false && !s3.endpoint.includes('.')) {
     // virtual-hosted style: bucket.endpoint
     const [first, ...rest] = host.split('.');
-    return { host: [first + '-' + s3.bucket, ...rest].join('.'), pathname: '/' + [s3.prefix, key].filter(Boolean).join('/') };
+    return { host: [first + '-' + s3.bucket, ...rest].join('.'), pathname: '/' + [key].filter(Boolean).join('/') };
   }
-  return { host, pathname: '/' + full };
+  return { host, pathname: '/' + [s3.bucket, key].filter(Boolean).join('/') };
 }
 
 /** Minimal AWS Signature Version 4 for a single-shot PUT/DELETE/GET. */
@@ -159,10 +186,10 @@ function signRequest({ method, url, headers, payloadHash, s3 }) {
 export async function s3Put(config, { buffer, filename, type }) {
   const s3 = s3Config(config);
   const ext = extFor(type, path.extname(filename).slice(1) || 'bin');
-  const key = (s3.prefix ? s3.prefix.replace(/\/+$/, '') + '/' : '') +
+  const key = (s3.prefix ? s3.prefix + '/' : '') +
     new Date().toISOString().slice(0, 10) + '/' + safeName(filename) + '-' + Date.now().toString(36) + '.' + ext;
   const { pathname } = s3Target(s3, key);
-  const url = (String(s3.endpoint).replace(/\/+$/, '') + pathname);
+  const url = s3.endpoint + pathname;
   const payloadHash = sha256(buffer);
   const headers = signRequest({
     method: 'PUT',
@@ -179,7 +206,7 @@ export async function s3Put(config, { buffer, filename, type }) {
 export async function s3Delete(config, key) {
   const s3 = s3Config(config);
   const { pathname } = s3Target(s3, key);
-  const url = String(s3.endpoint).replace(/\/+$/, '') + pathname;
+  const url = s3.endpoint + pathname;
   const headers = signRequest({ method: 'DELETE', url, headers: {}, payloadHash: sha256(''), s3 });
   const res = await fetch(url, { method: 'DELETE', headers });
   if (!res.ok && res.status !== 404) throw new Error('S3 DELETE ' + res.status);
@@ -188,10 +215,12 @@ export async function s3Delete(config, key) {
 
 export async function s3List(config) {
   const s3 = s3Config(config);
-  const base = String(s3.endpoint).replace(/\/+$/, '');
-  const prefix = [s3.prefix, ''].filter(Boolean).join('/');
+  const prefix = s3.prefix ? s3.prefix + '/' : '';
   const target = s3Target(s3, '');
-  const url = `${base}${target.pathname}?list-type=2&prefix=${encodeURIComponent(prefix)}`;
+  // S3 signs the path verbatim, so list the bucket with the canonical trailing
+  // slash rather than whatever the key shape happens to produce
+  const bucketRoot = target.pathname.endsWith('/') ? target.pathname : target.pathname + '/';
+  const url = s3.endpoint + bucketRoot + '?list-type=2&prefix=' + encodeURIComponent(prefix);
   const headers = signRequest({ method: 'GET', url, headers: {}, payloadHash: sha256(''), s3 });
   const res = await fetch(url, { headers });
   if (!res.ok) throw new Error('S3 LIST ' + res.status);

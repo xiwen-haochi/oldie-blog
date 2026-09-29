@@ -21,14 +21,14 @@ test('a config that predates the switches still loads', () => {
 });
 
 test('storage defaults to the local driver', () => {
-  const site = loadConfig({ env: {} });
-  assert.equal(driverName(site), 'local');
-  assert.equal(maxBytes(site), 4 * 1024 * 1024);
-  assert.match(describeStorage(site).label, /本地/);
+  // DEFAULTS, never loadConfig(): this file must not go red the moment the
+  // operator points their own site at object storage.
+  assert.equal(driverName(DEFAULTS), 'local');
+  assert.equal(maxBytes(DEFAULTS), 4 * 1024 * 1024);
+  assert.match(describeStorage(DEFAULTS).label, /本地/);
 });
 
 test('the s3 driver needs bucket, endpoint and keys', () => {
-  const base = loadConfig({ env: {} });
   assert.equal(
     checkUpload({ storage: { driver: 's3', s3: {} } }, { size: 10, type: 'image/png' }),
     '对象存储未配置：缺少 bucket / endpoint / accessKeyId / secretAccessKey'
@@ -43,7 +43,7 @@ test('the s3 driver needs bucket, endpoint and keys', () => {
 });
 
 test('uploads are size and type checked', () => {
-  const site = loadConfig({ env: {} });
+  const site = DEFAULTS;
   assert.match(checkUpload(site, { size: 10 * 1024 * 1024, type: 'image/png' }), /太大/);
   assert.match(checkUpload(site, { size: 10, type: 'application/pdf' }), /只接受图片/);
   assert.equal(checkUpload(site, { size: 100, type: 'image/png' }), null);
