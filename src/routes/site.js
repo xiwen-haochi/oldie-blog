@@ -18,7 +18,10 @@ export function siteRoutes(ctx) {
 
   /* ------------------------------------------------------------- home */
   router.get('/', (req, res) => {
-    const featuredPosts = ctx.index.featured(1);
+    // every pinned post belongs in the pinned section, and the list below
+    // excludes them. Taking only one left older pins stranded in the list,
+    // still wearing their badge, which read as a duplicate.
+    const featuredPosts = ctx.index.featured();
     const featuredSlugs = new Set(featuredPosts.map((p) => p.slug));
     const posts = ctx.index.publishedPosts().filter((p) => !featuredSlugs.has(p.slug));
     const perPage = ctx.site.postsPerPage || 8;

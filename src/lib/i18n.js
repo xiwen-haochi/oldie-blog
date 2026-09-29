@@ -69,10 +69,10 @@ const zh = {
 
   // ---- home ---------------------------------------------------------------
   'home.welcome': '欢迎来到我的主页！',
-  'home.visitor_line': '你是第 {total} 位访客，建站于 {since}。这里放着 {posts} 篇日志和 {guestbook} 条留言。',
-  'home.featured': '置顶日志',
-  'home.latest': '最新日志',
-  'home.empty': '📭 还没有日志。如果你看到的是全新安装，往 content/posts/ 里丢一个 .md 文件就会立刻出现。',
+  'home.visitor_line': '你是第 {total} 位访客，建站于 {since}。这里放着 {posts} 篇文章和 {guestbook} 条留言。',
+  'home.featured': '置顶文章',
+  'home.latest': '最新文章',
+  'home.empty': '📭 还没有文章。如果你看到的是全新安装，往 content/posts/ 里丢一个 .md 文件就会立刻出现。',
   'home.whats_new': '最近更新',
   'home.live_desk': '我的桌面直播',
   'home.wires_quiet': '📡 线缆很安静……去',
@@ -89,11 +89,11 @@ const zh = {
   'card.featured': '置顶',
 
   // ---- index / archive ----------------------------------------------------
-  'posts.title': '全部日志',
+  'posts.title': '全部文章',
   'posts.showing': '第 {from}–{to} 篇，共 {total} 篇，最新的排在前面。Markdown 写的，实时渲染。',
   'posts.none': '这里还什么都没有。',
   'archive.title': '往期归档',
-  'archive.summary': '共 {posts} 篇日志，横跨 {years} 年，{words} 字，最早一篇发布于 {first}。',
+  'archive.summary': '共 {posts} 篇文章，横跨 {years} 年，{words} 字，最早一篇发布于 {first}。',
   'archive.jump': '按主题跳转',
   'tags.title': '标签云',
   'tags.subtitle': '一共用了 {n} 个主题。字越大， ego 越大。',
@@ -171,7 +171,7 @@ const zh = {
 
   // ---- pages --------------------------------------------------------------
   'page.title': '静态页面',
-  'meta.posts': '{site} 上的全部日志，最新的排在最前。',
+  'meta.posts': '{site} 上的全部文章，最新的排在最前。',
   'meta.archive': '按年份和月份归档的 {site} 全部文章。',
   'meta.tags': '按主题浏览 {site} 的所有文章。',
   'meta.search': '搜索 {site} 的全部文章，支持 tag: 过滤、短语精确匹配和 -排除。',

@@ -171,7 +171,7 @@ export class ContentIndex {
    * Pinned posts, most recently pinned first. Sorting by featuredAt (and not
    * by publish date) is what makes pinning an *old* post visibly do something.
    */
-  featured(limit = 1) {
+  featured(limit = Infinity) {
     return this.publishedPosts()
       .filter((p) => p.featured)
       .sort((a, b) => (b.featuredAt || b.date) - (a.featuredAt || a.date))

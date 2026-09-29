@@ -126,6 +126,76 @@ let the proxy terminate HTTPS — the app speaks plain HTTP and never redirects 
 
 ---
 
+## Publishing a post
+
+Three ways to do it. **All three end up writing a `.md` file into `content/posts/`.**
+
+### 1. The admin (what you will use most)
+
+```
+1. Open /admin/posts/new
+2. Type the title, write Markdown in the body box — the preview is live
+3. Optionally set tags and a description (blank means "take the first 140 chars")
+4. Press Save to publish, or tick Draft first to keep it private
+```
+
+It appears on the home page immediately. Tick **pin to home** to move it up: the
+pinned section sorts by **when you pinned it**, so re-pinning an old post lifts it
+to the top.
+
+To edit a published post: **Posts** in the admin sidebar → click the title.
+To delete one: the delete button on the right of the list.
+
+### 2. From the command line
+
+```bash
+pnpm new:post "My title" --tags=intro,tools --draft
+```
+
+Creates a file with the front matter already filled in. Drop `--draft` to publish it.
+
+### 3. Any editor, plus git
+
+```bash
+vim content/posts/2026-09-29-my-post.md
+```
+
+The whole format is this:
+
+```markdown
+---
+title: "The title"           # required
+date: 2026-09-29             # required, decides the order
+description: "one line"     # optional, taken from the body if blank
+tags: [intro, tools]         # optional, commas work too
+featured: true               # optional, pin it
+draft: true                  # optional, keep it private
+cover: /uploads/x.png        # optional, cover image
+---
+
+The body is plain Markdown.
+```
+
+**Saving is publishing** — the server watches that directory, so a refresh is all it takes.
+
+### Images
+
+Drag them into the media page, or straight into the body box in the editor.
+Anywhere else works too:
+
+```markdown
+![alt text](/uploads/photo.png)
+```
+
+### When something looks wrong
+
+| Symptom | Cause |
+| --- | --- |
+| Saved but the page did not change | is it a `.md` file, is it in `content/posts/` |
+| Missing from the list | check for `draft: true` |
+| The URL of a Chinese title is ugly | set the Slug field in the editor |
+| Want to undo | the posts are files: `git checkout content/posts/` |
+
 ## Your writing is data, not code
 
 This is the part most blog engines get wrong. Here:

@@ -160,7 +160,7 @@ async function main() {
   section('public pages');
   const pages = [
     ['/', '欢迎来到我的主页'],
-    ['/posts', '全部日志'],
+    ['/posts', '全部文章'],
     ['/archive', '往期归档'],
     ['/tags', '标签云'],
     ['/guestbook', '留言簿'],
