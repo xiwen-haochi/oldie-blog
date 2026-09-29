@@ -84,7 +84,12 @@ export function importExistingData({ dataDir, root }) {
       let count = 0;
       for (const name of names) {
         try {
-          const doc = readMarkdown(path.join(dir, name), kind);
+          const file = path.join(dir, name);
+          const doc = readMarkdown(file, kind);
+          // Stamp creation from the file's own mtime. Two .md files carrying
+          // the same date used to be ordered by their titles, and the mtime is
+          // the only honest record of which one was written first.
+          doc.createdAt = new Date(fs.statSync(file).mtimeMs).toISOString();
           sqlitePut(prefix + doc.slug, doc);
           count++;
         } catch {

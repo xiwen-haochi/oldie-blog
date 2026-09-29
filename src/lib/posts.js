@@ -11,6 +11,24 @@ const toBool = (v) => (typeof v === 'boolean' ? v : String(v ?? '').toLowerCase(
  * import — falls back to the publish date, because that is the only time we
  * actually know about.
  */
+/**
+ * When a post was written. The creation stamp, or the publish date for the
+ * posts that predate it -- which is every post written before this field
+ * existed, and a newly imported .md until it is saved once.
+ */
+function writtenAt(post) {
+  return post.createdAt || post.date;
+}
+
+/**
+ * Newest first, and within a single day the one written last. This was the
+ * index's base order with a title tiebreak, so three articles published on the
+ * same afternoon came back A, B, C no matter which one you finished last.
+ */
+function byNewest(a, b) {
+  return b.date - a.date || writtenAt(b) - writtenAt(a) || a.title.localeCompare(b.title);
+}
+
 function pinTime(post) {
   return (post.featuredAt || post.date || 0);
 }
@@ -63,6 +81,8 @@ export function parseDoc(stored, { kind = 'post', siteOrigin = '' } = {}) {
     key: kind + ':' + slug,
     date,
     updated: coerceDate(data.updated) || null,
+    // when it was written, not when it was last touched
+    createdAt: coerceDate(stored && stored.createdAt) || null,
     tags,
     draft: toBool(data.draft),
     featured: toBool(data.featured),
@@ -126,7 +146,7 @@ export class ContentIndex {
     const bySlug = new Map();
     for (const p of posts) bySlug.set(p.slug, p);
 
-    this.#all = [...bySlug.values()].sort((a, b) => b.date - a.date || a.title.localeCompare(b.title));
+    this.#all = [...bySlug.values()].sort(byNewest);
     this.pages = pages.sort((a, b) => a.slug.localeCompare(b.slug));
     this.#version++;
 
@@ -174,17 +194,19 @@ export class ContentIndex {
   }
 
   /**
-   * The posts touched most recently, newest edit first.
+   * The most recently written posts, newest first.
    *
-   * A post that has never been edited falls back to its publish date, so the
-   * list is never empty on a site that has posts at all. The home page reads
-   * this; that panel used to be four sentences typed into the template, which
-   * is why saving an article never changed it.
+   * Ordered by when each post was *written*, never by when it was last saved.
+   * The home page panel used to be four sentences typed into the template, and
+   * the first attempt at this sorted by the updated date -- which meant fixing
+   * a typo in a two-year-old article pushed it to the top of the page.
+   * A post with no creation stamp falls back to its publish date, which is the
+   * only honest thing left to say about it.
    */
-  recentlyUpdated(limit = 5) {
+  newest(limit = 5) {
     return this.publishedPosts()
       .slice()
-      .sort((a, b) => (b.updated || b.date) - (a.updated || a.date) || b.date - a.date)
+      .sort((a, b) => writtenAt(b) - writtenAt(a) || byNewest(a, b))
       .slice(0, limit);
   }
 
@@ -204,7 +226,7 @@ export class ContentIndex {
         const newer = bPin - aPin;
         if (newer) return newer;
       }
-      return b.date - a.date || a.title.localeCompare(b.title);
+      return byNewest(a, b);
     });
   }
 

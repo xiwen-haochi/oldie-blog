@@ -32,7 +32,7 @@ async function withIndex(specs, fn) {
       featuredAt: spec.featuredAt,
       tags: spec.tags || [],
     };
-    await saveDoc({ kind: 'post', slug: '', fields, body: 'body of ' + slug });
+    await saveDoc({ kind: 'post', slug: '', fields, body: 'body of ' + slug, createdAt: spec.createdAt });
     written.push(slug);
   }
   const index = new ContentIndex({});
@@ -111,53 +111,82 @@ test('a pin with no timestamp still counts as a pin', async () => {
   });
 });
 
-test('recently updated is the post you touched, not the newest one', async () => {
-  // the home page panel used to be four sentences typed into the template,
-  // so editing a post could never change it
+test('three posts written on one day come back in the order they were written', async () => {
+  // Same publish date used to fall back to the alphabet, so the post you
+  // wrote last was the one furthest down the list.
   await withIndex({
-    'published-latest': { date: '2026-07-01' },
-    'edited-just-now': { date: '2020-01-01', updated: '2026-09-29' },
+    first: { date: '2026-09-29', createdAt: '2026-09-29T09:00:00.000Z' },
+    second: { date: '2026-09-29', createdAt: '2026-09-29T10:00:00.000Z' },
+    third: { date: '2026-09-29', createdAt: '2026-09-29T11:00:00.000Z' },
   }, (index) => {
     assert.deepEqual(
-      index.recentlyUpdated(2).map((p) => p.slug),
-      ['edited-just-now', 'published-latest'],
-      'editing an old post has to move it to the top'
+      index.list().map((p) => p.slug),
+      ['third', 'second', 'first'],
+      'a same-day post must not be ordered by its title'
     );
   });
 });
 
-test('a post that was never edited falls back to its publish date', async () => {
+test('newest() leads with what was written last, not what was edited last', async () => {
+  // Fixing one character in a two-year-old article is not news. The panel is
+  // about creation, so an edit must not drag anything to the top of it.
+  await withIndex({
+    'written-first': { date: '2026-09-29', createdAt: '2026-09-29T09:00:00.000Z' },
+    'written-last': { date: '2026-09-29', createdAt: '2026-09-29T11:00:00.000Z' },
+    'edited-today': { date: '2020-01-01', updated: '2026-09-29', createdAt: '2020-01-01T09:00:00.000Z' },
+  }, (index) => {
+    assert.deepEqual(
+      index.newest(3).map((p) => p.slug),
+      ['written-last', 'written-first', 'edited-today'],
+    );
+  });
+});
+
+test('a post with no creation stamp falls back to its publish date', async () => {
+  // 'edited' was saved in 2026 and 'old' was not touched since 2024, and old
+  // still comes first: this panel is about writing, not about saving.
   await withIndex({
     old: { date: '2024-01-01' },
     recent: { date: '2026-07-01' },
-    edited: { date: '2020-01-01', updated: '2026-01-01' },
+    edited: { date: '2020-01-01', updated: '2026-01-01', createdAt: '2020-01-01T09:00:00.000Z' },
   }, (index) => {
-    assert.deepEqual(
-      index.recentlyUpdated(3).map((p) => p.slug),
-      ['recent', 'edited', 'old'],
-    );
+    assert.deepEqual(index.newest(3).map((p) => p.slug), ['recent', 'old', 'edited']);
   });
 });
 
-test('the recent panel never leaks a draft', async () => {
+test('the newest panel never leaks a draft', async () => {
   await withIndex({
-    hidden: { date: '2026-07-01', updated: '2026-09-29', draft: true },
-    shown: { date: '2020-01-01', updated: '2026-01-01' },
+    hidden: { date: '2026-07-01', createdAt: '2026-09-29T09:00:00.000Z', draft: true },
+    shown: { date: '2020-01-01', createdAt: '2026-01-01T09:00:00.000Z' },
   }, (index) => {
-    assert.deepEqual(index.recentlyUpdated(5).map((p) => p.slug), ['shown']);
+    assert.deepEqual(index.newest(5).map((p) => p.slug), ['shown']);
   });
 });
 
-test('recently updated honours its limit', async () => {
+test('newest() honours its limit', async () => {
   await withIndex({
-    a: { date: '2026-01-01', updated: '2026-09-01' },
-    b: { date: '2026-02-01', updated: '2026-08-01' },
-    c: { date: '2026-03-01', updated: '2026-07-01' },
+    a: { date: '2026-01-01', createdAt: '2026-01-01T09:00:00.000Z' },
+    b: { date: '2026-02-01', createdAt: '2026-02-01T09:00:00.000Z' },
+    c: { date: '2026-03-01', createdAt: '2026-03-01T09:00:00.000Z' },
   }, (index) => {
-    assert.deepEqual(index.recentlyUpdated(2).map((p) => p.slug), ['a', 'b']);
+    assert.deepEqual(index.newest(2).map((p) => p.slug), ['c', 'b']);
   });
 });
 
+test('editing a post does not move its creation stamp', async () => {
+  const { saveDoc: save, readDoc } = await import('../src/lib/writer.js');
+  await save({ kind: 'post', slug: '', createdAt: '2026-01-01T09:00:00.000Z',
+    fields: { title: 'stamp', slug: 'stamp', date: '2026-01-01', tags: [] }, body: 'one' });
+  await save({ kind: 'post', slug: 'stamp',
+    fields: { title: 'stamp', slug: 'stamp', date: '2026-01-01', tags: [] }, body: 'two' });
+  try {
+    assert.equal(readDoc({ kind: 'post', slug: 'stamp' }).createdAt, '2026-01-01T09:00:00.000Z',
+      'a save moved the creation time');
+  } finally {
+    const { deleteDoc: del } = await import('../src/lib/writer.js');
+    await del({ kind: 'post', slug: 'stamp' });
+  }
+});
 test('a tag page uses the same order as the index', async () => {
   await withIndex({
     'tagged-plain': { date: '2026-06-01', tags: ['x'] },

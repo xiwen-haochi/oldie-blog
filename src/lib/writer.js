@@ -81,13 +81,18 @@ export function frontMatter(fields, body) {
  * front matter is kept as a parsed object rather than text, which is the whole
  * point of not writing files any more.
  */
-export async function saveDoc({ kind = 'post', slug, fields, body }) {
+export async function saveDoc({ kind = 'post', slug, fields, body, createdAt }) {
   const previous = slug ? readDoc({ kind, slug }) : null;
   const doc = {
     kind,
     slug: fields.slug,
     frontMatter: { ...fields },
     body: String(body || ''),
+    // When this was written, stamped once and never moved. Two posts published
+    // on the same day used to be ordered by their titles, because the publish
+    // date is all there was. An edit must not count as a fresh post: fixing a
+    // typo in an old article is not new writing.
+    createdAt: (previous && previous.createdAt) || createdAt || new Date().toISOString(),
   };
   if (previous && previous.slug !== fields.slug) sqliteDelete(key(kind, previous.slug));
   sqlitePut(key(kind, fields.slug), doc);

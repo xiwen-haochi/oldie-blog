@@ -789,32 +789,51 @@ async function main() {
       return at < 0 ? '' : html.slice(at, html.indexOf('</ul>', at));
     };
 
-    await check('the home page lists the post you just saved, not a fixed list', async () => {
+    await check('the home page lists what was written last, not a fixed list', async () => {
       // The panel used to be four sentences typed into home.ejs, so saving an
       // article changed nothing about it. It has to follow the database.
-      await post('/admin/posts', {
-        _csrf: adminCsrf, title: 'Recent Probe', slug: 'recent-probe',
-        date: '2020-01-01', body: 'Published long ago.',
-      });
+      const write = async (slug, title, date) => {
+        await post('/admin/posts', {
+          _csrf: adminCsrf, title, slug, date, body: 'body of ' + slug,
+        });
+      };
+      const today = new Date().toISOString().slice(0, 10);
+      await write('order-probe-a', 'Order Probe A', today);
+      await write('order-probe-b', 'Order Probe B', today);
+      await write('order-probe-c', 'Order Probe C', today);
+
       let home = await (await get('/')).text();
       assert.ok(recentBlock(home), 'the home page has no recent-updates panel at all');
       assert.doesNotMatch(home, /chiptune theme player —/,
         'the four hardcoded sentences are still in the template');
-      assert.doesNotMatch(recentBlock(home), /recent-probe/,
-        'a 2020 post nobody has edited yet should not lead the recent list');
+      assert.match(recentBlock(home), /blink/, 'the flashing NEW badge is gone again');
 
-      // now edit it, with the optional updated box left empty
+      // same publish date, three posts: the one written last has to lead, in
+      // the panel and in the post list. The title used to break the tie.
+      const panel = recentBlock(home);
+      assert.ok(panel.indexOf('order-probe-c') < panel.indexOf('order-probe-b'),
+        'the newest of three same-day posts is not at the top of the panel');
+      const listed = await (await get('/posts')).text();
+      assert.ok(listed.indexOf('order-probe-c') < listed.indexOf('order-probe-b'),
+        'the post list orders same-day posts by their title');
+
+      // Editing must not promote anything. An article written earlier stays
+      // below a newer one no matter how many times it is saved -- stamping the
+      // save date is what put a 2020 article at the top of the page.
+      await write('order-probe-old', 'Order Probe Old', '2020-01-01');
+      await write('order-probe-new', 'Order Probe New', today);
       await post('/admin/posts', {
-        _csrf: adminCsrf, originalSlug: 'recent-probe', title: 'Recent Probe',
-        date: '2020-01-01', body: 'Edited just now.',
+        _csrf: adminCsrf, originalSlug: 'order-probe-old', title: 'Order Probe Old',
+        date: '2020-01-01', body: 'one character fixed',
       });
-      home = await (await get('/')).text();
-      assert.match(recentBlock(home), /recent-probe/,
-        'saving an edit did not move the post into the recent panel');
-      assert.match(recentBlock(home), /Recent Probe/);
+      const after = recentBlock(await (await get('/')).text());
+      assert.ok(after.indexOf('order-probe-new') < after.indexOf('order-probe-old'),
+        'saving an older article promoted it above a newer one');
 
-      await post('/admin/posts/recent-probe/delete', { _csrf: adminCsrf });
-      return 'follows the database';
+      for (const slug of ['order-probe-a', 'order-probe-b', 'order-probe-c', 'order-probe-old', 'order-probe-new']) {
+        await post('/admin/posts/' + slug + '/delete', { _csrf: adminCsrf });
+      }
+      return 'creation order, with the NEW badge';
     });
 
     await check('a checkbox that is turned OFF stays off', async () => {

@@ -310,15 +310,10 @@ export function adminRoutes(ctx) {
       const previous = slug ? rawOf({ kind: 'post', slug }) : null;
       const fields = normaliseFields(req.body, previous ? previous.data : {});
       if (fields.featured && !fields.featuredAt) fields.featuredAt = new Date().toISOString();
-      // An edit is an edit. The form has always had an "updated" box and the
-      // index has always parsed it, but nothing wrote it -- so the only
-      // documents with an update date were the ones whose owner typed one by
-      // hand. A date typed into this request wins; an empty box means
-      // "stamp it now", which is what makes saving a post move it in the
-      // home page's recent panel.
-      if (slug && !String(req.body.updated || '').trim()) {
-        fields.updated = new Date().toISOString().slice(0, 10);
-      }
+      // "updated" is left exactly as the author filled it in. Stamping it on
+      // every save was tried and it is wrong: it put "updated today" on a
+      // two-year-old article because one character was fixed, and dragged that
+      // article to the top of the home page.
       const saved = await saveDoc({ kind: 'post', slug, fields, body: req.body.body || '' });
       ctx.refresh();
       const tSave = makeTranslator((req && req.locale) || ctx.site.locale);
@@ -378,15 +373,10 @@ export function adminRoutes(ctx) {
       const previous = slug ? rawOf({ kind: 'page', slug }) : null;
       const fields = normaliseFields(req.body, previous ? previous.data : {});
       if (fields.featured && !fields.featuredAt) fields.featuredAt = new Date().toISOString();
-      // An edit is an edit. The form has always had an "updated" box and the
-      // index has always parsed it, but nothing wrote it -- so the only
-      // documents with an update date were the ones whose owner typed one by
-      // hand. A date typed into this request wins; an empty box means
-      // "stamp it now", which is what makes saving a post move it in the
-      // home page's recent panel.
-      if (slug && !String(req.body.updated || '').trim()) {
-        fields.updated = new Date().toISOString().slice(0, 10);
-      }
+      // "updated" is left exactly as the author filled it in. Stamping it on
+      // every save was tried and it is wrong: it put "updated today" on a
+      // two-year-old article because one character was fixed, and dragged that
+      // article to the top of the home page.
       const saved = await saveDoc({ kind: 'page', slug, fields, body: req.body.body || '' });
       ctx.refresh();
       const tSave = makeTranslator((req && req.locale) || ctx.site.locale);

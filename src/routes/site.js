@@ -37,7 +37,7 @@ export function siteRoutes(ctx) {
       pager,
       pagerUrl: (n) => '/?page=' + n,
       featured: featuredPosts,
-      recent: ctx.index.recentlyUpdated(5),
+      recent: ctx.index.newest(5),
     }));
   });
 

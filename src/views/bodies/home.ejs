@@ -36,12 +36,12 @@
   <div class="widget">
     <h3 class="widget-title">📌 <%= t('home.whats_new') %></h3>
     <div class="widget-body">
-      <%# what you actually touched lately. This list used to be four
-          sentences typed into this file, so saving an article could never
-          move anything. %>
+      <%# Newest first by the time each post was written, so a typo fix on an
+          old article cannot make it look like news. This list used to be four
+          sentences typed into this file, which is why it never changed. %>
       <ul class="recent-updates">
         <% (recent || []).forEach(function (post) { %>
-          <li>✔ <a href="<%= post.url %>"><%= post.title %></a> <span class="mono muted" style="font-size:11px"><%= formatDate(post.updated || post.date, { locale: dateLocale }) %></span></li>
+          <li>✔ <span class="blink">NEW</span> <a href="<%= post.url %>"><%= post.title %></a> <span class="mono muted" style="font-size:11px"><%= formatDate(post.date, { locale: dateLocale }) %></span></li>
         <% }) %>
       </ul>
       <div class="linkbar">
