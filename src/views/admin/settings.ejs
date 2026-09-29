@@ -114,6 +114,8 @@
     <label class="checkline"><input type="checkbox" name="showTerminal" value="on" <%= settings.theme.showTerminal ? 'checked' : '' %>> <%= t('admin.show_terminal') %></label>
     <input type="hidden" name="showCounter" value="off">
     <label class="checkline"><input type="checkbox" name="showCounter" value="on" <%= settings.theme.showCounter ? 'checked' : '' %>> <%= t('admin.show_counter') %></label>
+    <input type="hidden" name="agePhotos" value="off">
+    <label class="checkline"><input type="checkbox" name="agePhotos" value="on" <%= settings.theme.agePhotos ? 'checked' : '' %>> <%= t('admin.age_photos') %></label>
     <div class="field"><label for="footer"><%= t('admin.footer_text') %></label><input id="footer" name="footer" value="<%= settings.footer %>"></div>
     <div class="field"><label for="icp"><%= t('admin.icp') %></label><input id="icp" name="icp" value="<%= settings.icp || '' %>"></div>
     <div class="field">

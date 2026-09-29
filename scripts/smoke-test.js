@@ -923,6 +923,25 @@ async function main() {
       return 'on, off, and the shape a browser sends';
     });
 
+    await check('photo ageing is a setting, and it starts off', async () => {
+      const on = async () => /data-age="1"/.test(await (await get('/')).text());
+
+      assert.equal(await on(), false, 'a fresh site must not age its photos');
+
+      // posted the way a browser does: the hidden "off" and the ticked "on"
+      await post('/admin/settings', wire([['_csrf', adminCsrf], ['agePhotos', 'off'], ['agePhotos', 'on']]));
+      assert.equal(await on(), true, 'the switch did not reach the page');
+
+      const css = await (await get('/css/site.css')).text();
+      assert.match(css, /data-age="1"[^{]*\{[^}]*filter/,
+        'the switch is on but there is no filter behind it');
+      assert.match(css, /\.prose img/, 'it has to reach the images inside a post');
+
+      await post('/admin/settings', wire([['_csrf', adminCsrf], ['agePhotos', 'off']]));
+      assert.equal(await on(), false, 'it did not switch back off');
+      return 'off by default, one line of CSS when on';
+    });
+
     await check('a partial settings save does not switch anything off', async () => {
       // Sending only the title used to blank every feature flag and empty every
       // text field it did not mention — the whole site off in one request.

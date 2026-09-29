@@ -540,6 +540,7 @@ export function adminRoutes(ctx) {
           showMarquee: flag('showMarquee', theme.showMarquee),
           showTerminal: flag('showTerminal', theme.showTerminal),
           showCounter: flag('showCounter', theme.showCounter),
+          agePhotos: flag('agePhotos', theme.agePhotos),
         },
       };
 

@@ -39,6 +39,8 @@ export const DEFAULTS = {
     showTerminal: true,
     showMusic: true,
     showCounter: true,
+    // off until someone asks for it: a filter over every photo is a taste call
+    agePhotos: false,
   },
   nav: [
     { label: 'HOME', href: '/' },
