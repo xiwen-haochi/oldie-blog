@@ -260,6 +260,9 @@
       Terminal.input.focus();
     },
     close: function () {
+      // a game left running would keep a timer going and swallow key
+      // events behind a panel nobody can see
+      if (typeof Snake !== 'undefined' && Snake.on) Snake.stop();
       Terminal.el.classList.remove('open');
       Terminal.el.setAttribute('aria-hidden', 'true');
     },
@@ -304,6 +307,11 @@
         if (mode === '1998') Theme.apply('1998'); else if (mode === 'classic') Theme.apply('classic'); else Theme.toggle();
         return Terminal.echo('⏳ theme: ' + Theme.current(), 'warn');
       }
+      if (head === 'ping') {
+        return realPing(raw.split(/\s+/).slice(1).join(' '));
+      }
+      if (head === 'whoami' && parts[1] === 'local') return localWhoami();
+      if (head === 'snake' || head === 'game') return Snake.start();
       if (head === 'open' || head === 'start') {
         var url = raw.split(/\s+/).slice(1).join(' ') || '/';
         Terminal.echo('[ open ' + url + ' ]', 'warn');
@@ -331,9 +339,203 @@
       });
     };
     xhr.onerror = function () { Terminal.echo('ERROR: could not reach the server.', 'err'); };
-    xhr.send('cmd=' + encodeURIComponent(cmd) + '&_csrf=' + encodeURIComponent(CSRF) + '&screen=' + encodeURIComponent(window.screen.width + 'x' + window.screen.height));
+    xhr.send(
+      'cmd=' + encodeURIComponent(cmd) +
+      '&_csrf=' + encodeURIComponent(CSRF) +
+      '&screen=' + encodeURIComponent(window.screen.width + 'x' + window.screen.height) +
+      '&theme=' + encodeURIComponent(Theme.current())
+    );
   }
 
+  /**
+   * Facts about the machine actually in front of you. The server cannot know
+   * any of this, and guessing it is how a terminal ends up confidently wrong.
+   */
+  function clientFacts() {
+    var n = navigator || {};
+    var tz = '';
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { /* not fatal */ }
+    return {
+      browser: String(n.userAgent || 'unknown').split(') ').pop().split(' ')[0] || 'unknown',
+      platform: n.platform || (n.userAgentData && n.userAgentData.platform) || 'unknown',
+      languages: (n.languages || []).join(', ') || n.language || 'unknown',
+      screen: window.screen.width + 'x' + window.screen.height,
+      pixels: (window.screen.width * window.screen.height * (window.devicePixelRatio || 1) / 1e6).toFixed(1) + ' MP',
+      cores: (n.hardwareConcurrency || '?') + ' cores',
+      memory: n.deviceMemory ? n.deviceMemory + ' GB' : 'undisclosed',
+      timezone: tz || 'undisclosed',
+      online: n.onLine === false ? 'offline' : 'online',
+      touch: ('ontouchstart' in window) ? 'yes' : 'no',
+    };
+  }
+
+  function localWhoami() {
+    var f = clientFacts();
+    Terminal.echo('YOUR MACHINE (read locally, never sent)', 'hi');
+    Terminal.echo('');
+    Object.keys(f).forEach(function (k) {
+      Terminal.echo('  ' + (k + ':').padEnd(12) + ' ' + f[k]);
+    });
+    Terminal.echo('');
+    Terminal.echo('  local time   : ' + new Date().toString(), 'dim');
+  }
+
+  /** A real round trip to this very server, measured here and now. */
+  function realPing(host) {
+    var target = host || location.host;
+    var xhr = new XMLHttpRequest();
+    var t0 = performance.now();
+    Terminal.echo('Pinging ' + target + ' with 0 bytes of data:', 'hi');
+    xhr.open('GET', '/healthz?_=' + Date.now(), true);
+    xhr.onload = function () {
+      var ms = performance.now() - t0;
+      Terminal.echo('Reply from ' + target + ': time=' + ms.toFixed(1) + 'ms  status=' + xhr.status);
+      Terminal.echo('  a real HTTP request, timed in your browser', 'dim');
+    };
+    xhr.onerror = function () {
+      Terminal.echo('Request to ' + target + ' failed after ' + (performance.now() - t0).toFixed(1) + 'ms', 'err');
+    };
+    xhr.send();
+  }
+
+  /* ================================================================ SNAKE */
+  // Runs entirely in the browser. Once the board is drawn the server is not
+  // involved again, so a game on every page costs the host nothing.
+  var Snake = {
+    W: 22, H: 12, timer: null, board: null, on: false,
+    best: 0, score: 0,
+
+    start: function () {
+      if (Snake.on) return Terminal.echo('the snake is already loose. press q to stop it.', 'warn');
+      Snake.best = Number(Snake.store('snake.best', 0)) || 0;
+      Snake.on = true;
+      Snake.score = 0;
+      Snake.state = null;
+
+      Terminal.echo('SNAKE  (c) 1991, one small computer', 'hi');
+      Terminal.echo('  arrow keys or WASD to steer · q quits', 'dim');
+      Snake.board = document.createElement('pre');
+      Snake.board.className = 'term-game';
+      Terminal.body.appendChild(Snake.board);
+      Terminal.body.scrollTop = Terminal.body.scrollHeight;
+      Snake.reset();
+      Terminal.echo('C:\SNAKE> SNAKE.EXE', 'hi');
+      Snake.draw();
+      Snake.timer = setInterval(Snake.step, 130);
+      Snake.keys = function (e) {
+        // {x, y}, not [x, y] — an array here produced NaN coordinates, and the
+        // snake walked off the edge of the world instead of turning
+        var d = {
+          ArrowUp: { x: 0, y: -1 }, w: { x: 0, y: -1 },
+          ArrowDown: { x: 0, y: 1 }, s: { x: 0, y: 1 },
+          ArrowLeft: { x: -1, y: 0 }, a: { x: -1, y: 0 },
+          ArrowRight: { x: 1, y: 0 }, d: { x: 1, y: 0 },
+        }[e.key];
+        if (d) {
+          e.preventDefault();
+          Snake.turn(d);
+          return true;
+        }
+        if (e.key === 'q' || e.key === 'Q' || e.key === 'Escape') { Snake.stop(); return true; }
+        return false;
+      };
+      document.addEventListener('keydown', Snake.keys, true);
+    },
+
+    store: function (key, value) {
+      try {
+        if (value === undefined) return window.localStorage.getItem(key);
+        window.localStorage.setItem(key, String(value));
+      } catch (e) { /* private mode: the high score is a nicety, not a feature */ }
+      return value;
+    },
+
+    reset: function () {
+      var y = Math.floor(Snake.H / 2);
+      Snake.state = {
+        snake: [{ x: 4, y: y }, { x: 3, y: y }, { x: 2, y: y }],
+        dir: { x: 1, y: 0 },
+        next: null,
+        food: Snake.spawn(),
+        dead: false,
+      };
+    },
+
+    spawn: function () {
+      for (var tries = 0; tries < 200; tries++) {
+        var c = { x: Math.floor(Math.random() * Snake.W), y: Math.floor(Math.random() * Snake.H) };
+        var hit = Snake.state && Snake.state.snake.some(function (s) { return s.x === c.x && s.y === c.y; });
+        if (!hit) return c;
+      }
+      return { x: 0, y: 0 };
+    },
+
+    turn: function (d) {
+      var s = Snake.state;
+      if (!s || s.dead) return;
+      // no instant 180s, the one rule every snake respects
+      if (d.x === -s.dir.x && d.y === -s.dir.y) return;
+      s.next = d;
+    },
+
+    step: function () {
+      var s = Snake.state;
+      if (!s) return;
+      if (s.next) { s.dir = s.next; s.next = null; }
+      var head = { x: s.snake[0].x + s.dir.x, y: s.snake[0].y + s.dir.y };
+
+      if (head.x < 0 || head.y < 0 || head.x >= Snake.W || head.y >= Snake.H) return Snake.die('you hit the wall');
+      for (var i = 0; i < s.snake.length - 1; i++) {
+        if (s.snake[i].x === head.x && s.snake[i].y === head.y) return Snake.die('you bit yourself');
+      }
+
+      s.snake.unshift(head);
+      if (head.x === s.food.x && head.y === s.food.y) {
+        Snake.score += 10;
+        s.food = Snake.spawn();
+      } else {
+        s.snake.pop();
+      }
+      Snake.draw();
+    },
+
+    die: function (why) {
+      Snake.state.dead = true;
+      var best = Snake.score > Snake.best;
+      if (best) { Snake.best = Snake.score; Snake.store('snake.best', Snake.best); }
+      Snake.draw();
+      Terminal.echo('  GAME OVER — ' + why, 'err');
+      Terminal.echo('  score ' + Snake.score + '   best ' + Snake.best + (best ? '  (new record!)' : ''), 'warn');
+      Terminal.echo('  type snake to play again, or keep typing commands.', 'dim');
+    },
+
+    draw: function () {
+      if (!Snake.board || !Snake.state) return;
+      var s = Snake.state;
+      var grid = [];
+      for (var y = 0; y < Snake.H; y++) grid.push(new Array(Snake.W).fill(' '));
+      s.snake.forEach(function (c, i) {
+        grid[c.y][c.x] = i === 0 ? (s.dead ? 'X' : '@') : (i === 1 ? 'O' : 'o');
+      });
+      grid[s.food.y][s.food.x] = '*';
+      var out = [
+        '+' + '-'.repeat(Snake.W) + '+   score ' + String(Snake.score).padStart(4) + '   best ' + String(Snake.best).padStart(4) + '   ' + (s.dead ? 'DEAD' : 'PLAY'),
+      ];
+      grid.forEach(function (row) { out.push('|' + row.join('') + '|'); });
+      out.push('+' + '-'.repeat(Snake.W) + '+');
+      Snake.board.textContent = out.join('\n');
+      Terminal.body.scrollTop = Terminal.body.scrollHeight;
+    },
+
+    stop: function () {
+      if (!Snake.on) return;
+      Snake.on = false;
+      clearInterval(Snake.timer);
+      Snake.timer = null;
+      document.removeEventListener('keydown', Snake.keys, true);
+      Terminal.echo('C:\SNAKE> (process ended, score ' + Snake.score + ')', 'hi');
+    },
+  };
   /* ============================================================== RADIO */
   var Radio = {
     speaking: false,

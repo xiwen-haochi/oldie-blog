@@ -108,7 +108,9 @@
           <div class="gb-body"><%= c.message %></div>
           <div class="gb-meta">
             <% if (c.url) { %><a href="<%= c.url %>" rel="nofollow noopener" target="_blank"><%= c.host %></a> · <% } %>
-            <% if (c.email) { %>📧 <a href="mailto:<%= c.email %>"><%= t('gb.reply') %></a> · <% } %>
+            <%# Same rule as the guestbook: the address is for the owner's
+                reply, never a public mailto. A bare envelope would say
+                nothing, so it is simply not shown. %>
             <span class="mono">#<%= c.id %></span>
           </div>
         </div>

@@ -47,6 +47,8 @@ export function apiRoutes(ctx) {
       visitorId: req.visitorId,
       geoGuess: req.geoGuess,
       screen: req.body && req.body.screen,
+      // which theme the visitor is actually looking at
+      theme: req.body && req.body.theme,
     });
     res.set('Cache-Control', 'no-store').json({ lines });
   });

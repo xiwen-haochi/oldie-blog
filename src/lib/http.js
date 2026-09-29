@@ -88,11 +88,10 @@ const GEO_HINTS = {
 export function geoGuess(req, res, next) {
   const country = String(req.headers['cf-ipcountry'] || req.headers['x-vercel-ip-country'] || '').toUpperCase();
   const city = String(req.headers['x-geo-city'] || req.headers['cf-ipcity'] || '').replace(/^"|"$/g, '');
-  if (country && GEO_HINTS[country]) {
-    const list = GEO_HINTS[country];
-    req.geoGuess = city ? city + ', ' + country : list[Math.floor(Math.random() * list.length)] + ', ' + country;
-  } else if (country) {
-    req.geoGuess = country;
+  if (country) {
+    // Only report what the edge actually told us. Picking a random city from a
+    // hint list produced confident nonsense on every page that shows it.
+    req.geoGuess = city ? city + ', ' + country : country;
   } else {
     req.geoGuess = 'the World Wide Web';
   }

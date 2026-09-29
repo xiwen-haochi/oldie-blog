@@ -413,6 +413,40 @@ async function main() {
     assert.equal(res.status, 403);
     return 'blocked';
   });
+
+  await check('the terminal publishes nothing unpublished', async () => {
+    const csrf = csrfFrom(await text('/'));
+    const say = async (cmd) => {
+      const res = await post('/api/terminal', { cmd, _csrf: csrf });
+      return (await res.json()).lines.map((l) => l.text).join('\n');
+    };
+    const stats = await say('stats');
+    assert.ok(!/draft/i.test(stats), 'the draft count is public');
+    assert.ok(!/pending/i.test(stats), 'the moderation queue size is public');
+
+    // the exact patch level is a free CVE-targeting hint
+    const colo = await say('colophon');
+    const exact = new RegExp('node ' + process.versions.node.replace(/[.]/g, '\\.'));
+    assert.ok(!exact.test(colo), 'the exact node version is public: ' + process.versions.node);
+    assert.match(colo, /node [0-9]+/, 'colophon should still name a node major');
+
+    // and a draft must not be reachable through the terminal at all
+    assert.match(await say('type hidden-draft'), /cannot find/);
+    return 'no drafts, no queue size, no patch level';
+  });
+
+  await check('neofetch reports the theme the visitor is in', async () => {
+    const csrf = csrfFrom(await text('/'));
+    const run = async (theme) => {
+      const res = await post('/api/terminal', { cmd: 'neofetch', _csrf: csrf, theme });
+      return (await res.json()).lines.map((l) => l.text).join('\n');
+    };
+    assert.match(await run('1998'), /Theme: 1998/);
+    assert.match(await run('classic'), /Theme: classic/);
+    assert.match(await run(undefined), /Theme: classic/, 'an unknown theme must not be trusted');
+    return 'echoes the real one';
+  });
+
   await check('search API honours tag: operator', async () => {
     const res = await get('/api/search?q=' + encodeURIComponent('tag:markdown'));
     const data = await res.json();
@@ -596,6 +630,42 @@ async function main() {
       assert.equal(res.status, 302);
       assert.ok((await text('/admin/guestbook?status=spam')).includes('#' + m[1]), 'spam list is empty');
       return 'entry #' + m[1];
+    });
+
+    await check('a public guestbook entry never shows its address', async () => {
+      const form = new URLSearchParams({
+        _csrf: adminCsrf, name: 'Address Probe', message: 'leave my address alone',
+        email: 'probe-secret@example.com', location: 'nowhere', url: '',
+      });
+      const res = await fetch(base + '/guestbook', {
+        method: 'POST', redirect: 'manual',
+        headers: { cookie: jar.header(), 'content-type': 'application/x-www-form-urlencoded' },
+        body: form.toString(),
+      });
+      jar.absorb(res);
+
+      const publicPage = async () => (await get('/guestbook')).text();
+      let page = await publicPage();
+      // Whether it lands in the queue depends on the moderation switch, and the
+      // suite flips that around. Only the published page is what matters here.
+      if (!page.includes('leave my address alone')) {
+        const pending = await (await get('/admin/guestbook?status=pending')).text();
+        const at = pending.indexOf('Address Probe');
+        assert.ok(at > 0, 'the probe entry is neither published nor queued');
+        const m = pending.slice(at).match(/\/admin\/guestbook\/(\d+)\/status/);
+        assert.ok(m, 'could not find the id to approve');
+        assert.equal((await post('/admin/guestbook/' + m[1] + '/status', { _csrf: adminCsrf, status: 'approved' })).status, 302);
+        page = await publicPage();
+      }
+
+      assert.ok(page.includes('leave my address alone'), 'the entry is not visible on the guestbook at all');
+      assert.ok(!page.includes('probe-secret@example.com'), 'the address was published');
+      assert.ok(!page.includes('mailto:probe-secret'), 'a mailto leaked');
+
+      const list = await (await get('/admin/guestbook?status=all')).text();
+      const m2 = list.match(/\/admin\/guestbook\/(\d+)\/status/);
+      if (m2) await post('/admin/guestbook/' + m2[1] + '/delete', { _csrf: adminCsrf });
+      return 'published, address still private';
     });
 
     await check('settings save applies live', async () => {

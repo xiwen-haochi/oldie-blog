@@ -415,6 +415,14 @@ form.bbs-form { background: var(--face); border: 2px solid #000; box-shadow: var
 form.bbs-form .row { margin-bottom: 10px; }
 form.bbs-form label { font-weight: 700; }
 .form-note { font-size: 11px; color: #444; font-family: var(--font-mono); }
+/* the DOS game screen: a fixed block the terminal redraws in place */
+.term-game {
+  margin: 4px 0 8px; padding: 6px 8px; overflow-x: auto;
+  background: #000; color: #33ff33; border: 1px solid var(--face-dark);
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.15;
+  white-space: pre;
+}
+[data-theme="1998"] .term-game { background: #000080; color: #c0c0c0; }
 .alert {
   padding: 8px 10px; border: 2px solid #000; box-shadow: var(--bevel-out);
   font-family: var(--font-ui); font-size: 12px; margin-bottom: 12px;

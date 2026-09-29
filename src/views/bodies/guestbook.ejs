@@ -79,9 +79,8 @@
       <% if (e.url) { %>
         <a href="<%= e.url %>" rel="nofollow noopener" target="_blank">🌐 <%= e.host %></a> ·
       <% } %>
-      <% if (e.email) { %>
-        📧 <a href="mailto:<%= e.email %>"><%= t('gb.reply') %></a> ·
-      <% } %>
+      <%# The visitor's address is theirs. It is used to reply from the admin,
+          never published: a mailto link here is a ready-made spam list. %>
       <span class="mono"><%= t('gb.entry') %> #<%= e.id %></span>
       <% if (e.status === 'pending') { %>
         · <span class="stamp draft"><%= t('gb.awaiting') %></span>

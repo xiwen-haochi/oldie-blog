@@ -1,6 +1,10 @@
+import { createRequire } from 'node:module';
+import path from 'node:path';
 import { search, parseQuery } from './search.js';
 import { toPlainText } from './markdown.js';
 import { formatDate, pad } from './text.js';
+import { getDataDriver } from './store.js';
+import { ROOT } from './paths.js';
 
 const FORTUNES = [
   'A journey of a thousand pages begins with a single hyperlink.',
@@ -36,13 +40,40 @@ export const COMMANDS = [
   ['ver', 'software version'],
   ['neofetch', 'system info, ASCII style'],
   ['uptime', 'how long the server has been up'],
-  ['ping <host>', 'ping the local web server'],
   ['music [on|off]', 'toggle the chiptune theme'],
   ['theme [1998|classic]', 'toggle Time Machine mode'],
+  ['ping <host>', 'measure the real round trip from your machine'],
+  ['whoami local', 'what your own browser says about you'],
+  ['snake', 'the 1991 game, played on a text screen'],
   ['open <url>', 'open a path in the browser'],
   ['clear', 'clear the screen'],
   ['exit', 'close the terminal'],
 ];
+
+/**
+ * "colophon" is only worth printing if it is true, so it is assembled from the
+ * running program instead of typed out by hand. A hand-written list is a lie
+ * waiting for the next dependency change — this one already claimed JSON
+ * storage long after the site moved to SQLite.
+ */
+function colophonRows(ctx) {
+  let deps = [];
+  try {
+    const require = createRequire(import.meta.url);
+    deps = Object.keys(require(path.join(ROOT, 'package.json')).dependencies || {});
+  } catch {
+    deps = ['(package.json unavailable)'];
+  }
+  return {
+    deps,
+    posts: ctx.index.publishedPosts().length,
+    words: ctx.index.totalWords(),
+    // The exact patch level is a free CVE-targeting hint. The major line is
+    // enough for the joke and useless to an attacker.
+    node: process.versions.node.split('.')[0],
+    driver: getDataDriver(),
+  };
+}
 
 export function uptimeText(since) {
   const s = Math.max(0, Math.floor((Date.now() - since) / 1000));
@@ -87,6 +118,7 @@ export function runCommand(ctx, raw, req = {}) {
 
     case 'neofetch': {
       const stats = ctx.stats.summary();
+      const c = colophonRows(ctx);
       const art = [
         '_______________________',
        '|  _________________  |',
@@ -100,12 +132,13 @@ export function runCommand(ctx, raw, req = {}) {
       ];
       push(art.join('\n'), 'dim');
       push('  ' + ctx.site.title + '@oldie-web');
-      push('  OS: node ' + process.versions.node + ' on ' + process.platform);
-      push('  Shell: msdos 1.0     Resolution: ' + (req.screen || '800x600'));
+      push('  OS: node ' + c.node + ' on ' + process.platform);
+      push('  Shell: msdos 1.0     Resolution: ' + (req.screen || 'unknown'));
       push('  Uptime: ' + uptimeText(ctx.startedAt));
-      push('  Posts: ' + ctx.index.publishedPosts().length + '  Words: ' + ctx.index.totalWords());
+      push('  Posts: ' + c.posts + '  Words: ' + c.words);
       push('  Hits: ' + stats.total + '  Unique today: ' + stats.unique);
-      push('  Theme: classic  Terminal: DOS 2.11  Tracker: none');
+      // the theme the visitor is actually looking at, not a constant
+      push('  Theme: ' + (req.theme === '1998' ? '1998' : 'classic') + '  Terminal: DOS 2.11  Tracker: none');
       break;
     }
 
@@ -119,10 +152,15 @@ export function runCommand(ctx, raw, req = {}) {
       push('up ' + uptimeText(ctx.startedAt) + '  (' + Math.floor(process.uptime()) + 's process uptime)');
       break;
 
-    case 'whoami':
-      push('visitor ' + String(req.visitorId || 'unknown').slice(0, 8) + ' from ' + (req.geoGuess || 'somewhere'));
-      push('online now: ' + ctx.stats.summary().online + '   your visit: #' + (req.sessionRank || 1));
+    case 'whoami': {
+      // The country comes from the edge; the city used to be invented when the
+      // edge sent no city header, which is a quiet lie. Say what is known.
+      push('visitor ' + String(req.visitorId || 'unknown').slice(0, 8));
+      push('network   : ' + (req.geoGuess || 'the World Wide Web'));
+      push('online    : ' + ctx.stats.summary().online + '   your visit: #' + (req.sessionRank || 1));
+      push('your browser details stay on your machine — "whoami local" shows them', 'dim');
       break;
+    }
 
     case 'about':
       push(ctx.site.title, 'hi');
@@ -134,17 +172,21 @@ export function runCommand(ctx, raw, req = {}) {
       push('Since     : ' + (ctx.site.since || new Date().getFullYear()));
       break;
 
-    case 'colophon':
+    case 'colophon': {
+      const c = colophonRows(ctx);
       push('HOW THIS PAGE IS BUILT', 'hi');
       push('');
-      push('  Content ....... ' + ctx.index.publishedPosts().length + ' Markdown files in content/posts/');
-      push('  Renderer ....... markdown-it + highlight.js');
-      push('  Server ......... node ' + process.versions.node + ' + express, zero native deps');
+      push('  Content ....... ' + c.posts + ' Markdown files, ' + c.words + ' words');
+      push('  Dependencies ... ' + (c.deps.join(', ') || 'none'));
+      push('  Server ......... node ' + c.node + ' + express, no native modules');
       push('  Search ......... in-memory inverted index, CJK aware');
-      push('  Storage ........ JSON stores in data/ (git friendly)');
+      push('  Storage ........ ' + (c.driver === 'sqlite'
+        ? 'SQLite via node:sqlite, one file in data/'
+        : 'JSON files in data/ (human readable)'));
       push('  Sounds .......... square waves generated live by the Web Audio API');
       push('  Tracking ....... none, just one anonymous visitor id cookie');
       break;
+    }
 
     case 'fortune':
       push(FORTUNES[Math.floor(Math.random() * FORTUNES.length)], 'warn');
@@ -258,10 +300,12 @@ export function runCommand(ctx, raw, req = {}) {
       push('  today ............ ' + s.today);
       push('  unique today ..... ' + s.unique);
       push('  online right now .. ' + s.online);
-      push('  posts ............ ' + ctx.index.publishedPosts().length + ' (' + ctx.index.allPosts().filter(function (p) { return p.draft; }).length + ' draft)');
+      // No draft count, no pending count. The public has no business knowing how
+      // much is unpublished, or how much is waiting for moderation.
+      push('  posts ............ ' + ctx.index.publishedPosts().length);
       push('  words written .... ' + ctx.index.totalWords());
       push('  tags ............. ' + ctx.index.allTags().length);
-      push('  guestbook ........ ' + ctx.community.count({ target: 'guestbook' }) + ' signed, ' + ctx.community.stats().pending + ' pending');
+      push('  guestbook ........ ' + ctx.community.count({ target: 'guestbook' }) + ' signed');
       push('  subscribers ...... ' + ctx.community.subscriberCount());
       push('  uptime ........... ' + uptimeText(ctx.startedAt));
       break;
@@ -285,12 +329,11 @@ export function runCommand(ctx, raw, req = {}) {
     }
 
     case 'ping': {
+      // The client measures this for real and never reaches here; a direct
+      // API call gets told so rather than a made-up round trip.
       const host = arg || String(ctx.site.url).replace(/^https?:\/\//, '');
-      push('Pinging ' + host + ' with 32 bytes of data:');
-      const ms = 1 + Math.floor(Math.random() * 4);
-      push('Reply from ' + host + ': bytes=32 time=' + ms + 'ms TTL=54');
-      push('');
-      push('Ping statistics: Sent = 1, Received = 1, Lost = 0 (0% loss)');
+      push('ping is measured in your browser, not here.', 'dim');
+      push('Type "ping ' + host + '" in the terminal for a real round trip.', 'dim');
       break;
     }
 
