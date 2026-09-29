@@ -303,6 +303,27 @@ async function main() {
     return 'guarded';
   });
 
+  await check('the public and login assets are versioned', async () => {
+    // The static handler caches these for 30 days in production. A page whose
+    // markup updates but whose script does not looks exactly like a button
+    // that does nothing — which is how the cover picker "failed" once.
+    const escaped = (tag) => tag.replace(/[/.]/g, (c) => '\\' + c);
+    const stamped = (html, tag) => {
+      const m = html.match(new RegExp('(?:href|src)="' + escaped(tag) + '(\\?v=[^"]*)?"'));
+      return Boolean(m && m[1]);
+    };
+    const site = await text('/');
+    for (const tag of ['/css/site.css', '/js/site.js']) {
+      assert.ok(stamped(site, tag), tag + ' is unversioned on the home page');
+    }
+    // before signing in: /admin/login redirects once a session exists
+    const login = await text('/admin/login');
+    for (const tag of ['/css/site.css', '/css/admin.css']) {
+      assert.ok(stamped(login, tag), tag + ' is unversioned on the login page');
+    }
+    return 'public + login stamped';
+  });
+
   await check('static assets are cacheable, html is revalidated', async () => {
     const css = await get('/css/site.css');
     assert.match(css.headers.get('cache-control') || '', /max-age=(3600|\d+d)/);
@@ -630,6 +651,17 @@ async function main() {
       assert.equal(found.url, saved.url, 'the picker and the upload must agree on the url');
       assert.equal(typeof found.size, 'number');
       return json.files.length + ' files, url ' + found.url;
+    });
+
+    await check('admin.js is versioned on the admin pages', async () => {
+      const escaped = (tag) => tag.replace(/[/.]/g, (c) => '\\' + c);
+      const dash = await text('/admin/dashboard');
+      for (const tag of ['/css/site.css', '/css/admin.css', '/js/admin.js']) {
+        const m = dash.match(new RegExp('(?:href|src)="' + escaped(tag) + '(\\?v=[^"]*)?"'));
+        assert.ok(m, tag + ' is not linked on the dashboard');
+        assert.ok(m[1], tag + ' is unversioned on the dashboard');
+      }
+      return 'admin.js stamped';
     });
 
     await check('a cover is saved and actually drawn on the post', async () => {

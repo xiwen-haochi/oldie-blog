@@ -68,10 +68,17 @@ export function createContext() {
   return ctx;
 }
 
-/** Cache-bust CSS/JS by mtime so a restart never serves stale assets. */
+/**
+ * Cache-bust CSS/JS by mtime so a restart never serves stale assets.
+ *
+ * admin.js has to be in this list. Leaving it out is how you end up with a
+ * page that shows a button the old script knows nothing about: the markup is
+ * no-cache so it updates, the script is cached for 30 days so it does not, and
+ * clicking the button does nothing at all.
+ */
 function assetVersion() {
   let h = 0;
-  for (const rel of ['public/css/site.css', 'public/js/site.js', 'public/css/admin.css']) {
+  for (const rel of ['public/css/site.css', 'public/js/site.js', 'public/css/admin.css', 'public/js/admin.js']) {
     try {
       const st = fs.statSync(path.join(ROOT, rel));
       h = (h * 31 + Math.round(st.mtimeMs)) % 1000000007;

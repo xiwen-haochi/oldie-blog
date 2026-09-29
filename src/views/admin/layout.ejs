@@ -8,8 +8,8 @@
 <meta name="csrf-token" content="<%= csrf %>">
 <meta name="csrf-token" content="<%= csrf %>">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/css/site.css">
-<link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/site.css?v=<%= site.assetV %>">
+<link rel="stylesheet" href="/css/admin.css?v=<%= site.assetV %>">
 <link rel="stylesheet" href="/css/vendor/hljs.css">
 </head>
 <body class="admin-body">
@@ -60,6 +60,6 @@
   <button type="button" onclick="location.href='/'"><span class="ico" aria-hidden="true">🌐</span><span><%= t('admin.view_site').replace(/^[^ ]+ /, '') %></span></button>
 </div>
 <script id="i18n-admin" type="application/json"><%- JSON.stringify(clientStrings) %></script>
-<script src="/js/admin.js" defer></script>
+<script src="/js/admin.js?v=<%= site.assetV %>" defer></script>
 </body>
 </html>
