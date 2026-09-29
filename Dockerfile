@@ -28,9 +28,10 @@ COPY src ./src
 COPY scripts ./scripts
 COPY docker/entrypoint.sh ./docker/entrypoint.sh
 
-# /app/config and /app/content are volumes. A fresh (empty) volume is seeded
-# from exactly what the image ships, which is why the default config has to
-# live at the real path rather than in some staging directory.
+# Everything the site stores lives in /app/data/oldie.sqlite, so /app/data is the
+# volume that matters. /app/config holds the bootstrap config (read only while
+# the database has never been written to) and /app/content is only where a
+# first boot looks for hand-written .md files to import.
 COPY config/site.config.json ./config/site.config.json
 COPY content/.gitkeep ./content/.gitkeep
 

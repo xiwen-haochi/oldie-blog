@@ -1,6 +1,7 @@
 # one command: docker compose up -d
-# your writing, counters and settings live in named volumes, so rebuilding
-# the image never loses them.
+# the data volume holds data/oldie.sqlite — settings, articles, counters and
+# messages all live in that one file. config and content only matter on a first
+# boot: the bootstrap config, and any .md files to import.
 services:
   blog:
     build: .

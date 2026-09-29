@@ -20,13 +20,14 @@ and a real SEO layer underneath.
 ## What it is
 
 A personal blog engine dressed as a 1996 GeoCities page. The nostalgia is the interface;
-underneath it is a boring, fast, server-rendered blog: posts are plain Markdown files on
-disk, the admin is a real one, and the SEO surface is complete.
+underneath it is a boring, fast, server-rendered blog that keeps everything in **one SQLite
+file** — settings, articles, hits, guestbook, subscribers and sessions — with a real admin
+and a complete SEO surface.
 
 | | |
 | --- | --- |
 | ![posts](docs/posts.png) | ![post](docs/post.png) |
-| **The index** — pinned post, then the rest | **A post** — every page is a real `.md` file |
+| **The index** — pinned post, then the rest | **A post** — Markdown in, HTML out |
 
 ### Admin
 
@@ -143,17 +144,17 @@ docker exec -it <container> node scripts/reset-admin.js # anywhere else
 1. **New Project → Deploy from GitHub repo**, pick `xiwen-haochi/oldie-blog`. Railway reads
    the `Dockerfile` and builds it.
 
-2. **Attach volumes for what must survive, not just `/app/data`.** Railway's filesystem
-   is ephemeral — only a mounted volume survives a redeploy.
+2. **Attach one volume at `/app/data`.** Railway's filesystem is ephemeral, and that
+   directory holds the single file the whole site lives in.
 
    | Mount at | Holds | Without it |
    | --- | --- | --- |
-   | `/app/content` | every post and page (`.md`) | **the next redeploy deletes every article** |
-   | `/app/data` | hits, guestbook, subscribers, admin settings | counters and messages reset to zero |
-   | `/app/config` | `site.config.json` and the admin password | the site forgets its own settings and password |
+   | `/app/data` | `oldie.sqlite` — settings, every article, hits, guestbook, subscribers, sessions | **the next redeploy deletes the entire site** |
+   | `/app/config` | `site.config.json` and the admin password | read only on the very first boot, so nothing to worry about |
+   | `/app/content` | `.md` files, imported once at first boot | ditto |
 
-   `/app/data` is the one everybody remembers to mount. It is not the one that matters
-   most: your `.md` sources are gitignored, so a lost `content` volume cannot be recovered.
+   One volume, one file, one thing to back up. Copy `/app/data/oldie.sqlite` and you have
+   copied the site.
 
 3. **Set three variables** (the Variables tab):
 
@@ -228,23 +229,23 @@ let the proxy terminate HTTPS — the app speaks plain HTTP and never redirects 
 **Media** and write `![alt](/uploads/photo.png)` in the text.
 
 **Changed your mind about the text?** the editor autosave only lives in your browser,
-so closing the tab discards it. For something already published, the post is a file
-on disk and `git checkout content/posts/` rolls it back.
+so closing the tab discards it. For something already published, take a backup
+first — **备份与恢复** writes a `.zip` holding the whole database.
 
-### 2. The command line (optional, for bulk work or another editor)
+### 2. The command line (optional, for bulk work)
 
 ```bash
 pnpm new:post "My title" --tags=intro,tools --draft
 ```
 
-Writes a file with the front matter filled in, for you to finish in any editor.
+Creates the post in the database, ready to finish in the admin.
 **This is for people who like a terminal, not a requirement.**
 
-### 3. Any editor
+### 3. Markdown on disk
 
-```bash
-vim content/posts/2026-09-29-my-post.md
-```
+Articles live in the database, but a backup also writes them out as real Markdown
+files under `content/`, and a fresh install imports any `.md` files it finds
+there. So a hand-written file is never a dead end.
 
 The whole format is this:
 
@@ -270,7 +271,7 @@ The body is plain Markdown.
 | --- | --- |
 | Writing normally | **the admin**, publish with the mouse |
 | You live in vim / VS Code | the command line, or any editor |
-| Moving old posts in from elsewhere | drop the `.md` files into `content/posts/` |
+| Moving old posts in from elsewhere | drop the `.md` files into `content/posts/` and restart — the first boot imports them |
 
 ### What a push to GitHub actually does
 
@@ -315,20 +316,26 @@ docker compose up -d
 
 This is the part most blog engines get wrong. Here:
 
-- posts are `content/posts/*.md` — edit them in your editor, in git, anywhere
-- `content/`, `data/` and `config/admin.json` are **gitignored** and never published
+- everything lives in **one file**: `data/oldie.sqlite` — settings, articles, hits, guestbook
+- that file is **gitignored** and never published
 - a fresh clone starts empty; `pnpm seed` gives you sample content to look at
+- **备份与恢复** writes a `.zip` that is both the database and a readable Markdown copy
 
 ```bash
 pnpm new:post "Hello world" --tags=intro --draft
 pnpm clean          # wipe posts, pages, messages and counters for a fresh start
 ```
 
+> **Trade-off, stated plainly:** your writing is no longer a file you can open in an
+> editor or `git diff`. In exchange you get one thing to back up, one thing to copy when
+> you move servers, and no chance of a half-written file. If you want plain text back,
+> the backup archive has it.
+
 ### Where everything lives
 
 | Path | Holds | Published? |
 | --- | --- | --- |
-| `content/posts/*.md` | your posts | no — that is yours |
+| `data/oldie.sqlite` | your posts, settings, messages, counters | no — that is yours |
 | `content/pages/*.md` | standalone pages | no |
 | `data/` | hit counter, guestbook, subscribers, sessions, settings | no |
 | `config/admin.json` | the admin password (scrypt) | no |
