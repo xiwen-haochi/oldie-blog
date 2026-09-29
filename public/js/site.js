@@ -402,12 +402,19 @@
   // Runs entirely in the browser. Once the board is drawn the server is not
   // involved again, so a game on every page costs the host nothing.
   var Snake = {
-    W: 22, H: 12, timer: null, board: null, on: false,
+    W: 22, H: 12, timer: null, board: null, keys: null, on: false,
     best: 0, score: 0,
 
     start: function () {
-      if (Snake.on) return Terminal.echo('the snake is already loose. press q to stop it.', 'warn');
-      Snake.best = Number(Snake.store('snake.best', 0)) || 0;
+      // A finished field is not a running one. Tear the dead board down and
+      // deal a fresh one, which is what the game over screen promises you.
+      if (Snake.on) {
+        if (!Snake.state || !Snake.state.dead) {
+          return Terminal.echo('the snake is already loose. press q to stop it.', 'warn');
+        }
+        Snake.teardown();
+      }
+      Snake.best = Number(Snake.read('snake.best')) || 0;
       Snake.on = true;
       Snake.score = 0;
       Snake.state = null;
@@ -442,12 +449,15 @@
       document.addEventListener('keydown', Snake.keys, true);
     },
 
-    store: function (key, value) {
-      try {
-        if (value === undefined) return window.localStorage.getItem(key);
-        window.localStorage.setItem(key, String(value));
-      } catch (e) { /* private mode: the high score is a nicety, not a feature */ }
-      return value;
+    // Read and write are separate on purpose. This used to take a default as
+    // its second argument and store it, so `store('snake.best', 0)` wiped the
+    // record on the way past and every new game started you back at zero.
+    read: function (key) {
+      try { return window.localStorage.getItem(key); } catch (e) { return null; }
+    },
+
+    write: function (key, value) {
+      try { window.localStorage.setItem(key, String(value)); } catch (e) { /* private mode: a nicety, not a feature */ }
     },
 
     reset: function () {
@@ -480,7 +490,9 @@
 
     step: function () {
       var s = Snake.state;
-      if (!s) return;
+      // A dead field stops here. It used to carry on, walked the same head
+      // into the same wall and reprinted the game over every 130ms.
+      if (!s || s.dead) return;
       if (s.next) { s.dir = s.next; s.next = null; }
       var head = { x: s.snake[0].x + s.dir.x, y: s.snake[0].y + s.dir.y };
 
@@ -500,9 +512,12 @@
     },
 
     die: function (why) {
-      Snake.state.dead = true;
+      var s = Snake.state;
+      if (!s || s.dead) return;          // one game over per game, please
+      s.dead = true;
+      Snake.halt();
       var best = Snake.score > Snake.best;
-      if (best) { Snake.best = Snake.score; Snake.store('snake.best', Snake.best); }
+      if (best) { Snake.best = Snake.score; Snake.write('snake.best', Snake.best); }
       Snake.draw();
       Terminal.echo('  GAME OVER — ' + why, 'err');
       Terminal.echo('  score ' + Snake.score + '   best ' + Snake.best + (best ? '  (new record!)' : ''), 'warn');
@@ -527,13 +542,28 @@
       Terminal.body.scrollTop = Terminal.body.scrollHeight;
     },
 
+    // Stop the clock and the keyboard but leave the last frame on screen: a
+    // finished game should not cost the browser a timer, or swallow arrow
+    // keys for a field that is no longer playing.
+    halt: function () {
+      if (Snake.timer) { clearInterval(Snake.timer); Snake.timer = null; }
+      if (Snake.keys) { document.removeEventListener('keydown', Snake.keys, true); Snake.keys = null; }
+    },
+
+    // halt, plus take the board off the screen
+    teardown: function () {
+      Snake.halt();
+      Snake.on = false;
+      if (Snake.board && Snake.board.parentNode) Snake.board.parentNode.removeChild(Snake.board);
+      Snake.board = null;
+      Snake.state = null;
+    },
+
     stop: function () {
       if (!Snake.on) return;
-      Snake.on = false;
-      clearInterval(Snake.timer);
-      Snake.timer = null;
-      document.removeEventListener('keydown', Snake.keys, true);
-      Terminal.echo('C:\SNAKE> (process ended, score ' + Snake.score + ')', 'hi');
+      var score = Snake.score;
+      Snake.teardown();
+      Terminal.echo('C:\SNAKE> (process ended, score ' + score + ')', 'hi');
     },
   };
   /* ============================================================== RADIO */
