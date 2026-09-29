@@ -98,6 +98,29 @@ docker pull ghcr.io/xiwen-haochi/oldie-blog:latest
 > **Package settings** → **Change visibility** → **Public**。
 > 不做这一步，别人 `docker pull` 会收到 401。
 
+### 部署到 Railway（最容易出坑的三个地方）
+
+1. **New Project → Deploy from GitHub repo**，选 `xiwen-haochi/oldie-blog`。Railway 会自动读
+   `Dockerfile` 并构建。
+
+2. **给服务加一个 Volume，挂到 `/app/data`** —— Railway 的文件系统是临时的，没有这个卷，
+   每次重新部署都会把文章、留言、访问量**全部清空**。
+   （文章在 `/app/content`，如果你也从 GitHub 之外的地方导入过文章，可以再挂一个到 `/app/content`。）
+
+3. **设三个环境变量**（Variables 标签页）：
+
+   | 变量 | 值 | 不设会怎样 |
+   | --- | --- | --- |
+   | `ADMIN_PASSWORD` | 你自己定一个长密码 | 启动时打印随机密码，重启就变 |
+   | `SESSION_SECRET` | 一串随机字符 | 每次重启所有人都得重新登录 |
+   | `SITE_URL` | Railway 给你的域名 | canonical、订阅源、站点地图全错，SEO 废掉 |
+
+   端口不用管，Railway 会注入 `PORT`，应用自己读。
+
+部署成功后 Railway 会给一个 `*.up.railway.app` 的地址，在 **Settings → Networking** 里
+可以换成自己的域名。
+
+> Railway 免费额度会在闲置时休眠，冷启动要等十几秒。
 ### 裸机部署
 
 ```bash

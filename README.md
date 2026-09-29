@@ -103,6 +103,29 @@ if anything private is ever about to be committed.
 > → `oldie-blog` → **Package settings** → **Change visibility** → **Public**.
 > Until you do, `docker pull` from outside gets a 401.
 
+### Deploying to Railway (the three things that bite)
+
+1. **New Project → Deploy from GitHub repo**, pick `xiwen-haochi/oldie-blog`. Railway reads
+   the `Dockerfile` and builds it.
+
+2. **Attach a Volume at `/app/data`.** Railway's filesystem is ephemeral: without one,
+   every redeploy wipes your posts, guestbook and counters.
+   (Add a second volume at `/app/content` if you import articles from outside git.)
+
+3. **Set three variables** (the Variables tab):
+
+   | Variable | Value | If you skip it |
+   | --- | --- | --- |
+   | `ADMIN_PASSWORD` | a long password of your own | a random one is printed at boot and changes on every restart |
+   | `SESSION_SECRET` | a random string | everybody is logged out after every restart |
+   | `SITE_URL` | the domain Railway gives you | canonical links, feeds and the sitemap all point nowhere |
+
+   The port needs no attention: Railway injects `PORT` and the app reads it.
+
+Once it is live Railway hands you a `*.up.railway.app` address. **Settings → Networking**
+lets you attach your own domain.
+
+> The free tier sleeps when idle, so a cold start takes a few seconds.
 ### On a plain server
 
 ```bash
