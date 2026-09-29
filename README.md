@@ -103,6 +103,29 @@ if anything private is ever about to be committed.
 > → `oldie-blog` → **Package settings** → **Change visibility** → **Public**.
 > Until you do, `docker pull` from outside gets a 401.
 
+### Where the password comes from, and how to change it
+
+**On the first boot** the app does one of two things:
+
+- `ADMIN_PASSWORD` is set in the environment → it uses that, **for that boot only**
+- it is not set → one is generated and printed in the startup log:
+
+```
+┌─ first run ─────────────────────────────────────────────┐
+│ admin user : admin                                     │
+│ temp pass  : xxxxxxxxxxxxx                             │
+└──────────────────────────────────────────────────────────┘
+```
+
+**To read that line:** the service page → the **Console** tab → scroll back to the
+first boot.
+
+**To change it:** sign in → **Settings → Password** → current password, then the new one.
+
+Afterwards the `ADMIN_PASSWORD` variable can be **deleted** — it only seeds the first
+boot, and from then on the password you chose is the one that counts, restarts included.
+
+> Forgotten it? Run `node scripts/reset-admin.js` on the server; it prints a new one.
 ### Deploying to Railway (the three things that bite)
 
 1. **New Project → Deploy from GitHub repo**, pick `xiwen-haochi/oldie-blog`. Railway reads

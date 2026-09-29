@@ -98,6 +98,28 @@ docker pull ghcr.io/xiwen-haochi/oldie-blog:latest
 > **Package settings** → **Change visibility** → **Public**。
 > 不做这一步，别人 `docker pull` 会收到 401。
 
+### 密码从哪来，怎么改
+
+**第一次启动**时应用会做两件事之一：
+
+- 设了 `ADMIN_PASSWORD` 环境变量 → 用它，并**只在这一次生效**
+- 没设 → 随机生成一个，打印在启动日志里：
+
+```
+┌─ first run ─────────────────────────────────────────────┐
+│ admin user : admin                                     │
+│ temp pass  : xxxxxxxxxxxxx                             │
+└──────────────────────────────────────────────────────────┘
+```
+
+**在哪看那行日志**：Railway 服务页 → **Console** 标签页 → 往回翻到第一次启动。
+
+**改密码**：登录后 → **设置 → 密码** → 填当前密码和新密码。
+
+改完之后 `ADMIN_PASSWORD` 这个环境变量就可以**删掉了** —— 它只在首次启动起作用，
+之后你设的密码说了算，重启也不会被冲掉。
+
+> 忘了密码就在服务器上跑 `node scripts/reset-admin.js`，会打印一个新密码。
 ### 部署到 Railway（最容易出坑的三个地方）
 
 1. **New Project → Deploy from GitHub repo**，选 `xiwen-haochi/oldie-blog`。Railway 会自动读

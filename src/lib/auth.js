@@ -20,14 +20,26 @@ export function verifyPassword(password, stored) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-/** Plaintext ADMIN_PASSWORD env / config shortcut used on first boot. */
-export function ensureAdminCredentials(config, { persist = true } = {}) {
-  const file = path.join(CONFIG_DIR, 'admin.json');
+/**
+ * Decide the password in force.
+ *
+ * ADMIN_PASSWORD seeds the very first boot, and only that: once a password is
+ * stored, whatever the operator typed in the admin is the real one. Seeding on
+ * every boot would quietly undo their change on each restart, which is exactly
+ * the kind of surprise a login form should never spring on anybody.
+ */
+export function ensureAdminCredentials(config, { persist = true, dir = CONFIG_DIR } = {}) {
+  const file = path.join(dir, 'admin.json');
   let stored = {};
   try { stored = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { stored = {}; }
 
-  if (config.admin?.password) {
-    stored = { ...stored, username: config.admin.username || 'admin', password: hashPassword(config.admin.password) };
+  if (!stored.password && config.admin?.password) {
+    // first boot: take the one from the environment
+    stored = {
+      username: config.admin.username || 'admin',
+      password: hashPassword(config.admin.password),
+      seededFromEnv: true,
+    };
   } else if (!stored.password) {
     const generated = crypto.randomBytes(9).toString('base64url');
     stored = { username: 'admin', password: hashPassword(generated), mustChange: true };
@@ -36,11 +48,14 @@ export function ensureAdminCredentials(config, { persist = true } = {}) {
     console.log('│ temp pass  : ' + generated.padEnd(44) + '│');
     console.log('│ saved to   : config/admin.json  (change it!)            │');
     console.log('└──────────────────────────────────────────────────────────┘\n');
+  } else if (config.admin?.password && stored.seededFromEnv) {
+    // the seed already happened; the operator owns the password from here on
+    delete stored.seededFromEnv;
   }
 
   stored.updatedAt = new Date().toISOString();
   if (persist) {
-    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(file, JSON.stringify(stored, null, 2) + '\n');
     try { fs.chmodSync(file, 0o600); } catch { /* best effort */ }
   }
