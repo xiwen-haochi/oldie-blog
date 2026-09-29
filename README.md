@@ -1,433 +1,213 @@
-# oldie-blog
+<div align="center">
 
-> A 1990s personal homepage that survived the dot-com winter.
-> Markdown in, server-rendered HTML out, webrings, guestbooks, a DOS terminal
-> in the corner — and a real SEO layer underneath.
+![home](docs/home.png)
+
+**老博客 / oldie-blog** — a 1990s personal homepage that outlived the dot-com winter.
+Markdown in, server-rendered HTML out, webrings, guestbooks, a DOS terminal in the corner,
+and a real SEO layer underneath.
+
+[English](README.md) · [简体中文](README.zh-CN.md)
 
 [![node](https://img.shields.io/badge/node-%3E%3D22.13-3fa633?logo=node.js)](https://nodejs.org)
+![license](https://img.shields.io/badge/license-MIT-blue.svg)
+![deps](https://img.shields.io/badge/runtime%20deps-6-informational)](#why-so-few-dependencies)
+![tests](https://img.shields.io/badge/tests-149%20unit%20%2B%2060%20e2e-success)
 
-English · [简体中文](./README.zh-CN.md)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![deps](https://img.shields.io/badge/dependencies-6-informational)](#why-so-few-dependencies)
+</div>
+
+---
+
+## What it is
+
+A personal blog engine dressed as a 1996 GeoCities page. The nostalgia is the interface;
+underneath it is a boring, fast, server-rendered blog: posts are plain Markdown files on
+disk, the admin is a real one, and the SEO surface is complete.
+
+| | |
+| --- | --- |
+| ![posts](docs/posts.png) | ![post](docs/post.png) |
+| **The index** — pinned post, then the rest | **A post** — every page is a real `.md` file |
+
+### Admin
+
+| | |
+| --- | --- |
+| ![dashboard](docs/admin-dashboard.png) | ![editor](docs/admin-editor.png) |
+| **Dashboard** — traffic, SEO self-check, moderation queue | **Editor** — Markdown with a live preview |
+
+| | |
+| --- | --- |
+| ![settings](docs/admin-settings.png) | ![backup](docs/admin-backup.png) |
+| **Settings** — feature switches, storage driver, attachments | **Backup** — the whole site as one `.zip` |
+
+### The rest of it
+
+| | |
+| --- | --- |
+| ![guestbook](docs/guestbook.png) | ![search](docs/search.png) |
+| **Guestbook** — sign it, with moderation | **Search** — CJK-aware, `tag:` included |
+
+| ![1998 mode](docs/mode-1998.png) | ![login](docs/admin-login.png) |
+| **1998 mode** — one click rewinds the whole site | The admin is never advertised, never indexed |
+
+---
+
+## Quick start
 
 ```bash
+git clone git@github.com:xiwen-haochi/oldie-blog.git
+cd oldie-blog
+
 nvm use            # Node 24 recommended (.nvmrc is committed)
 pnpm install
 pnpm start         # → http://localhost:4173
 ```
 
-The first boot prints a temporary admin password. Sign in at `/admin`, change
-it under **Settings → Password**, and delete `config/admin.json` if you ever
-need a fresh one.
+The first boot prints a temporary admin password. Sign in at `/admin` and change it under
+**Settings → Password**.
 
----
-
----
-
-## Forgot the password?
+Want something to look at first?
 
 ```bash
-pnpm reset:admin                 # generate a strong one and print it
-pnpm reset:admin "my password"   # or pick your own
+pnpm seed          # five sample posts, a guestbook, a counter
 ```
-
-It writes a scrypt hash into `config/admin.json` (gitignored, chmod 600) and takes
-effect on the next login — no restart needed.
-
----
-
-## What this is
-
-A blog that looks like it was last touched in 1998 and behaves like it was
-deployed yesterday:
-
-- **Blog pages** — home, post, page, archive by year, tags, tag, search,
-  guestbook, 404, plus one Markdown file per route in `content/`.
-- **Admin backend** — login, dashboard, post/page editor with live preview,
-  drafts, duplication, guestbook moderation, media uploads, settings,
-  SEO checklist and a full JSON export.
-- **Markdown authoring** — files in `content/posts/*.md` are the source of
-  truth. The admin writes the same files you would edit by hand, so your
-  content survives any migration, forever.
-- **SEO done properly** — canonical URLs, Open Graph/Twitter cards, JSON-LD
-  (`BlogPosting`, `WebSite` + `SearchAction`, `BreadcrumbList`), RSS 2.0,
-  Atom 1.0, JSON Feed 1.1, `sitemap.xml`, `robots.txt`, `llms.txt`, a web
-  manifest, pagination `rel=prev/next`, gzip, ETag and honest cache headers.
-- **Signature features** — the fun stuff, listed below.
-
----
-
-## Signature features
-
-| | Feature | What it does |
-| --- | --- | --- |
-| ⌨️ | **DOS terminal** | `Ctrl`+`K` opens a green-on-black prompt on every page. `dir`, `type <slug>`, `search`, `stats`, `neofetch`, `fortune`, `guestbook` — all answered by the real server, so nothing is faked. |
-| 🎵 | **Chiptune theme** | Square waves and noise hats generated live with the Web Audio API. Zero bytes of audio, never autoplays, remembers your choice. |
-| 📻 | **Radio narration** | "Listen to this post" reads the article aloud with `speechSynthesis`, complete with a blinking VU meter. |
-| 📊 | **Hit counter** | Odometer digits, today/unique/live-online counts, per-path stats and a 30-day sparkline in the admin. Starts at 1998. |
-| 🌐 | **Webring** | Prev / next / random navigation through a configurable list of neighbour sites. |
-| 📼 | **.TXT downloads** | Every post has a `POST-XXXX.TXT` button — plain text, exactly how people shared writing in 1998. |
-| 📬 | **Guestbook + comments** | Moderation queue, honeypot, link/keyword spam scoring, per-post comments. |
-| ⏳ | **Time Machine** | One click flips the site into 1998 mode: Times New Roman, centred layout, navy desktop, no JavaScript chrome. Shareable with `?theme=1998`. |
-| 🎲 | **Random post** | Deterministic per day, so "random" stays reproducible. |
-| 🗺 | **`.json` per post** | Machine-readable Markdown/HTML/text for every article. |
-| 🌐 | **Language switch** | Chinese by default, English in one click. `?lang=en` is shareable, `hreflang` tells search engines, and the choice is remembered in one cookie. |
-
-Plus: a 56k dial-up progress bar, scrolling marquee, blinking status line,
-"best viewed in Netscape 4.0" banner, and a status bar that reports the real
-server time.
-
----
-
-## Writing a post
-
-Create `content/posts/2025-06-01-my-post.md`:
-
-```markdown
----
-title: "My post title"
-date: 2025-06-01
-updated: 2025-06-04        # optional, shows "updated" + feeds
-description: "Shown in listings, meta tags and the RSS summary."
-tags: [markdown, web-design]
-featured: false             # pins to the home page
-draft: false
-cover: /uploads/cover.png
-coverAlt: "A beige CRT monitor"
-keywords: [extra, seo, terms]
-canonical: ""               # for syndicated / moved posts
-noindex: false
----
-
-The body is Markdown — plus raw HTML, because this is a 1990s blog and
-<blink>some things are better left alone</blink>.
-
-<!-- more -->                # everything above is the teaser
-
-## Headings get anchors
-
-Code fences are highlighted, ```ascii``` blocks render in a pixel font,
-==highlight== works, and ++ctrl+k++ becomes real <kbd> keys.
-```
-
-Filenames may start with `YYYY-MM-DD-`; the date and slug are taken from it
-automatically. Anything in `content/pages/` is served at `/<slug>`.
-
-Quick start from a terminal:
-
-```bash
-pnpm new:post "My post title" --tags=retro,web --draft
-```
-
-### Front matter reference
-
-| Key | Type | Notes |
-| --- | --- | --- |
-| `title` | string | Required. Used in `<title>`, RSS and JSON-LD. |
-| `date` | date | Defaults to the filename prefix, then the file mtime. |
-| `updated` | date | Optional. Feeds and `article:modified_time`. |
-| `description` | string | Falls back to the auto-generated excerpt. |
-| `tags` | list | Drives `/tags`, tag feeds and related posts. |
-| `draft` | bool | Hidden from visitors, visible in the admin. |
-| `featured` | bool | Pinned to the home page. |
-| `cover` / `coverAlt` | path / string | Hero image and its alt text. |
-| `keywords` | list | Extra meta keywords. |
-| `canonical` | url | For posts published elsewhere first. |
-| `noindex` | bool | Keep it out of search engines. |
-
----
-
-## The admin
-
-| Screen | What it is for |
-| --- | --- |
-| **Dashboard** | Hits, words, drafts, 30-day chart, moderation queue, top paths, SEO health. |
-| **Posts / Pages** | Filter, edit, duplicate (as a draft), delete. |
-| **Editor** | Live preview (HTML / meta / raw Markdown), toolbar, slug auto-fill, description auto-excerpt, local autosave, image insertion. |
-| **Guestbook** | Approve, mark spam, delete; e-mails and IPs never leak to the public page. |
-| **Media** | Upload images (or paste a data URL); 4 MB limit, image MIME types only. |
-| **Settings** | Title, description, nav, webring, banners, appearance, analytics snippet, password. |
-| **Tools** | SEO checklist, raw Markdown viewer, subscriber list, full JSON export. |
-
-Saving in the admin writes a normal `.md` file to `content/` — check
-`git status` and you will see exactly what changed.
-
----
-
----
-
-## Common settings (admin → Settings)
-
-**Feature switches**
-
-| Switch | Effect when off |
-| --- | --- |
-| Allow comments | the comment form and thread disappear from posts |
-| Comments need approval | new comments wait in the moderation queue |
-| Enable the guestbook | `/guestbook` 404s and the sidebar link hides |
-| Guestbook entries need approval | same, for the guestbook |
-| Enable site search | `/search` 404s |
-| Show the hit counter | nothing is counted and the widget hides |
-| Offer a random post | `/random` redirects home |
-| Show the table of contents | hides the TOC box on posts that have one |
-| Show reading time | hides the estimated minutes per post |
-
-**Attachment storage**
-
-Local disk (`public/uploads/`) by default, or any **S3-compatible** object store:
-Aliyun OSS, Tencent COS, Qiniu, Cloudflare R2, MinIO — they all speak the S3 API, and
-this repo ships a tiny SigV4 signer so the dependency count stays at zero.
-
-```json
-{ "storage": { "driver": "s3", "s3": {
-    "bucket": "my-blog-assets",
-    "region": "auto",
-    "endpoint": "https://<accountid>.r2.cloudflarestorage.com",
-    "accessKeyId": "…",
-    "secretAccessKey": "…",
-    "prefix": "blog",
-    "publicUrl": "https://cdn.example.com",
-    "pathStyle": true
-} } }
-```
-
-Tick path-style addressing for MinIO / R2; AWS uses virtual-hosted style. Secrets
-live in `data/settings.json`, which is gitignored.
-
-## Pasting HTML
-
-Posts accept raw HTML, so you can paste tables, diagrams, inline SVG or video tags
-straight from another document. Two things happen on the way out:
-
-1. **Guarded** — balanced HTML blocks (including `<div>`s that contain blank lines)
-   are lifted out of the Markdown parse, so they no longer collapse into
-   paragraphs or a `<pre>` block. That is what used to happen to pasted content.
-2. **Sanitised** — the output is filtered against an allowlist: `<style>`,
-   `background`, `on*` handlers and `javascript:` URLs are dropped, while tables,
-   figures, `video` and inline `svg` survive.
-
-So you can paste freely without taking the blog's styling down with it.
-## Backup and restore
-
-Admin → 💾 Backup & restore.
-
-**Export** produces a single `.zip` containing
-
-- `MANIFEST.json` — what is in it, when, which version
-- `content/posts/*.md`, `content/pages/*.md` — your writing
-- `public/uploads/` — uploaded images
-- `config/` — site configuration and the admin password
-- `data/` — hits, guestbook, subscribers, admin settings (S3 keys)
-
-**Restore**: pick the archive, type the site title to confirm, done.
-
-- nothing is deleted on the spot: the old files move to `.before-restore-<time>/`
-- tick “keep my current uploads” to leave your images alone
-- restart the server afterwards
-- foreign archives are refused, and so is any entry containing `../`
-
-The archive is written with Node's own zlib (store + deflate), so there is no
-dependency to install, and `unzip`, Finder or Explorer can open it.
-
-## Before you publish
-
-```bash
-pnpm clean            # move your posts/pages/messages into content/.backup-<date>
-pnpm clean --force    # delete instead of backing up
-```
-
-It leaves a starter post behind and moves everything else to the backup.
-Then edit the two files that carry your identity by hand:
-
-- `config/site.config.json` — title, author, e-mail, tagline, nav, webring names (**this one is meant to be committed**)
-- `content/pages/about.md` — the about page
-
-Everything else is local runtime data: hits, guestbook, subscribers, sessions,
-admin settings (S3 keys) and the admin password. `.gitignore` keeps them
-out of the repository, and the app re-checks on boot and shouts if one slips in.
-
-### Runtime data can live in SQLite
-
-**SQLite is the default** (Node ships `node:sqlite`, nothing to install).
-Switch back to JSON files in **Settings → Runtime data storage** and restart:
-
-- it is Node's own `node:sqlite` (22.5+), so **nothing to install**
-- everything in one `data/oldie.sqlite`, WAL mode, survives power cuts
-- both backends share one interface, switch back any time
-
-| Where | Holds | Committed? |
-| --- | --- | --- |
-| `data/*.json` or `data/oldie.sqlite` | hits, guestbook, subscribers, sessions | no, ignored |
-| `data/settings.json` | admin settings (S3 keys) | no, ignored |
-| `config/admin.json` | admin password (scrypt) | no, ignored |
-| `config/site.config.json` | title, nav, other public bits | yes, on purpose |
-| `content/*.md` | posts and pages | your call |
-
-## Where the admin lives
-
-Public pages are public. The admin is a door you choose:
-
-```json
-// config/site.config.json
-{ "adminPath": "/my-secret-door" }
-```
-
-`admin`, `/admin`, `/my-secret-door/` all work — the value is normalised,
-sanitised, and can never climb out of the site root. Everything (login, editor,
-media, tools, redirects, navigation) moves with it, and `GET /healthz` reports
-the current value so you never have to guess.
-
-The public site never links to it, the sitemap never lists it, and robots.txt
-deliberately does **not** name it: putting a secret door in robots.txt is an
-invitation, not a lock. Admin pages also send `X-Robots-Tag: noindex, nofollow`
-and `X-Frame-Options: DENY`.
-
----
-
-## Speed
-
-Cold load measured in a headless browser: **~300 ms**, server response **5–20 ms**.
-
-- **Fixed a real 6-second stall.** The hand-rolled gzip middleware handed
-  `undefined` back to Node's `res.end()` on the "too small to compress" path
-  after intercepting `write()`, which left the socket waiting. Small assets (the
-  syntax theme, the favicon) paid a full timeout on every single page load.
-- **Assets are cached hard.** CSS/JS carry `?v=<hash>`, so they keep a long
-  `max-age` even in development instead of re-downloading 58 KB per visit.
-- **HTML revalidates.** `Cache-Control: no-cache` plus an ETag turns a repeat
-  visit into a few-byte 304 instead of a full page.
-- **Hit counting never blocks the response** — it writes to disk in background.
-- Paint stays cheap via `contain` on the heavy card/widget bevels.
-
----
-
-## Internationalisation
-
-The interface ships in **Chinese (zh-CN)** and **English**, switchable from the
-title bar or with `?lang=en` on any URL.
-
-Resolution order: `?lang=` → `oldie_lang` cookie → `site.config.json` →
-`Accept-Language`. The switcher writes the cookie for a year and every page
-emits `<link rel="alternate" hreflang="…">` plus `og:locale:alternate`, so the
-two languages never compete with each other in search results.
-
-```bash
-# add a third language
-# 1. copy an object in src/lib/i18n.js, give it a code + label
-# 2. nothing else — templates, routes and the admin pick it up automatically
-```
-
-Dates, "N posts", pagination and the whole admin chrome follow the active
-language. Your **content** is yours: posts can be written in either language,
-and the search index handles CJK (unigram + bigram tokenising).
-
----
-
-## Configuration
-
-Four layers, later ones win:
-
-1. built-in defaults (`src/lib/config.js`)
-2. `config/site.config.json` — the file you commit
-3. `data/settings.json` — written by the admin UI (gitignored)
-4. environment variables — `SITE_URL`, `ADMIN_USER`, `ADMIN_PASSWORD`, `SESSION_SECRET`
-
-Runtime state also lives in `data/` and is gitignored: hit counter,
-guestbook + comments, subscribers, sessions.
-
----
-
-## Project layout
-
-```
-oldie-blog/
-├─ bin/oldie-blog.js        CLI entry point
-├─ config/
-│  ├─ site.config.json      committed site configuration
-│  └─ admin.json            scrypt password hash (generated, gitignored)
-├─ content/
-│  ├─ posts/*.md            your writing
-│  └─ pages/*.md            about, colophon, links…
-├─ data/                    hit counter, guestbook, subscribers (gitignored)
-├─ public/
-│  ├─ css/site.css          the 1990s design system
-│  ├─ css/admin.css         the control panel
-│  ├─ js/site.js            terminal, chiptune, radio, search, theme
-│  ├─ js/admin.js           live preview, autosave, slug helpers
-│  └─ assets/               generated SVG favicon, logo, OG image
-├─ scripts/
-│  ├─ smoke-test.js         end-to-end HTTP test (44 checks)
-│  ├─ new-post.js           scaffold a post from the terminal
-│  └─ seed-demo.js          demo hit counter + guestbook
-├─ src/
-│  ├─ server.js             express app, middleware, error pages
-│  ├─ context.js            wires config + content + stores
-│  ├─ lib/                  config, markdown, posts, search, seo, feeds,
-│  │                        stats, community, auth, sessions, writer,
-│  │                        terminal, http, text, store, paths
-│  ├─ routes/               site.js · admin.js · api.js · meta.js
-│  └─ views/                EJS templates (public + admin)
-└─ tests/                   node:test unit suites
-```
-
----
-
-## Why so few dependencies
-
-Six runtime packages: `express`, `ejs`, `markdown-it`, `highlight.js`,
-`gray-matter`, `multer`. Everything else — search, the hit counter, the
-guestbook, sessions, CSRF, password hashing, gzip, the chiptune player, the
-terminal, the OG image — is in this repository. No native modules, so
-`pnpm install` never fights a compiler, and the whole thing runs on a
-raspberry pi in a cupboard.
-
----
-
-## Testing
-
-```bash
-pnpm test        # unit suites (73) + end-to-end smoke test (44 checks)
-pnpm test:unit   # pure functions only
-pnpm test:e2e    # boots the server, drives every route and the admin flow
-```
-
-The smoke test creates and deletes its own posts, signs the guestbook,
-moderates an entry, uploads an image, rotates the password and logs out — so
-you can trust the admin actually works.
 
 ---
 
 ## Deploying
 
+### One command with Docker
+
 ```bash
-git clone https://github.com/you/oldie-blog && cd oldie-blog
-pnpm install --prod
-SITE_URL=https://your-site.tld ADMIN_PASSWORD=… NODE_ENV=production \
+cp .env.example .env      # set ADMIN_PASSWORD and SITE_URL
+docker compose up -d
+```
+
+Your writing, your counters and your settings live in **named volumes**, so rebuilding
+the image never loses them. `/healthz` backs the container healthcheck.
+
+### From GitHub, automatically
+
+Every push to `main` runs the test suite and builds the image into
+GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/xiwen-haochi/oldie-blog:latest
+```
+
+`.github/workflows/ci.yml` also runs `scripts/check-secrets.mjs`, which fails the build
+if anything private is ever about to be committed.
+
+### On a plain server
+
+```bash
+git clone … && cd oldie-blog && pnpm install --prod=false
+NODE_ENV=production ADMIN_PASSWORD='…' SITE_URL='https://your.site' \
   node src/server.js
 ```
 
-Behind nginx or Caddy, forward `X-Forwarded-For` (already trusted) and set
-`SITE_URL` so canonical URLs, feeds and the sitemap are absolute. The only
-writable directory is `data/` (and `public/uploads/` if you use uploads).
+Put it behind nginx or Caddy for TLS. Behind a reverse proxy set `HOST=127.0.0.1` and
+let the proxy terminate HTTPS — the app speaks plain HTTP and never redirects on its own.
+
+### Environment
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `SITE_URL` | `http://localhost:4173` | canonical links, feeds, sitemaps |
+| `HOST` / `PORT` | `127.0.0.1` / `4173` | interface to bind |
+| `ADMIN_USER` / `ADMIN_PASSWORD` | `admin` / generated | first-boot credentials |
+| `SESSION_SECRET` | generated | signs session cookies; set it to survive restarts |
+| `NODE_ENV` | — | `production` turns on long cache headers for static files |
 
 ---
 
-## Accessibility & the modern web
+## Your writing is data, not code
 
-It is a nostalgia piece, but it is not a badly built one:
+This is the part most blog engines get wrong. Here:
 
-- semantic landmarks, skip link, visible focus rings, `aria-`live` log for the terminal
-- `prefers-reduced-motion` disables marquees, blinking and the VU meter
-- works with JavaScript disabled — every feature except the terminal, music,
-  radio and live search degrades to a plain page
-- contrast, alt-text reminders in the editor and an SEO check that flags
-  missing image descriptions
-- one anonymous cookie for the visitor counter, one session cookie for the
-  admin. No trackers, ever.
+- posts are `content/posts/*.md` — edit them in your editor, in git, anywhere
+- `content/`, `data/` and `config/admin.json` are **gitignored** and never published
+- a fresh clone starts empty; `pnpm seed` gives you sample content to look at
+
+```bash
+pnpm new:post "Hello world" --tags=intro --draft
+pnpm clean          # wipe posts, pages, messages and counters for a fresh start
+```
+
+### Where everything lives
+
+| Path | Holds | Published? |
+| --- | --- | --- |
+| `content/posts/*.md` | your posts | no — that is yours |
+| `content/pages/*.md` | standalone pages | no |
+| `data/` | hit counter, guestbook, subscribers, sessions, settings | no |
+| `config/admin.json` | the admin password (scrypt) | no |
+| `config/site.config.json` | title, nav, webring names | **yes**, on purpose |
+| `public/uploads/` | images you attached | no |
+
+**Backup** is one click in the admin: it writes a single `.zip` with your content,
+uploads, config and runtime data. Restoring puts the previous files aside rather than
+deleting them, so a mistake is always reversible.
 
 ---
 
-## License
+## Features
 
-MIT — see [LICENSE](LICENSE). Fork it, make it your homepage, put your own
-name on it. That is the entire point of personal homepages.
+**Writing** — Markdown with front matter, live preview, drafts, pinning, tags,
+per-post SEO, and a table of contents. Paste raw HTML and it is sanitised, not trusted:
+stylesheets, inline backgrounds and event handlers are stripped, tables and inline SVG survive.
+
+**Reading** — full-text search that understands Chinese (unigram + bigram), an archive,
+tag pages, reading time, and every post downloadable as plain `.txt` or `.json`.
+
+**The 1990s** — webrings with neighbours, a guestbook that needs moderation, a hit counter,
+a marquee, blinking text, a DOS terminal on every page (<kbd>Ctrl</kbd>+<kbd>K</kbd>),
+a chiptune theme synthesised in the browser, and a **1998 mode** that rewinds the whole site.
+
+**The real parts** — RSS/Atom/JSON Feed, `sitemap.xml`, JSON-LD, `llms.txt`, Open Graph,
+hreflang alternates, an admin at a configurable path that is never advertised, scrypt
+passwords, signed sessions, CSRF tokens, rate-limited login, and a per-request HTML sanitiser.
+
+**Switchable** — comments, comment moderation, the guestbook, search, the hit counter,
+random posts, the table of contents and reading time each have an off switch in the admin.
+
+---
+
+## Why so few dependencies
+
+Six runtime packages: `express`, `ejs`, `markdown-it`, `highlight.js`, `gray-matter`,
+`multer`. Everything else is in `src/lib`:
+
+| Instead of | this repo has |
+| --- | --- |
+| a search library | a CJK-aware inverted index, ~200 lines |
+| a session library | HMAC-signed cookies, ~80 lines |
+| `bcrypt` | `node:crypto` `scrypt` |
+| a compression library | a hand-rolled gzip middleware |
+| a template engine beyond EJS | EJS, plus a small view layer |
+| an S3 SDK | a SigV4 signer over `fetch` |
+| a ZIP library | a deflate/store writer and reader |
+| a markdown sanitizer | an allowlist HTML sanitiser |
+
+No compiler, no `node-gyp`, no lockfile rot on a fresh clone. `pnpm install` takes seconds.
+
+---
+
+## Development
+
+```bash
+pnpm test          # 149 unit tests + a 60-check end-to-end suite against a real server
+pnpm test:unit
+pnpm test:e2e
+pnpm dev           # node --watch
+node scripts/check-secrets.mjs
+```
+
+The end-to-end suite boots a real server in a throwaway data directory, so it can never
+touch your own posts or counters.
+
+---
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).

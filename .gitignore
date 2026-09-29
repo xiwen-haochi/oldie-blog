@@ -1,12 +1,19 @@
+# dependencies and build noise
 node_modules/
-.env
-.DS_Store
-*.log
 coverage/
+.cache/
+*.log
+.DS_Store
+Thumbs.db
+
+# secrets: never commit these
+.env
+.env.*
+!.env.example
 
 # runtime state: hit counter, guestbook, sessions, subscribers, settings.
-# *.tmp too: the JSON store writes <file>.json.<pid>.<ts>.tmp while saving and
-# those files contain the same (personal) data as the file they replace.
+# *.tmp too: the JSON store writes <file>.json.<pid>.<ts>.tmp while saving,
+# and those carry the same personal data as the file they replace.
 data/*.json
 data/*.json.*
 data/*.tmp
@@ -16,19 +23,23 @@ data/*.sqlite-shm
 data/*.bak
 !data/.gitkeep
 
-# generated admin credentials — never commit these
+# generated admin credentials (scrypt hash + username)
 config/admin.json
 
-# secrets that can also live in a .env or a config override
-.env
-.env.*
+# your writing is data, not code: it lives on the server, not in the repo.
+# run `pnpm seed` for sample posts while you try things out.
+content/posts/*.md
+content/pages/*.md
+content/.backup-*/
+!content/.gitkeep
 
 # uploads are yours, keep them out of the history unless you want them
 public/uploads/*
 !public/uploads/.gitkeep
-.cache/
 
 # restore scratch space (a restore moves the old files here first)
 .before-restore-*/
 .restore-staging-*/
-content/.backup-*/
+
+# local overrides of the shipped config
+config/site.config.local.json

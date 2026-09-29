@@ -1,0 +1,16 @@
+node_modules
+data
+config/admin.json
+config/site.config.local.json
+content/posts
+content/pages
+public/uploads
+docs
+tests
+scripts
+.git
+.github
+*.log
+.DS_Store
+Dockerfile
+.dockerignore

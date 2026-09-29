@@ -1,0 +1,25 @@
+# one command: docker compose up -d
+# your writing, counters and settings live in named volumes, so rebuilding
+# the image never loses them.
+services:
+  blog:
+    build: .
+    image: oldie-blog:latest
+    container_name: oldie-blog
+    restart: unless-stopped
+    ports:
+      - '4173:4173'
+    environment:
+      NODE_ENV: production
+      SITE_URL: ${SITE_URL:-http://localhost:4173}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+    volumes:
+      - content:/app/content
+      - data:/app/data
+      - config:/app/config
+
+volumes:
+  content:
+  data:
+  config:
