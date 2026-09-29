@@ -128,33 +128,53 @@ let the proxy terminate HTTPS — the app speaks plain HTTP and never redirects 
 
 ## Publishing a post
 
-Three ways to do it. **All three end up writing a `.md` file into `content/posts/`.**
+### 1. The admin — the normal way, no terminal required
 
-### 1. The admin (what you will use most)
+**You never have to touch a command line.** The admin is the whole workflow:
 
 ```
-1. Open /admin/posts/new
-2. Type the title, write Markdown in the body box — the preview is live
-3. Optionally set tags and a description (blank means "take the first 140 chars")
-4. Press Save to publish, or tick Draft first to keep it private
+①  open  https://your.site/admin/posts/new
+
+②  title
+
+③  body    — Markdown box on the left, live preview on the right
+            the toolbar has B / I / heading / quote / link / image / code
+
+④  optional fields on the right
+       · tags        comma separated, they become tag pages
+       · description  leave blank and it takes the opening of the body;
+                      the same text is used for SEO and the feed
+       · cover        /uploads/photo.png
+
+⑤  press Save        → published, live immediately
+   tick Draft first  → only you can see it
+   tick Pin to home  → it lands in the pinned section
 ```
 
-It appears on the home page immediately. Tick **pin to home** to move it up: the
-pinned section sorts by **when you pinned it**, so re-pinning an old post lifts it
-to the top.
+![The editor](docs/admin-editor.png)
 
-To edit a published post: **Posts** in the admin sidebar → click the title.
-To delete one: the delete button on the right of the list.
+**To edit a published post:** **Posts** in the sidebar → click the title → save again.
 
-### 2. From the command line
+**To delete one:** the delete button on the same row. It removes the `.md` file, so
+`rm`-ing it on the server does exactly the same thing.
+
+**Images:** either drag the file straight into the body box, or upload it under
+**Media** and write `![alt](/uploads/photo.png)` in the text.
+
+**Changed your mind about the text?** the editor autosave only lives in your browser,
+so closing the tab discards it. For something already published, the post is a file
+on disk and `git checkout content/posts/` rolls it back.
+
+### 2. The command line (optional, for bulk work or another editor)
 
 ```bash
 pnpm new:post "My title" --tags=intro,tools --draft
 ```
 
-Creates a file with the front matter already filled in. Drop `--draft` to publish it.
+Writes a file with the front matter filled in, for you to finish in any editor.
+**This is for people who like a terminal, not a requirement.**
 
-### 3. Any editor, plus git
+### 3. Any editor
 
 ```bash
 vim content/posts/2026-09-29-my-post.md
@@ -178,24 +198,53 @@ The body is plain Markdown.
 
 **Saving is publishing** — the server watches that directory, so a refresh is all it takes.
 
-### Images
+### Which one should you use
 
-Drag them into the media page, or straight into the body box in the editor.
-Anywhere else works too:
+| Situation | Use |
+| --- | --- |
+| Writing normally | **the admin**, publish with the mouse |
+| You live in vim / VS Code | the command line, or any editor |
+| Moving old posts in from elsewhere | drop the `.md` files into `content/posts/` |
 
-```markdown
-![alt text](/uploads/photo.png)
+### What a push to GitHub actually does
+
+| | |
+| --- | --- |
+| Code changes | pushed; CI re-runs the tests and rebuilds the image |
+| **Your posts** | **not pushed** — `content/` is in `.gitignore` |
+| **The admin password** | **not pushed** — `config/admin.json` is in `.gitignore` |
+| Hits, guestbook, settings | **not pushed** — all under `data/` |
+
+That is deliberate, and it is the difference between this and an ordinary CMS:
+
+- **Anyone who clones your repo** gets an empty site plus the sample posts. Not one
+  word of your own writing comes with it.
+- **Change the password locally** and the deployed site's password does not move. Each
+  machine has its own.
+- **Running the same blog on a second machine** means exporting a `.zip` from
+  **Backup & restore** and importing it there — not using git.
+
+In short: **git carries the code, a `.zip` carries your content.**
+
+### So where does it run
+
+GitHub itself **cannot** run this blog. It needs a long-lived Node process and a
+writable disk; GitHub Pages only serves static files. So pushing code is not the same
+as the site being live.
+
+For a real address, pick a host that gives you a persistent disk — Railway, Render,
+Fly.io, or your own server — and start it with the `docker-compose.yml` above:
+
+```bash
+cp .env.example .env      # set ADMIN_PASSWORD and SITE_URL
+docker compose up -d
 ```
 
-### When something looks wrong
-
-| Symptom | Cause |
-| --- | --- |
-| Saved but the page did not change | is it a `.md` file, is it in `content/posts/` |
-| Missing from the list | check for `draft: true` |
-| The URL of a Chinese title is ugly | set the Slug field in the editor |
-| Want to undo | the posts are files: `git checkout content/posts/` |
-
+> **Attach a persistent volume.** Without one, a restart loses every post and every
+> guestbook entry.
+>
+> **Set `SESSION_SECRET` and `ADMIN_PASSWORD` before the first boot**, or nobody stays
+> logged in across a restart.
 ## Your writing is data, not code
 
 This is the part most blog engines get wrong. Here:
