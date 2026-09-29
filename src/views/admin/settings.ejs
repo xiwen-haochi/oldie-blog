@@ -17,21 +17,31 @@
 
   <fieldset>
     <legend><%= t('admin.features') %></legend>
-    <label class="checkline"><input type="checkbox" name="fComments" <%= settings.features.comments ? 'checked' : '' %>> 💬 <%= t('admin.f_comments') %></label>
-    <label class="checkline"><input type="checkbox" name="fModerateComments" <%= settings.features.moderateComments ? 'checked' : '' %>> ⏳ <%= t('admin.f_moderate_comments') %></label>
-    <label class="checkline"><input type="checkbox" name="fGuestbook" <%= settings.features.guestbook ? 'checked' : '' %>> 📬 <%= t('admin.f_guestbook') %></label>
-    <label class="checkline"><input type="checkbox" name="fModerateGuestbook" <%= settings.features.moderateGuestbook ? 'checked' : '' %>> 🕒 <%= t('admin.f_moderate_guestbook') %></label>
-    <label class="checkline"><input type="checkbox" name="fSearch" <%= settings.features.search ? 'checked' : '' %>> 🔍 <%= t('admin.f_search') %></label>
-    <label class="checkline"><input type="checkbox" name="fHitCounter" <%= settings.features.hitCounter ? 'checked' : '' %>> 📊 <%= t('admin.f_counter') %></label>
-    <label class="checkline"><input type="checkbox" name="fRandomPost" <%= settings.features.randomPost ? 'checked' : '' %>> 🎲 <%= t('admin.f_random') %></label>
-    <label class="checkline"><input type="checkbox" name="fShowToc" <%= settings.features.showToc ? 'checked' : '' %>> 📑 <%= t('admin.f_toc') %></label>
-    <label class="checkline"><input type="checkbox" name="fShowReadingTime" <%= settings.features.showReadingTime ? 'checked' : '' %>> ⏱ <%= t('admin.f_reading') %></label>
+    <input type="hidden" name="fComments" value="off">
+    <label class="checkline"><input type="checkbox" name="fComments" value="on" <%= settings.features.comments ? 'checked' : '' %>> 💬 <%= t('admin.f_comments') %></label>
+    <input type="hidden" name="fModerateComments" value="off">
+    <label class="checkline"><input type="checkbox" name="fModerateComments" value="on" <%= settings.features.moderateComments ? 'checked' : '' %>> ⏳ <%= t('admin.f_moderate_comments') %></label>
+    <input type="hidden" name="fGuestbook" value="off">
+    <label class="checkline"><input type="checkbox" name="fGuestbook" value="on" <%= settings.features.guestbook ? 'checked' : '' %>> 📬 <%= t('admin.f_guestbook') %></label>
+    <input type="hidden" name="fModerateGuestbook" value="off">
+    <label class="checkline"><input type="checkbox" name="fModerateGuestbook" value="on" <%= settings.features.moderateGuestbook ? 'checked' : '' %>> 🕒 <%= t('admin.f_moderate_guestbook') %></label>
+    <input type="hidden" name="fSearch" value="off">
+    <label class="checkline"><input type="checkbox" name="fSearch" value="on" <%= settings.features.search ? 'checked' : '' %>> 🔍 <%= t('admin.f_search') %></label>
+    <input type="hidden" name="fHitCounter" value="off">
+    <label class="checkline"><input type="checkbox" name="fHitCounter" value="on" <%= settings.features.hitCounter ? 'checked' : '' %>> 📊 <%= t('admin.f_counter') %></label>
+    <input type="hidden" name="fRandomPost" value="off">
+    <label class="checkline"><input type="checkbox" name="fRandomPost" value="on" <%= settings.features.randomPost ? 'checked' : '' %>> 🎲 <%= t('admin.f_random') %></label>
+    <input type="hidden" name="fShowToc" value="off">
+    <label class="checkline"><input type="checkbox" name="fShowToc" value="on" <%= settings.features.showToc ? 'checked' : '' %>> 📑 <%= t('admin.f_toc') %></label>
+    <input type="hidden" name="fShowReadingTime" value="off">
+    <label class="checkline"><input type="checkbox" name="fShowReadingTime" value="on" <%= settings.features.showReadingTime ? 'checked' : '' %>> ⏱ <%= t('admin.f_reading') %></label>
   </fieldset>
 
   <fieldset>
     <legend>🗄 <%= t('admin.storage') %></legend>
     <p class="form-note"><%= t('admin.storage_hint') %></p>
-    <label class="checkline"><input type="checkbox" name="s3Enabled" <%= settings.storage.driver === 's3' ? 'checked' : '' %>> ☁️ <%= t('admin.storage_s3') %></label>
+    <input type="hidden" name="s3Enabled" value="off">
+    <label class="checkline"><input type="checkbox" name="s3Enabled" value="on" <%= settings.storage.driver === 's3' ? 'checked' : '' %>> ☁️ <%= t('admin.storage_s3') %></label>
     <div class="grid-2">
       <div class="field"><label for="directory"><%= t('admin.storage_dir') %></label><input id="directory" name="directory" value="<%= settings.storage.directory %>" placeholder="public/uploads"></div>
       <div class="field"><label for="publicPath"><%= t('admin.storage_public') %></label><input id="publicPath" name="publicPath" value="<%= settings.storage.publicPath %>" placeholder="/uploads"></div>
@@ -44,8 +54,10 @@
       <div class="field"><label for="accessKeyId">Access Key ID</label><input id="accessKeyId" name="accessKeyId" value="<%= settings.storage.s3.accessKeyId %>" autocomplete="off"></div>
       <div class="field"><label for="secretAccessKey">Secret Access Key</label><input id="secretAccessKey" name="secretAccessKey" type="password" value="<%= settings.storage.s3.secretAccessKey %>" autocomplete="new-password" placeholder="<%= settings.storage.s3.secretAccessKey ? '••••••（留空保持不变）' : '' %>"></div>
     </div>
-    <%# an unchecked checkbox sends nothing at all, so the handler needs a
-        value to compare against; the hidden field is what "off" looks like %>
+    <%# Every checkbox in this form is preceded by a hidden value="off". An
+        unticked box submits nothing, so without that the server cannot tell
+        "turned off" from "not in this request", and the box ticks itself
+        back on. The e2e suite reads them back out of the rendered form. %>
     <input type="hidden" name="pathStyle" value="off">
     <label class="checkline"><input type="checkbox" name="pathStyle" value="on" <%= settings.storage.s3.pathStyle ? 'checked' : '' %>> <%= t('admin.s3_pathstyle') %></label>
   </fieldset>
@@ -96,9 +108,12 @@
       <div class="field"><label for="accent"><%= t('admin.accent') %></label><input id="accent" name="accent" type="color" value="<%= settings.theme.accent || '#008080' %>"></div>
       <div class="field"><label for="accent2"><%= t('admin.accent2') %></label><input id="accent2" name="accent2" type="color" value="<%= settings.theme.accent2 || '#000080' %>"></div>
     </div>
-    <label class="checkline"><input type="checkbox" name="showMarquee" <%= settings.theme.showMarquee ? 'checked' : '' %>> <%= t('admin.show_marquee') %></label>
-    <label class="checkline"><input type="checkbox" name="showTerminal" <%= settings.theme.showTerminal ? 'checked' : '' %>> <%= t('admin.show_terminal') %></label>
-    <label class="checkline"><input type="checkbox" name="showCounter" <%= settings.theme.showCounter ? 'checked' : '' %>> <%= t('admin.show_counter') %></label>
+    <input type="hidden" name="showMarquee" value="off">
+    <label class="checkline"><input type="checkbox" name="showMarquee" value="on" <%= settings.theme.showMarquee ? 'checked' : '' %>> <%= t('admin.show_marquee') %></label>
+    <input type="hidden" name="showTerminal" value="off">
+    <label class="checkline"><input type="checkbox" name="showTerminal" value="on" <%= settings.theme.showTerminal ? 'checked' : '' %>> <%= t('admin.show_terminal') %></label>
+    <input type="hidden" name="showCounter" value="off">
+    <label class="checkline"><input type="checkbox" name="showCounter" value="on" <%= settings.theme.showCounter ? 'checked' : '' %>> <%= t('admin.show_counter') %></label>
     <div class="field"><label for="footer"><%= t('admin.footer_text') %></label><input id="footer" name="footer" value="<%= settings.footer %>"></div>
     <div class="field"><label for="icp"><%= t('admin.icp') %></label><input id="icp" name="icp" value="<%= settings.icp || '' %>"></div>
     <div class="field">

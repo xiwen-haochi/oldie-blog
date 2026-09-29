@@ -8,9 +8,10 @@
   <button type="button" data-toggle-theme title="<%= t('footer.time_machine') %>">
     <span class="ico" aria-hidden="true">⏳</span><span>1998 MODE</span>
   </button>
-  <button type="button" data-toggle-radio title="<%= t('post.listen') %>">
-    <span class="ico" aria-hidden="true">📻</span><span>RADIO</span>
-  </button>
+  <%# There used to be a fourth button here, data-toggle-radio. Nothing ever
+      listened to it, and the speech it would have driven reads [data-post-body],
+      which the home page does not have -- so it was a button that did nothing.
+      The working one lives on each post: the listen link in post.ejs. %>
 </div>
 
 <section class="terminal" id="terminal" aria-label="DOS terminal" aria-hidden="true">

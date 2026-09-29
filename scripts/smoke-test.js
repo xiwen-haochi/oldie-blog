@@ -155,11 +155,17 @@ async function main() {
       method: 'POST',
       redirect: 'manual',
       headers: { cookie: jar.header(), 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(form).toString(),
+      // A string body goes out verbatim, so a test can post the same key
+      // twice. new URLSearchParams({k: ['a', 'b']}) would quietly collapse
+      // that to the single value "a,b" -- which is not what a browser sends,
+      // and is how this suite managed to pass for so long.
+      body: typeof form === 'string' ? form : new URLSearchParams(form).toString(),
     });
     jar.absorb(res);
     return res;
   };
+  // the exact bytes a ticked checkbox + its hidden "off" produce
+  const wire = (pairs) => pairs.map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v)).join('&');
   const csrfFrom = (html) => {
     const a = html.match(/name="csrf-token" content="([^"]+)"/);
     const b = html.match(/name="_csrf" value="([^"]+)"/);
@@ -795,6 +801,71 @@ async function main() {
       await post('/admin/settings', { _csrf: adminCsrf });
       assert.equal(checked(await text('/admin/settings')), false, 'an absent field must mean no change, not off');
       return 'on, off, untouched';
+    });
+
+    await check('every switch in the settings form can actually be turned off', async () => {
+      // An unticked box submits nothing at all, so the form has to say "off"
+      // out loud with a hidden field. pathStyle had one; the other twelve did
+      // not, which is why switching anything off snapped straight back on.
+      const form = await text('/admin/settings');
+      const names = [...form.matchAll(/<input type="checkbox" name="([^"]+)"/g)].map((m) => m[1]);
+      assert.ok(names.length >= 13, 'expected the full set of switches, saw ' + names.length);
+      const silent = names.filter((n) => !form.includes('type="hidden" name="' + n + '" value="off"'));
+      assert.deepEqual(silent, [], 'these cannot be switched off: ' + silent.join(', '));
+      return names.length + ' switches, every one reversible';
+    });
+
+    await check('the appearance switches actually change the page', async () => {
+      const ticked = async (n) => new RegExp('name="' + n + '"[^>]*checked').test(await text('/admin/settings'));
+
+      await post('/admin/settings', {
+        _csrf: adminCsrf, showMarquee: 'on', showTerminal: 'on', showCounter: 'on',
+        banners: 'hello | #',
+      });
+      let home = await (await get('/')).text();
+      assert.ok(home.includes('class="dock"'), 'the dock should have been on');
+      assert.ok(home.includes('id="hit-counter"'), 'the counter should have been on');
+      assert.ok(home.includes('marquee-bar'), 'the marquee should have been on');
+
+      await post('/admin/settings', { _csrf: adminCsrf, showTerminal: 'off', showCounter: 'off', showMarquee: 'off' });
+      home = await (await get('/')).text();
+      assert.ok(!home.includes('class="dock"'), 'the dock did not go away');
+      assert.ok(!home.includes('id="hit-counter"'), 'the counter did not go away');
+      assert.ok(!home.includes('marquee-bar'), 'the marquee did not go away');
+
+      assert.equal(await ticked('showTerminal'), false, 'showTerminal snapped back on');
+      assert.equal(await ticked('showCounter'), false, 'showCounter snapped back on');
+      assert.equal(await ticked('showMarquee'), false, 'showMarquee snapped back on');
+
+      // and back on again -- an earlier version of this suite only ever
+      // checked the off direction, so a switch that could be turned off but
+      // never turned back on would have gone unnoticed
+      await post('/admin/settings', {
+        _csrf: adminCsrf, showTerminal: 'on', showCounter: 'on', showMarquee: 'on', banners: '',
+      });
+      home = await (await get('/')).text();
+      assert.ok(home.includes('class="dock"'), 'the dock did not come back');
+      assert.ok(home.includes('id="hit-counter"'), 'the counter did not come back');
+      assert.equal(await ticked('showTerminal'), true, 'showTerminal did not come back');
+      return 'off and on again, all three';
+    });
+    await check('a switch survives what a browser really sends', async () => {
+      // A ticked box sitting next to its hidden "off" posts BOTH values, so
+      // the handler sees the pair ["off", "on"] and not the string "on".
+      // Comparing that pair to 'on' is false forever: every switch could be
+      // turned off but never turned back on. The suite above hid this by
+      // posting scalars by hand, which is not what a browser does.
+      const ticked = async (n) => new RegExp('name="' + n + '"[^>]*checked').test(await text('/admin/settings'));
+
+      await post('/admin/settings', wire([['_csrf', adminCsrf], ['pathStyle', 'off'], ['pathStyle', 'on']]));
+      assert.equal(await ticked('pathStyle'), true, 'a ticked box must stay ticked');
+      await post('/admin/settings', wire([['_csrf', adminCsrf], ['s3Enabled', 'off'], ['s3Enabled', 'on']]));
+      assert.equal(await ticked('s3Enabled'), true, 'object storage could not be switched on');
+
+      await post('/admin/settings', wire([['_csrf', adminCsrf], ['pathStyle', 'off'], ['s3Enabled', 'off']]));
+      assert.equal(await ticked('pathStyle'), false, 'an unticked box must stay unticked');
+      assert.equal(await ticked('s3Enabled'), false, 'object storage could not be switched off');
+      return 'on, off, and the shape a browser sends';
     });
 
     await check('a partial settings save does not switch anything off', async () => {

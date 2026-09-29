@@ -444,9 +444,20 @@ export function adminRoutes(ctx) {
       // form sends everything, but a partial POST used to blank every checkbox
       // and every text field it happened to leave out — which turned the whole
       // site off in a single request.
+      //
+      // A checkbox needs the opposite reading of the same word. A browser sends
+      // *nothing at all* for an unticked box, so "absent" meant "keep the
+      // current value" here and no switch could ever be turned off — it ticked
+      // itself straight back on. The form now carries a hidden value="off"
+      // beside every box, so off is something you can actually say.
       const cur = ctx.site;
-      const keep = (k, fallback) => (b[k] === undefined ? fallback : b[k]);
-      const flag = (k, current) => (b[k] === undefined ? !!current : !!b[k]);
+      // A ticked checkbox sitting next to its hidden "off" posts both values,
+      // so the field arrives as ["off", "on"] and not as "on". Comparing
+      // that pair to 'on' is false forever, which meant every switch in this
+      // form could be turned off and never turned back on.
+      const said = (k) => (b[k] === undefined ? undefined : (Array.isArray(b[k]) ? b[k][b[k].length - 1] : b[k]));
+      const keep = (k, fallback) => { const v = said(k); return v === undefined ? fallback : v; };
+      const flag = (k, current) => { const v = said(k); return v === undefined ? !!current : v === 'on'; };
       const text = (k, current, max) => String(keep(k, current === undefined || current === null ? '' : current)).slice(0, max);
       const parseList = (v) => String(v || '').split('\n').map((x) => x.trim()).filter(Boolean);
       const parseNav = (v) => String(v || '').split('\n').map((line) => {
@@ -495,7 +506,8 @@ export function adminRoutes(ctx) {
           showReadingTime: flag('fShowReadingTime', features.showReadingTime),
         },
         storage: {
-          driver: b.s3Enabled === undefined ? (storage.driver || 'local') : (b.s3Enabled === 'on' ? 's3' : 'local'),
+          // a two-way switch that has to read as 's3' or 'local'
+          driver: said('s3Enabled') === undefined ? (storage.driver || 'local') : (flag('s3Enabled', false) ? 's3' : 'local'),
           directory: text('directory', storage.directory || 'public/uploads', 200),
           maxSizeMb: Math.min(50, Math.max(1, Number(keep('maxSizeMb', storage.maxSizeMb || 4)) || 4)),
           publicPath: text('publicPath', storage.publicPath || '/uploads', 200),
@@ -511,7 +523,7 @@ export function adminRoutes(ctx) {
               : String(s3.secretAccessKey || ''),
             prefix: text('prefix', s3.prefix === undefined ? 'blog' : s3.prefix, 120),
             publicUrl: text('publicUrl', s3.publicUrl, 300),
-            pathStyle: b.pathStyle === undefined ? !!s3.pathStyle : b.pathStyle === 'on',
+            pathStyle: flag('pathStyle', s3.pathStyle),
           },
         },
         theme: {

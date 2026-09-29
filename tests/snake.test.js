@@ -81,6 +81,7 @@ function load() {
     lines,
     said: (needle) => lines.filter((l) => l.includes(needle)).length,
     press: (key) => { for (const fn of keys.slice()) fn({ key, preventDefault() {} }); },
+    keys: () => keys.slice(),
     run,
   };
 }
@@ -151,12 +152,20 @@ test('a dead field leaves no timer behind', () => {
   assert.equal(g.live(), 0, 'a finished game should not keep ticking');
 });
 
-test('a dead field stops listening for keys', () => {
+test('a dead field ignores the arrow keys but still answers q', () => {
   const g = load();
   g.Snake.start();
   g.run(40);
-  assert.doesNotThrow(() => g.press('ArrowUp'));
+
+  let eaten = false;
+  for (const fn of g.keys()) fn({ key: 'ArrowUp', preventDefault() { eaten = true; } });
+  assert.equal(eaten, false, 'a dead field must not swallow keys meant for the prompt');
   assert.equal(g.Snake.state.dead, true);
+
+  // a finished program still exits when you ask it to
+  g.press('q');
+  assert.equal(g.said('(process ended'), 1);
+  assert.equal(g.live(), 0);
 });
 
 test('the game over screen tells the truth: snake starts a new field', () => {

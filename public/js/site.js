@@ -430,6 +430,12 @@
       Snake.draw();
       Snake.timer = setInterval(Snake.step, 130);
       Snake.keys = function (e) {
+        // q first, and it works after a loss too: a finished program still
+        // exits when you ask it to.
+        if (e.key === 'q' || e.key === 'Q' || e.key === 'Escape') { Snake.stop(); return true; }
+        // A dead field steers nothing, and it must not swallow the keys the
+        // terminal needs to type the next command.
+        if (!Snake.state || Snake.state.dead) return false;
         // {x, y}, not [x, y] — an array here produced NaN coordinates, and the
         // snake walked off the edge of the world instead of turning
         var d = {
@@ -443,7 +449,6 @@
           Snake.turn(d);
           return true;
         }
-        if (e.key === 'q' || e.key === 'Q' || e.key === 'Escape') { Snake.stop(); return true; }
         return false;
       };
       document.addEventListener('keydown', Snake.keys, true);
@@ -542,18 +547,17 @@
       Terminal.body.scrollTop = Terminal.body.scrollHeight;
     },
 
-    // Stop the clock and the keyboard but leave the last frame on screen: a
-    // finished game should not cost the browser a timer, or swallow arrow
-    // keys for a field that is no longer playing.
+    // Stop the clock but leave the keyboard alone: a dead field should cost the
+    // browser no timer, while still answering q the way an exited program does.
     halt: function () {
       if (Snake.timer) { clearInterval(Snake.timer); Snake.timer = null; }
-      if (Snake.keys) { document.removeEventListener('keydown', Snake.keys, true); Snake.keys = null; }
     },
 
-    // halt, plus take the board off the screen
+    // halt, plus let go of the keyboard and take the board off the screen
     teardown: function () {
       Snake.halt();
       Snake.on = false;
+      if (Snake.keys) { document.removeEventListener('keydown', Snake.keys, true); Snake.keys = null; }
       if (Snake.board && Snake.board.parentNode) Snake.board.parentNode.removeChild(Snake.board);
       Snake.board = null;
       Snake.state = null;
