@@ -174,6 +174,21 @@ export class ContentIndex {
   }
 
   /**
+   * The posts touched most recently, newest edit first.
+   *
+   * A post that has never been edited falls back to its publish date, so the
+   * list is never empty on a site that has posts at all. The home page reads
+   * this; that panel used to be four sentences typed into the template, which
+   * is why saving an article never changed it.
+   */
+  recentlyUpdated(limit = 5) {
+    return this.publishedPosts()
+      .slice()
+      .sort((a, b) => (b.updated || b.date) - (a.updated || a.date) || b.date - a.date)
+      .slice(0, limit);
+  }
+
+  /**
    * The order every list uses: pinned first, most recently pinned first, then
    * newest first. One place, so the index, the archive and a tag page cannot
    * disagree about what "pinned" means.

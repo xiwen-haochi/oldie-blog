@@ -36,11 +36,13 @@
   <div class="widget">
     <h3 class="widget-title">📌 <%= t('home.whats_new') %></h3>
     <div class="widget-body">
-      <ul>
-        <li>✔ <span class="blink">NEW</span> <%= locale === 'en' ? 'chiptune theme player — synthesized live in your browser, zero downloads' : '芯片音乐主题 —— 浏览器现场合成，零下载' %></li>
-        <li>✔ <%= locale === 'en' ? 'DOS terminal on every page — press Ctrl+K, type help' : '每个页面都有 DOS 终端 —— 按 Ctrl+K 输入 help' %></li>
-        <li>✔ <%= locale === 'en' ? 'every post can be downloaded as a plain .TXT file' : '每篇文章都能下载成纯文本 .TXT' %></li>
-        <li>✔ <%= locale === 'en' ? 'posts authored in Markdown, served as fast, crawlable HTML' : '用 Markdown 写，吐出快速、可抓取的 HTML' %></li>
+      <%# what you actually touched lately. This list used to be four
+          sentences typed into this file, so saving an article could never
+          move anything. %>
+      <ul class="recent-updates">
+        <% (recent || []).forEach(function (post) { %>
+          <li>✔ <a href="<%= post.url %>"><%= post.title %></a> <span class="mono muted" style="font-size:11px"><%= formatDate(post.updated || post.date, { locale: dateLocale }) %></span></li>
+        <% }) %>
       </ul>
       <div class="linkbar">
         <a class="btn tiny" href="/random">🎲 <%= t('side.random') %></a>

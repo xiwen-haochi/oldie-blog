@@ -782,6 +782,41 @@ async function main() {
       return 'no empty box';
     });
 
+    // the recent-updates panel on the home page, isolated from the post list
+    // above it so a link in one cannot satisfy an assertion about the other
+    const recentBlock = (html) => {
+      const at = html.indexOf('class="recent-updates"');
+      return at < 0 ? '' : html.slice(at, html.indexOf('</ul>', at));
+    };
+
+    await check('the home page lists the post you just saved, not a fixed list', async () => {
+      // The panel used to be four sentences typed into home.ejs, so saving an
+      // article changed nothing about it. It has to follow the database.
+      await post('/admin/posts', {
+        _csrf: adminCsrf, title: 'Recent Probe', slug: 'recent-probe',
+        date: '2020-01-01', body: 'Published long ago.',
+      });
+      let home = await (await get('/')).text();
+      assert.ok(recentBlock(home), 'the home page has no recent-updates panel at all');
+      assert.doesNotMatch(home, /chiptune theme player —/,
+        'the four hardcoded sentences are still in the template');
+      assert.doesNotMatch(recentBlock(home), /recent-probe/,
+        'a 2020 post nobody has edited yet should not lead the recent list');
+
+      // now edit it, with the optional updated box left empty
+      await post('/admin/posts', {
+        _csrf: adminCsrf, originalSlug: 'recent-probe', title: 'Recent Probe',
+        date: '2020-01-01', body: 'Edited just now.',
+      });
+      home = await (await get('/')).text();
+      assert.match(recentBlock(home), /recent-probe/,
+        'saving an edit did not move the post into the recent panel');
+      assert.match(recentBlock(home), /Recent Probe/);
+
+      await post('/admin/posts/recent-probe/delete', { _csrf: adminCsrf });
+      return 'follows the database';
+    });
+
     await check('a checkbox that is turned OFF stays off', async () => {
       // A browser omits an unchecked box from the POST entirely, so the form
       // carries a hidden value and the handler reads that one. Note the

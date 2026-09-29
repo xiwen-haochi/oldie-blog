@@ -26,6 +26,7 @@ async function withIndex(specs, fn) {
       slug,
       title: slug,
       date: spec.date,
+      updated: spec.updated,
       draft: spec.draft,
       featured: spec.featured,
       featuredAt: spec.featuredAt,
@@ -107,6 +108,53 @@ test('a pin with no timestamp still counts as a pin', async () => {
     const slugs = index.list().map((p) => p.slug);
     assert.deepEqual(slugs, ['stamped', 'unstamped', 'plain'], 'an unstamped pin fell behind an unpinned post');
     assert.deepEqual(index.featured().map((p) => p.slug), ['stamped', 'unstamped']);
+  });
+});
+
+test('recently updated is the post you touched, not the newest one', async () => {
+  // the home page panel used to be four sentences typed into the template,
+  // so editing a post could never change it
+  await withIndex({
+    'published-latest': { date: '2026-07-01' },
+    'edited-just-now': { date: '2020-01-01', updated: '2026-09-29' },
+  }, (index) => {
+    assert.deepEqual(
+      index.recentlyUpdated(2).map((p) => p.slug),
+      ['edited-just-now', 'published-latest'],
+      'editing an old post has to move it to the top'
+    );
+  });
+});
+
+test('a post that was never edited falls back to its publish date', async () => {
+  await withIndex({
+    old: { date: '2024-01-01' },
+    recent: { date: '2026-07-01' },
+    edited: { date: '2020-01-01', updated: '2026-01-01' },
+  }, (index) => {
+    assert.deepEqual(
+      index.recentlyUpdated(3).map((p) => p.slug),
+      ['recent', 'edited', 'old'],
+    );
+  });
+});
+
+test('the recent panel never leaks a draft', async () => {
+  await withIndex({
+    hidden: { date: '2026-07-01', updated: '2026-09-29', draft: true },
+    shown: { date: '2020-01-01', updated: '2026-01-01' },
+  }, (index) => {
+    assert.deepEqual(index.recentlyUpdated(5).map((p) => p.slug), ['shown']);
+  });
+});
+
+test('recently updated honours its limit', async () => {
+  await withIndex({
+    a: { date: '2026-01-01', updated: '2026-09-01' },
+    b: { date: '2026-02-01', updated: '2026-08-01' },
+    c: { date: '2026-03-01', updated: '2026-07-01' },
+  }, (index) => {
+    assert.deepEqual(index.recentlyUpdated(2).map((p) => p.slug), ['a', 'b']);
   });
 });
 
