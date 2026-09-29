@@ -91,6 +91,11 @@ test('the photo filter menu and the whitelist cannot drift apart', async () => {
 
   const css = fs.readFileSync(path.resolve(VIEWS, '..', '..', 'public', 'css', 'site.css'), 'utf8');
   for (const name of PHOTO_FILTERS) {
+    // an empty data-age attribute is still an attribute: without the
+    // :not([data-age=""]) every cover wore its aged edge with the filter off
+    assert.doesNotMatch(css, /html\[data-age\]\s+\./,
+      'a bare html[data-age] selector also matches the empty, off state');
+
     // the token is followed by ] and a brace, not by whitespace
     assert.match(css, new RegExp('data-age="' + name + '"[^{]*\\{[^}]*--photo-filter:'),
       'the ' + name + ' filter has no recipe in the stylesheet');

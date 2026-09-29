@@ -429,9 +429,11 @@ form.bbs-form label { font-weight: 700; }
  * filter at paint time, so choosing one costs a repaint and choosing none
  * costs nothing. Scoped to content images on purpose — the dock icons, the
  * avatars and anything else that is part of the chrome stay as they are. */
-html[data-age] .prose img,
-html[data-age] .article-cover img,
-html[data-age] .post-list .has-cover img {
+/* [data-age] on its own is not enough: with nothing chosen the attribute is
+   still there, empty, and every cover kept its aged edge with the filter off. */
+html[data-age]:not([data-age=""]) .prose img,
+html[data-age]:not([data-age=""]) .article-cover img,
+html[data-age]:not([data-age=""]) .post-list .has-cover img {
   filter: var(--photo-filter, none);
 }
 
@@ -444,7 +446,7 @@ html[data-age="washed"]  { --photo-filter: saturate(0.52) brightness(1.1) contra
 html[data-age="xerox"]   { --photo-filter: grayscale(1) contrast(1.55) brightness(1.06); }
 
 /* a worn edge, which is what a print actually looks like */
-html[data-age] .article-cover img {
+html[data-age]:not([data-age=""]) .article-cover img {
   box-shadow: inset 0 0 42px rgba(120, 82, 30, 0.28);
 }
 .alert {
