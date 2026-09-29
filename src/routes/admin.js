@@ -487,7 +487,7 @@ export function adminRoutes(ctx) {
             secretAccessKey: String(b.secretAccessKey || ''),
             prefix: String(b.prefix || 'blog'),
             publicUrl: String(b.publicUrl || ''),
-            pathStyle: b.pathStyle !== 'off',
+            pathStyle: b.pathStyle === 'on',
           },
         },
         theme: {

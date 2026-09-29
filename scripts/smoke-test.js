@@ -592,6 +592,30 @@ async function main() {
       return 'applied';
     });
 
+    await check('a checkbox that is turned OFF stays off', async () => {
+      // A browser omits an unchecked box from the POST entirely, so the form
+      // has to carry a hidden value and the handler has to treat only an
+      // explicit "on" as yes. Testing "the field is missing" is what the old
+      // code got wrong; posting a literal "off" hid it.
+      const checked = (html) => /name="pathStyle" value="on"[^>]*checked/.test(html);
+      const form = await text('/admin/settings');
+      assert.match(form, /type="hidden" name="pathStyle" value="off"/,
+        'without a hidden fallback an unchecked box submits nothing at all');
+
+      await post('/admin/settings', { _csrf: adminCsrf });
+      assert.equal(checked(await text('/admin/settings')), false, 'a missing field must mean off');
+
+      await post('/admin/settings', { _csrf: adminCsrf, pathStyle: 'off' });
+      assert.equal(checked(await text('/admin/settings')), false, '"off" must mean off');
+
+      await post('/admin/settings', { _csrf: adminCsrf, pathStyle: 'on' });
+      assert.equal(checked(await text('/admin/settings')), true, '"on" must mean on');
+
+      await post('/admin/settings', { _csrf: adminCsrf, pathStyle: 'off' });
+      assert.equal(checked(await text('/admin/settings')), false, 'and it must be able to go back off');
+      return 'off, on, off';
+    });
+
     await check('settings reset restores the config file', async () => {
       const res = await post('/admin/settings/reset', { _csrf: adminCsrf });
       assert.equal(res.status, 302);

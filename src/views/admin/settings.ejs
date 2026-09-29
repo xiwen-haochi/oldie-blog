@@ -9,7 +9,7 @@
   </div>
 </div>
 
-<div class="alert warn"><%= t('admin.settings_note') %></div>
+<div class="alert info"><%= t(settings.dataDriver === 'sqlite' ? 'admin.settings_note_sqlite' : 'admin.settings_note_json') %></div>
 
 <form id="settings-form" method="post" action="<%= adminPath %>/settings" class="settings-form">
   <input type="hidden" name="_csrf" value="<%= csrf %>">
@@ -51,7 +51,10 @@
       <div class="field"><label for="accessKeyId">Access Key ID</label><input id="accessKeyId" name="accessKeyId" value="<%= settings.storage.s3.accessKeyId %>" autocomplete="off"></div>
       <div class="field"><label for="secretAccessKey">Secret Access Key</label><input id="secretAccessKey" name="secretAccessKey" type="password" value="<%= settings.storage.s3.secretAccessKey %>" autocomplete="new-password" placeholder="<%= settings.storage.s3.secretAccessKey ? '••••••（留空保持不变）' : '' %>"></div>
     </div>
-    <label class="checkline"><input type="checkbox" name="pathStyle" <%= settings.storage.s3.pathStyle ? 'checked' : '' %>> <%= t('admin.s3_pathstyle') %></label>
+    <%# an unchecked checkbox sends nothing at all, so the handler needs a
+        value to compare against; the hidden field is what "off" looks like %>
+    <input type="hidden" name="pathStyle" value="off">
+    <label class="checkline"><input type="checkbox" name="pathStyle" value="on" <%= settings.storage.s3.pathStyle ? 'checked' : '' %>> <%= t('admin.s3_pathstyle') %></label>
   </fieldset>
 
   <fieldset>

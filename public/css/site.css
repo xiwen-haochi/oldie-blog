@@ -403,6 +403,7 @@ form.bbs-form label { font-weight: 700; }
   font-family: var(--font-ui); font-size: 12px; margin-bottom: 12px;
 }
 .alert.ok { background: #dfffd0; } .alert.warn { background: #fff4c2; } .alert.err { background: #ffd6d6; }
+.alert.info { background: #ddeafb; }
 
 /* search results */
 .search-box { display: flex; gap: 6px; align-items: stretch; }
