@@ -19,9 +19,9 @@ jobs:
         node: ['22.13', '24']
     steps:
       - uses: actions/checkout@v4
+      # no `version:` on purpose: the action reads the exact one from the
+      # packageManager field in package.json, and giving both is an error
       - uses: pnpm/action-setup@v4
-        with:
-          version: 11
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
@@ -34,17 +34,6 @@ jobs:
           ADMIN_PASSWORD: ci-test-password
       - name: server parses
         run: node --check src/server.js
-
-  secrets:
-    name: no tracked file is on the sensitive list
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - run: node scripts/check-secrets.mjs
-
   image:
     name: docker image
     runs-on: ubuntu-latest

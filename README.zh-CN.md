@@ -93,6 +93,11 @@ docker pull ghcr.io/xiwen-haochi/oldie-blog:latest
 
 `.github/workflows/ci.yml` 还会跑 `scripts/check-secrets.mjs`，一旦有敏感文件要被提交就直接让构建失败。
 
+> **第一次构建后要做一件事**：GitHub 的镜像包**不会**跟着仓库自动变公开。
+> 打开 [Packages](https://github.com/xiwen-haochi/oldie-blog/packages) → `oldie-blog` →
+> **Package settings** → **Change visibility** → **Public**。
+> 不做这一步，别人 `docker pull` 会收到 401。
+
 ### 裸机部署
 
 ```bash

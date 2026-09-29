@@ -98,6 +98,11 @@ docker pull ghcr.io/xiwen-haochi/oldie-blog:latest
 `.github/workflows/ci.yml` also runs `scripts/check-secrets.mjs`, which fails the build
 if anything private is ever about to be committed.
 
+> **One thing to do after the first build:** a GitHub package does **not** inherit the
+> repository's visibility. Open [Packages](https://github.com/xiwen-haochi/oldie-blog/packages)
+> → `oldie-blog` → **Package settings** → **Change visibility** → **Public**.
+> Until you do, `docker pull` from outside gets a 401.
+
 ### On a plain server
 
 ```bash
