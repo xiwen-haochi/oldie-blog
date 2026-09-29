@@ -1,12 +1,12 @@
-# syntax=docker/dockerfile:1
-
 ############ deps — install exactly what the lockfile says
+# No `#syntax=` line and no `RUN --mount`: both are BuildKit-only sugar, and
+# some hosts validate a Dockerfile with a plain parser that rejects them.
+# The cost is a slower rebuild; the image is identical either way.
 FROM node:24-alpine AS deps
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile --prod
 
 ############ runtime — no package manager, no compiler, no dev dependencies
 FROM node:24-alpine AS runtime
@@ -36,7 +36,6 @@ RUN mkdir -p /app/content/posts /app/content/pages /app/data /app/public/uploads
     && chmod +x /app/docker/entrypoint.sh
 
 USER node
-VOLUME ["/app/content", "/app/data", "/app/config"]
 EXPOSE 4173
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
